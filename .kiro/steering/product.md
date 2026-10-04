@@ -36,10 +36,16 @@ advanced, how each series played out, and who is still alive.
 - For a selected series **in the current (in-progress) season**, the app produces a
   **win/loss prediction**: a favorite team, a win probability, and an **AI-generated
   natural-language narrative** explaining the pick.
-- The narrative is produced by **Amazon Bedrock** (Anthropic Claude). The numeric
-  probability comes from a deterministic model so results are explainable and testable.
+- The narrative is produced by **Amazon Bedrock** with a **selectable model** - the
+  **Amazon Nova** family (micro / lite / pro, default **Nova Lite**), with **Anthropic
+  Claude** also available. The narrative is **localized to the UI language (EN / JA)**.
+  The numeric probability comes from a deterministic model so results are explainable
+  and testable, and a deterministic fallback narrative keeps the feature working if a
+  model is unavailable.
 - The prediction feature is **only offered for the current season**. Past, completed
   seasons are results-only and never trigger a prediction.
+- A non-blocking **data-integrity warning** surfaces if a finished series or decided
+  game still references an undetermined/TBD placeholder team; the site keeps rendering.
 
 ## Constraints and non-goals
 

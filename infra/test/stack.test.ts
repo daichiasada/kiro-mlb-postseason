@@ -61,6 +61,45 @@ describe('MlbPostseasonStack', () => {
     });
   });
 
+  it('authorizes bedrock:InvokeModel on BOTH foundation-model and inference-profile ARNs (so Amazon Nova + Claude invocation is permitted)', () => {
+    // The resources are wildcard foundation-model/* (spans regions) and
+    // inference-profile/* (spans the account), which cover the Amazon Nova
+    // foundation-model ARNs and the `us.amazon.nova-*` / `us.anthropic.claude-*`
+    // inference-profile ARNs. Assert both ARN shapes are present on the same
+    // Allow statement that carries bedrock:InvokeModel.
+    template.hasResourceProperties('AWS::IAM::Policy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Effect: 'Allow',
+            Action: Match.arrayWith([
+              'bedrock:InvokeModel',
+              'bedrock:InvokeModelWithResponseStream',
+            ]),
+            Resource: Match.arrayWith([
+              'arn:aws:bedrock:*::foundation-model/*',
+              'arn:aws:bedrock:*:123456789012:inference-profile/*',
+            ]),
+          }),
+        ]),
+      },
+    });
+  });
+
+  it('sets a non-empty BEDROCK_MODEL_ID env on the prediction (bedrock-invoking) function', () => {
+    // The prediction function has 512 MB memory (vs 256 for getBracket); match on
+    // that so we assert the env on the right application function specifically.
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      MemorySize: 512,
+      Runtime: 'nodejs20.x',
+      Environment: {
+        Variables: Match.objectLike({
+          BEDROCK_MODEL_ID: Match.anyValue(),
+        }),
+      },
+    });
+  });
+
   it('exposes GET /bracket and GET + POST /prediction HTTP API routes', () => {
     template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
       RouteKey: 'GET /bracket',

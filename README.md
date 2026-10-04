@@ -32,7 +32,10 @@ final exam.
   current (in-progress) season**; completed seasons simply show their final results.
 
 The numeric win probability is produced by a deterministic model in code (so it is
-explainable and unit-tested); **Amazon Bedrock** (Anthropic Claude) turns it into prose.
+explainable and unit-tested); **Amazon Bedrock** turns it into prose using a
+**selectable model** (the **Amazon Nova** family, default **Nova Lite**, with
+**Anthropic Claude** also available), and the narrative is **localized to the UI
+language (EN / JA)**.
 
 No authentication. Public, read-only. Not a betting product.
 
@@ -51,7 +54,9 @@ and a PNG (`docs/architecture.png`) are included.
 - **Backend:** two **AWS Lambda** functions (Node 20) behind an **API Gateway HTTP API**
   with CORS. Routes: `GET /bracket`, `GET /prediction`, `POST /prediction`.
 - **Data:** **DynamoDB** caches the aggregated bracket JSON per season.
-- **AI:** **Amazon Bedrock** (`InvokeModel`) generates the prediction narrative.
+- **AI:** **Amazon Bedrock** (`InvokeModel`) generates the prediction narrative from a
+  selectable model (Amazon Nova micro/lite/pro, default Nova Lite; Anthropic Claude also
+  available), localized to the UI language.
 - **IaC:** **AWS CDK (TypeScript)** provisions everything for one-command deploy.
 
 ### Monorepo layout (npm workspaces)
@@ -138,6 +143,46 @@ toggle, and the detail page). Unknown/preview team ids (not in the `TEAMS` map) 
 localized placeholder — EN `TBD (#<id>)`, JA `未定 (#<id>)` — rather than a raw
 `Team <id>`.
 
+### Localized AI narrative and selectable Bedrock model
+
+The prediction narrative is **localized** and the **Bedrock model is selectable**:
+
+- **Localized (EN / JA).** The narrative is generated in the current UI language for both
+  the Bedrock prompt and the deterministic fallback. The SPA sends its UI language on each
+  `/prediction` request (`&lang=en|ja`); a bare API caller that omits `lang` defaults to
+  English. Team club names stay in English by convention; only the surrounding prose is
+  localized.
+- **Model selector.** A labeled selector next to the accuracy slider lets you pick the
+  Bedrock model. The options are the **Amazon Nova** family — **Nova Micro**, **Nova Lite**
+  (default), **Nova Pro** — plus **Anthropic Claude Haiku**, which remains available.
+  (Amazon Titan is not offered: it has no text-generation model in us-east-1, only
+  embeddings.) The choice is sent as `&model=<id>` and validated server-side against a
+  shared allowlist; an unknown/missing model falls back to the default and never causes a
+  `400`.
+- **Per-provider adapter + fallback.** The InvokeModel request/response JSON differs per
+  provider, so the backend shapes the Anthropic messages body vs the Amazon Nova
+  `messages` + `inferenceConfig` body and parses each provider's response. On any Bedrock
+  error (including a model not yet access-enabled), the endpoint returns a deterministic
+  templated narrative in the requested language with the `model` field suffixed
+  `(fallback)`, so a prediction is always returned at HTTP 200.
+
+> **Deploy-time caveat (Bedrock model access).** IAM authorizes the InvokeModel call for
+> all selectable models, but each model must ALSO be **access-enabled** for Bedrock in the
+> deploy account/region (us-east-1) to return generated text at runtime; model access only
+> surfaces at invoke time. If a selected Amazon Nova model is not access-enabled, the
+> deterministic fallback keeps `/prediction` working (HTTP 200). Verify model access for
+> every selectable model in the Bedrock console on redeploy for live generation.
+
+### Data-integrity warnings
+
+The `GET /bracket` response is scanned for **data-integrity problems**: a finished series
+or a decided game that still references an undetermined/TBD **placeholder team** (a team id
+absent from the `TEAMS` map). Placeholder teams are normal in not-yet-started parts of the
+2026 bracket, but a *finished* context should reference the two real teams that played.
+Any findings are surfaced as a non-blocking `integrityWarnings` array on the HTTP 200
+response and logged server-side (Lambda `console.warn`); the SPA shows a non-blocking,
+localized banner and still renders the bracket. A clean bracket shows no banner.
+
 ### Game-detail toggle and the finished-series detail page
 
 - **Collapsed-by-default game detail.** Each series card hides its game-by-game list
@@ -155,11 +200,16 @@ localized placeholder — EN `TBD (#<id>)`, JA `未定 (#<id>)` — rather than 
 
 The win probability is computed by a transparent heuristic in `backend/src/predict/`
 (current series progress blended with regular-season win pct, clamped to `[0.5, 0.95]`).
-**Bedrock** (`BEDROCK_MODEL_ID`, default `us.anthropic.claude-haiku-4-5-20251001-v1:0`,
-a cross-region inference profile) is then
-asked to explain the pick in a concise 2–3 sentence narrative. If Bedrock errors, the
-endpoint degrades gracefully to a deterministic templated narrative, so a prediction is
-always returned.
+**Bedrock** (`BEDROCK_MODEL_ID`, default `us.amazon.nova-lite-v1:0`, a cross-region
+inference profile) is then asked to explain the pick in a concise 2–3 sentence narrative,
+in the requested language (EN / JA). The model is selectable per request from a shared
+allowlist — the **Amazon Nova** family (`us.amazon.nova-micro|lite|pro-v1:0`, default Nova
+Lite) plus the **Anthropic Claude** Haiku inference profile — and a small per-provider
+adapter shapes the request/response JSON for each provider. If Bedrock errors (including a
+model not access-enabled in the region), the endpoint degrades gracefully to a
+deterministic templated narrative in the same language, so a prediction is always
+returned. Override the default model at deploy time with
+`cdk deploy --context bedrockModelId=<id>`.
 
 ## Image assets
 
@@ -176,19 +226,26 @@ while satisfying the "actual image assets" requirement.
   runtime).
 - **An AWS account** with credentials active in your shell/session (profile, SSO, or
   environment variables).
-- **Amazon Bedrock model access granted** for the chosen Claude model
-  (`us.anthropic.claude-haiku-4-5-20251001-v1:0` by default, a cross-region inference
-  profile) **in the deploy region**. Enable model access in the Bedrock console before
-  deploying. The default is an inference-profile id (prefix `us.`) because the current-
-  generation Claude Haiku model is only invocable on-demand through an inference profile;
-  the Lambda's IAM policy grants `bedrock:InvokeModel` on the inference profile plus the
-  underlying foundation models across US regions it may route to. Override the model with
+- **Amazon Bedrock model access granted** for the selectable models **in the deploy
+  region (us-east-1)**. The default is **Amazon Nova Lite**
+  (`us.amazon.nova-lite-v1:0`, a cross-region inference profile); the other selectable
+  options are Nova Micro, Nova Pro, and the Anthropic Claude Haiku profile
+  (`us.anthropic.claude-haiku-4-5-20251001-v1:0`). Enable model access for the models you
+  intend to use in the Bedrock console before deploying — **model access only surfaces at
+  runtime**, and a model that is not access-enabled falls back to the deterministic
+  narrative. The defaults are inference-profile ids (prefix `us.`) because these
+  current-generation models are invoked on-demand through an inference profile; the
+  Lambda's IAM policy grants `bedrock:InvokeModel` on the inference profiles plus the
+  underlying foundation models across the US regions they may route to, which covers both
+  the Amazon Nova models and the Claude profile. Override the default model with
   `cdk deploy --context bedrockModelId=<id>`.
 - The CDK bundles Lambdas with **esbuild** (no Docker required).
 
 > **Note:** AWS credentials must be active **and** Bedrock model access must be granted
-> in the region before you deploy. The repository build itself performs no live AWS or
-> Bedrock calls.
+> in the region (us-east-1) for each selectable model you want to generate from before you
+> deploy; model access only surfaces at runtime, and the deterministic fallback keeps the
+> endpoint working otherwise. The repository build itself performs no live AWS or Bedrock
+> calls.
 
 ---
 
@@ -286,7 +343,8 @@ Concretely, the lessons are demonstrated by:
 - **Spec / steering-driven development** — this steering set plus discrete planned
   features under `.agents/tasks/`.
 - **Amazon Bedrock integration** — the win/loss prediction narrative is a real AI
-  integration, not a toy.
+  integration (selectable Amazon Nova / Claude models via a per-provider adapter,
+  localized EN/JA, with a deterministic fallback), not a toy.
 - **Infrastructure as Code** — AWS CDK provisions the entire stack for one-command deploy.
 - **Testing** — Vitest unit tests cover prediction logic and MLB aggregation with AWS and
   the MLB API mocked (no live calls in CI).

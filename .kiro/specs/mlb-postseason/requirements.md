@@ -102,23 +102,88 @@ branches on `mode`:
 10. IF the `season` query is present but not a 4-digit year THEN the system
     SHALL respond `400`.
 
-## Requirement 3 - AI narrative with graceful fallback
+## Requirement 3 - Localized AI narrative with selectable model and graceful fallback
 
 **User story:** As a fan, I want a short natural-language explanation of the
-prediction, so that the numeric probability is easy to understand.
+prediction in my chosen language and (optionally) from a model I pick, so that
+the numeric probability is easy to understand and I can explore different
+Amazon Bedrock models.
+
+The narrative is both language-aware (EN/JA) and model-selectable. The selectable
+models are a shared allowlist in `@mlb/shared` (`shared/src/narrative.ts`,
+`NARRATIVE_MODEL_OPTIONS`): the Amazon Nova family (`us.amazon.nova-micro-v1:0`,
+`us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0`) plus the Anthropic Claude
+Haiku inference profile (`us.anthropic.claude-haiku-4-5-20251001-v1:0`). The
+default is **Amazon Nova Lite** (`DEFAULT_NARRATIVE_MODEL_ID = 'us.amazon.nova-lite-v1:0'`),
+chosen for its balance of quality, latency, and cost and because it supports both
+on-demand and inference-profile invocation. (Amazon Titan has no text-generation
+model in us-east-1, embeddings only, so the Amazon-family text options are the
+Nova family.) The request/response JSON differs per provider, so the backend
+invoker selects a per-provider adapter (Anthropic messages shape vs Amazon Nova
+`messages` + `inferenceConfig`).
 
 ### Acceptance criteria
 
 1. WHEN a prediction is produced THEN the system SHALL generate a 2-3 sentence
-   narrative via Amazon Bedrock (Anthropic Claude) describing why the favorite
-   is favored.
-2. IF the Bedrock call fails for any reason (throttling, access, parse error)
-   THEN the system SHALL return a deterministic templated fallback narrative and
-   SHALL NOT fail the prediction request.
-3. WHEN the fallback is used THEN the response `model` field SHALL be suffixed
-   with `(fallback)` so the source is transparent.
-4. WHEN running tests THEN the Bedrock call SHALL be mockable through the
+   narrative via Amazon Bedrock describing why the favorite is favored, using
+   the request's selected model (default Amazon Nova Lite) and localized to the
+   request's language (EN or JA) for both the prompt and the prose.
+2. WHEN the request carries a `lang` of `ja` THEN the generated narrative (and
+   the deterministic fallback) SHALL be written in Japanese; otherwise it SHALL
+   be in English. The default narrative language for a bare API caller is `en`;
+   the SPA always sends its current UI language (default UI language `ja`).
+3. WHEN the request carries a `model` THEN the backend SHALL validate it against
+   the shared allowlist (`resolveModelId`): a known id is used as-is, and an
+   unknown/missing id falls back to the default (Nova Lite) WITHOUT a `400`.
+4. WHEN the selected model's provider is Amazon Nova THEN the invoker SHALL send
+   the Nova request shape (`messages` + `inferenceConfig`) and parse
+   `output.message.content[].text`; WHEN it is Anthropic Claude THEN it SHALL
+   send the Anthropic messages shape (`anthropic_version` + `content[].text`)
+   and parse `content[].text`.
+5. IF the Bedrock call fails for any reason (throttling, model access not
+   enabled, parse error) THEN the system SHALL return a deterministic templated
+   fallback narrative in the requested language and SHALL NOT fail the
+   prediction request.
+6. WHEN the fallback is used THEN the response `model` field SHALL be suffixed
+   with `(fallback)` so the source is transparent; otherwise it SHALL report the
+   resolved (allowlisted) model id.
+7. WHEN running tests THEN the Bedrock call SHALL be mockable through the
    `BedrockInvoker` interface and SHALL make no live calls.
+8. The `lang` and `model` request parameters SHALL be threaded end to end
+   (UI -> `api.ts` -> handler lenient parse -> `BracketService.getPrediction`
+   -> `resolveModelId` allowlist -> `generateNarrative`), parsed leniently from
+   both the GET query and the POST body so a missing/invalid optional NEVER
+   causes a `400`.
+
+## Requirement 12 - Finished-game data-integrity warnings
+
+**User story:** As an operator, I want to be told when a finished series or
+decided game still references an undetermined/TBD/placeholder team, so that I
+can spot a data problem without the site breaking for visitors.
+
+The live MLB Stats API 2026 feed can carry PLACEHOLDER team ids (e.g. "AL Higher
+Seed") that are absent from the `TEAMS` map. A placeholder is normal and
+expected in a not-yet-started (scheduled) part of the bracket; it is a
+data-integrity problem ONLY when it appears in a context that is already
+FINISHED, because a completed matchup should reference the two real teams that
+played it. The check is pure (`shared/src/integrity.ts`,
+`findIntegrityWarnings`) and the handler attaches its result; the aggregator
+stays side-effect free.
+
+### Acceptance criteria
+
+1. WHEN a `GET /bracket` response is produced THEN the system SHALL scan it for
+   finished contexts (a `final` series, or a decided game) that reference a
+   placeholder/TBD team id absent from `TEAMS` and SHALL attach any findings as
+   a non-blocking `integrityWarnings` array on the HTTP 200 bracket response.
+2. WHEN there are no such findings THEN `integrityWarnings` SHALL be an empty
+   array and the response SHALL be unchanged in every other respect.
+3. WHEN one or more warnings are found THEN the handler SHALL also log a
+   server-side `console.warn` (observable in the Lambda logs) summarizing the
+   affected series ids, WITHOUT changing the 200 status.
+4. WHEN the SPA receives a bracket carrying a non-empty `integrityWarnings` THEN
+   it SHALL show a non-blocking, localized (EN/JA) banner and SHALL still render
+   the bracket normally; a clean bracket SHALL show no banner.
 
 ## Requirement 4 - MLB data strategy (cache + live + seed fallback)
 

@@ -39,13 +39,14 @@ const BACKEND_HANDLERS = path.join(REPO_ROOT, 'backend', 'src', 'handlers');
 const FRONTEND_DIST = path.join(REPO_ROOT, 'frontend', 'dist');
 
 /**
- * Default Bedrock model; mirrors backend's DEFAULT_MODEL_ID. Uses the
- * cross-region inference-profile id (prefix `us.`) because the current-
- * generation Claude Haiku model is only invocable on-demand through an
- * inference profile. Override at deploy time with
+ * Default Bedrock model; mirrors backend/shared `DEFAULT_NARRATIVE_MODEL_ID`.
+ * The default is now an Amazon Nova inference profile (Nova Lite) per Issue #13:
+ * it balances quality, latency, and cost and is invocable on-demand through a
+ * cross-region inference profile (prefix `us.`). Anthropic Claude Haiku remains
+ * a selectable option. Override at deploy time with
  * `--context bedrockModelId=<id>`.
  */
-const DEFAULT_BEDROCK_MODEL_ID = 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
+const DEFAULT_BEDROCK_MODEL_ID = 'us.amazon.nova-lite-v1:0';
 
 export class MlbPostseasonStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -105,15 +106,25 @@ export class MlbPostseasonStack extends Stack {
     table.grantReadWriteData(getBracketFn);
     table.grantReadWriteData(getPredictionFn);
 
-    // Bedrock InvokeModel for the prediction function. The default model id is
-    // a cross-region inference profile (e.g. `us.anthropic.claude-...`) in this
-    // account/region, but such a profile transparently routes the request to a
+    // Bedrock InvokeModel for the prediction function. The selectable models are
+    // cross-region inference profiles (prefix `us.`): the Amazon Nova family
+    // (`us.amazon.nova-micro|lite|pro-v1:0`, Nova Lite being the default) AND the
+    // Anthropic Claude Haiku profile (`us.anthropic.claude-haiku-...`). An
+    // inference profile transparently routes the request to the underlying
     // foundation model in ANY region of its geography (us-east-1, us-east-2,
-    // us-west-2, ...). Bedrock authorizes BOTH the inference-profile ARN and the
-    // underlying foundation-model ARN in whichever region actually serves the
-    // request, so the foundation-model grant must span regions (wildcard region)
-    // rather than being pinned to `this.region`; otherwise the invoke fails with
-    // AccessDeniedException on e.g. `arn:aws:bedrock:us-east-2::foundation-model/...`.
+    // us-west-2, ...), and Bedrock authorizes BOTH the inference-profile ARN and
+    // the underlying foundation-model ARN in whichever region actually serves the
+    // request. The two wildcard resources below therefore authorize invocation of
+    // BOTH the Anthropic Claude inference profile AND every Amazon Nova
+    // model/inference profile (foundation-model/* spans regions, inference-profile/*
+    // spans the account's profiles) with no per-model change needed. The
+    // foundation-model grant must span regions (wildcard region) rather than being
+    // pinned to `this.region`; otherwise the invoke fails with AccessDeniedException
+    // on e.g. `arn:aws:bedrock:us-east-2::foundation-model/amazon.nova-lite-v1:0`.
+    // NOTE: each selected model must also be *access-enabled* for Bedrock in the
+    // account/region (Bedrock model access); that is a runtime account setting, not
+    // IAM. The deterministic templated fallback keeps /prediction returning 200
+    // even when a chosen model is not yet access-enabled.
     getPredictionFn.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],

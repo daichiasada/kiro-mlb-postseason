@@ -226,3 +226,74 @@ switch, and a configurable prediction-accuracy parameter.
         `.kiro/specs/mlb-postseason/design.md`,
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`.
 - _Requirements: 6, 7, 8, 9, 10, 11_
+
+## Localized narrative, selectable models, and data integrity (task-issue-13-localize-models-integrity)
+
+GitHub Issue #13 under `.agents/tasks/task-issue-13-localize-models-integrity/`
+(features FEAT-001 through FEAT-005): localize the AI narrative to the UI
+language (EN/JA), make the Bedrock model selectable (Amazon Nova family, default
+Nova Lite; Claude kept available) via a per-provider request/response adapter
+with the deterministic fallback intact, and add a finished-game TBD
+data-integrity check that surfaces non-blocking warnings. Language + model are
+threaded UI -> api -> handler -> service -> narrative.
+
+### I1. Verify green baseline (task-issue-13 FEAT-001)
+
+- [x] Confirm build/test/e2e/synth are green before starting the feature work.
+- _Requirements: 3, 12 (baseline)_
+
+### I2. Localized narrative + selectable Amazon Nova models, backend (task-issue-13 FEAT-002)
+
+- [x] Shared narrative contract: `NarrativeLanguage` (default `en`), the
+      `NARRATIVE_MODEL_OPTIONS` allowlist (Nova micro/lite/pro + Claude Haiku),
+      `DEFAULT_NARRATIVE_MODEL_ID = 'us.amazon.nova-lite-v1:0'`, and
+      `resolveModelId`.
+      - `shared/src/narrative.ts`, `shared/src/index.ts`.
+- [x] Language-aware prompt + fallback and a per-provider request/response
+      adapter (Anthropic messages vs Amazon Nova `messages`/`inferenceConfig`);
+      thread `language` + resolved `model` through the service and handler
+      (lenient parse, never a `400`).
+      - `backend/src/bedrock/narrative.ts`,
+        `backend/src/bedrock/narrative.test.ts`,
+        `backend/src/service/bracketService.ts`,
+        `backend/src/service/bracketService.test.ts`,
+        `backend/src/handlers/getPrediction.ts`, `backend/src/handlers/http.ts`,
+        `backend/src/handlers/getPrediction.test.ts`.
+- _Requirements: 3_
+
+### I3. Finished-game TBD data-integrity check (task-issue-13 FEAT-003)
+
+- [x] Pure `findIntegrityWarnings` scan over the bracket for finished contexts
+      referencing a placeholder/TBD team, surfaced on the `/bracket` 200
+      response and logged server-side.
+      - `shared/src/integrity.ts`, `shared/src/index.ts`,
+        `shared/src/integrity.property.test.ts`,
+        `backend/src/handlers/getBracket.ts`,
+        `backend/src/handlers/getBracket.test.ts`.
+- _Requirements: 12_
+
+### I4. Frontend model selector, language passthrough, integrity banner (task-issue-13 FEAT-004)
+
+- [x] Model selector near the accuracy slider, `&lang=`/`&model=` passthrough,
+      and a non-blocking localized integrity banner.
+      - `frontend/src/components/PredictionPanel.tsx`, `frontend/src/api.ts`,
+        `frontend/src/config.ts`, `frontend/src/i18n/messages.ts`,
+        `frontend/src/pages/HomePage.tsx`, `frontend/e2e/prediction.spec.ts`,
+        `frontend/e2e/fixtures.ts`.
+- _Requirements: 3, 10, 12_
+
+### I5. Infra IAM/default-model confirmation + docs + full verification (task-issue-13 FEAT-005)
+
+- [x] Confirm the IAM covers the Amazon Nova foundation-model + inference-profile
+      ARNs, set the Lambda default `BEDROCK_MODEL_ID` to the shared default
+      (Nova Lite), and assert both in the stack tests.
+      - `infra/lib/mlb-postseason-stack.ts`, `infra/test/stack.test.ts`.
+- [x] Keep the spec-driven-dev artifacts, README/README.ja.md, and steering
+      truthful to the localized narrative, selectable Amazon models + per-provider
+      adapter + fallback, the default-model choice, the request threading, the
+      integrity check, and the Bedrock model-access deploy caveat.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`,
+        `.kiro/steering/product.md`, `.kiro/steering/tech.md`.
+- _Requirements: 3, 12_

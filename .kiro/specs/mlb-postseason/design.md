@@ -19,7 +19,7 @@ API Gateway (HTTP API, CORS)
           v
    BracketService  --->  DynamoDB cache (pk BRACKET#<season>, ttl)
           |          --->  MLB Stats API (statsapi.mlb.com)
-          |          --->  Amazon Bedrock (Anthropic Claude)
+          |          --->  Amazon Bedrock (selectable Amazon Nova / Anthropic Claude)
           |          --->  bundled 2024 + 2025 seeds (shared/src/seed)
 ```
 
@@ -321,18 +321,89 @@ it still responds `400` for a missing `seriesId` or an invalid `season`, and
   series teams and is unaffected by accuracy; monotonic non-decreasing in
   accuracy for a given favored series; deterministic for identical inputs.
 
-## Bedrock narrative - generateNarrative
+## Bedrock narrative - generateNarrative (localized + model-selectable)
 
-`backend/src/bedrock/narrative.ts`:
+`backend/src/bedrock/narrative.ts`, with the shared contract in
+`shared/src/narrative.ts`:
 
-- `buildPrompt` composes a concise analyst prompt from the matchup and the
-  computed call.
-- `RealBedrockInvoker` wraps `InvokeModelCommand` for Anthropic Claude
-  (`anthropic.claude-3-haiku-...`, overridable via `BEDROCK_MODEL_ID`) and
-  parses the `content[].text` blocks.
-- `generateNarrative` returns the Bedrock text, or `fallbackNarrative` on any
-  error (model id suffixed `(fallback)`), so the prediction never hard-fails.
+- **Shared contract (`@mlb/shared`).** `shared/src/narrative.ts` is the single
+  source of truth for the narrative language type (`NarrativeLanguage = 'en' |
+  'ja'`, default `'en'`) and the selectable-model allowlist
+  (`NARRATIVE_MODEL_OPTIONS`): the Amazon Nova family (`us.amazon.nova-micro-v1:0`,
+  `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0`) plus the Anthropic
+  Claude Haiku inference profile (`us.anthropic.claude-haiku-4-5-20251001-v1:0`).
+  The default model is `DEFAULT_NARRATIVE_MODEL_ID = 'us.amazon.nova-lite-v1:0'`
+  (Nova Lite): an Amazon-family model per Issue #13, balancing quality, latency,
+  and cost and supporting both on-demand and inference-profile invocation. Amazon
+  Titan is NOT offered because it has no text-generation model in us-east-1
+  (embeddings only). The ids are the `us.*` cross-region inference-profile ids
+  verified via `aws bedrock list-foundation-models`/`list-inference-profiles`,
+  matching the IAM `inference-profile/*` grant. `resolveModelId(id?)` validates a
+  requested id against the allowlist and returns the default for anything
+  unknown/missing (it never throws).
+- `buildPrompt(series, prediction, language)` composes a concise analyst prompt
+  from the matchup and the computed call, localized to EN or JA. Team club names
+  stay in English (the i18n convention) while the surrounding instruction prose
+  is localized; the numeric percentage is identical across languages.
+- **Per-provider adapter.** The InvokeModel request/response JSON differs by
+  provider, so the invoker selects a `ModelStrategy` from the model id
+  (`strategyForModel`): an `anthropic.` id uses the Anthropic messages shape
+  (`anthropic_version` + `messages[].content[].text`) and parses `content[].text`;
+  an `amazon.` id (and the default) uses the Amazon Nova shape (`messages` +
+  `inferenceConfig`) and parses `output.message.content[].text`.
+- `RealBedrockInvoker` wraps `InvokeModelCommand`, shaping the body and parsing
+  the text via the selected strategy; the model id defaults from
+  `BEDROCK_MODEL_ID` (set by infra to the shared default) and is overridable per
+  request.
+- `generateNarrative(series, prediction, invoker?, modelId?, language?)` returns
+  the Bedrock text, or the deterministic `fallbackNarrative(series, prediction,
+  language)` on ANY error (model id suffixed `(fallback)`), so the prediction
+  never hard-fails. The fallback is localized to the same language. This also
+  means a selected model that is not yet *access-enabled* for Bedrock in the
+  account/region degrades to the localized fallback at HTTP 200 rather than
+  erroring (see Infrastructure note on Bedrock model access).
 - The `BedrockInvoker` interface makes the AI path mockable in tests.
+
+### Language + model request threading
+
+The `lang` and `model` parameters are threaded end to end and parsed leniently
+so an optional never causes a `400`:
+
+- The SPA (`frontend/src/api.ts`) appends `&lang=<ui language>` and
+  `&model=<selected id>` to the `/prediction` request. The default UI language
+  is `ja`; the default model is Nova Lite.
+- `backend/src/handlers/getPrediction.ts` parses `lang` and `model` from BOTH
+  the GET query and the POST body via lenient helpers in
+  `backend/src/handlers/http.ts` (mirroring `parseAccuracy`/`parseSeason`): an
+  unrecognized `lang` or `model` yields `undefined` so the default applies, and
+  neither ever produces a `400`.
+- `BracketService.getPrediction(..., language?, model?)` resolves the model
+  through the shared `resolveModelId` allowlist, reports the resolved id back on
+  the `prediction` response `model` field, and passes the language + resolved id
+  to `generateNarrative`.
+
+## Data-integrity check - findIntegrityWarnings
+
+`shared/src/integrity.ts` is a pure scan over the `Bracket` contract, and the
+`/bracket` handler attaches its result (keeping the aggregator side-effect
+free):
+
+- The live 2026 feed can carry PLACEHOLDER team ids (e.g. "AL Higher Seed")
+  absent from `TEAMS`. A placeholder is normal in a not-yet-started (scheduled)
+  context; it is a DATA-INTEGRITY problem only when it appears in a context that
+  is already FINISHED - a `final` series, or a decided game - because a completed
+  matchup should reference the two real teams that played it.
+- `findIntegrityWarnings(bracket)` returns an `IntegrityWarning[]` (code
+  `finished_game_tbd_team`), one per finished context that references a
+  placeholder/TBD team id; a clean bracket yields an empty array. Invariants are
+  covered by `shared/src/integrity.property.test.ts`.
+- `backend/src/handlers/getBracket.ts` calls `findIntegrityWarnings` AFTER
+  `getBracket`, attaches the array to the HTTP 200 response as
+  `integrityWarnings`, and (when non-empty) logs a `console.warn` summarizing the
+  affected series ids. The status stays 200: the warning is non-blocking.
+- The SPA (`frontend/src/pages/HomePage.tsx`) renders a non-blocking, localized
+  (EN/JA) banner (`.app__notice--integrity`) when `integrityWarnings` is
+  non-empty, and still renders the bracket; a clean bracket shows no banner.
 
 ## Data store
 
@@ -364,3 +435,30 @@ seed if a bracket request fails, so the demo renders offline.
 HTTP API + the two Lambdas, the DynamoDB table (TTL enabled), and Bedrock IAM
 permissions. `npm run synth` produces the template; `npm run deploy` builds and
 deploys in one command (requires active AWS credentials).
+
+### Bedrock model id + IAM (selectable Amazon Nova / Claude)
+
+- The prediction Lambda's `BEDROCK_MODEL_ID` env defaults to
+  `DEFAULT_BEDROCK_MODEL_ID = 'us.amazon.nova-lite-v1:0'`, matching the
+  backend/shared default (`DEFAULT_NARRATIVE_MODEL_ID`) so the deployed default
+  and the code default agree. It is overridable at deploy time with
+  `--context bedrockModelId=<id>`.
+- The IAM policy grants `bedrock:InvokeModel` +
+  `bedrock:InvokeModelWithResponseStream` on two wildcard resources:
+  `arn:aws:bedrock:*::foundation-model/*` (spans regions) and
+  `arn:aws:bedrock:*:<account>:inference-profile/*` (spans the account's
+  profiles). An inference profile transparently routes to the underlying
+  foundation model in any region of its geography, and Bedrock authorizes BOTH
+  the inference-profile ARN and the underlying foundation-model ARN. These two
+  resources therefore authorize invocation of BOTH the Anthropic Claude
+  inference profile AND every Amazon Nova model/inference profile with no
+  per-model IAM change. `infra/test/stack.test.ts` asserts the policy authorizes
+  `bedrock:InvokeModel` on both ARN shapes and that `BEDROCK_MODEL_ID` is set on
+  the prediction function.
+- **Bedrock model access (deploy-time caveat).** IAM authorizes the API call,
+  but each selected model must ALSO be *access-enabled* for Bedrock in the
+  account/region (us-east-1), which is a runtime account setting that only
+  surfaces at invoke time. If a selected model is not access-enabled, the
+  deterministic templated fallback keeps `/prediction` returning HTTP 200 with a
+  localized narrative; the operator should verify model access on redeploy for
+  live generation from every selectable model.
