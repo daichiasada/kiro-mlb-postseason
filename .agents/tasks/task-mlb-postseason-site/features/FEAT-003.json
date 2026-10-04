@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Build the React + TypeScript (Vite) frontend SPA: a graphical postseason view (bracket + series cards + standings panel) and a win/loss prediction panel that calls the backend and shows the AI narrative. Include committed SVG image assets (brand + team marks) so the UI uses real image assets, not emoji only. Depends on FEAT-001 (shared types) and FEAT-002 (API shape).",
+  "status": "pending",
+  "steps": [
+    "Flesh out frontend/package.json (name @mlb/frontend) with React 18, react-dom, and dev deps vite, @vitejs/plugin-react, typescript, vitest, @testing-library/react, jsdom, @types/react, @types/react-dom. Depend on @mlb/shared (workspace) for types. Scripts: dev (vite), build (tsc -b && vite build or vite build), typecheck (tsc --noEmit), test (vitest run), preview.",
+    "Create frontend/index.html, frontend/vite.config.ts (react plugin, test env jsdom, define base path suitable for CloudFront root), frontend/tsconfig.json extending base with DOM libs and jsx react-jsx.",
+    "frontend/src/config.ts: read API base URL from import.meta.env.VITE_API_BASE_URL with a sensible local default; the CDK/deploy wires the real value.",
+    "frontend/src/api.ts: typed client functions getBracket(season): Promise<Bracket> and getPrediction(seriesId, season): Promise<Prediction> hitting the backend; types imported from @mlb/shared. On fetch failure, surface a typed error the UI can show, and (optional) fall back to the bundled @mlb/shared seed for the bracket so the demo renders offline.",
+    "Create SVG image assets committed under frontend/src/assets/: a brand/logo SVG (brand.svg), a baseball/diamond hero SVG (hero.svg), and generic AL/NL league-mark SVGs plus a reusable team-badge SVG component or set of simple generated team-color SVG badges. These satisfy the 'actual image assets (not emoji-only)' requirement. Keep them lightweight hand-authored SVG.",
+    "frontend/src/components/BracketView.tsx: render the postseason bracket graphically from Bracket.series, laid out by round (Wild Card -> Division Series -> Championship Series -> World Series) and league (AL left, NL right, WS center), using CSS grid/flex. Use the SVG assets for visual polish.",
+    "frontend/src/components/SeriesCard.tsx: show a single series: both teams (badge + name), series score (wins-wins), bestOf, status, and per-game results. A 'Predict' affordance that selects the series for the prediction panel.",
+    "frontend/src/components/StandingsPanel.tsx: show participating teams grouped by league with their postseason progress.",
+    "frontend/src/components/PredictionPanel.tsx: when a series is selected, call getPrediction and display favorite team, win probability (as a bar/percentage), and the AI-generated narrative text, with loading and error states.",
+    "frontend/src/App.tsx + main.tsx: compose the layout (header with brand/hero asset, BracketView, StandingsPanel, PredictionPanel), load the bracket for a default season (2024) on mount, manage selected-series state. Add frontend/src/styles.css (or CSS modules) for a clean responsive layout - no emoji-only visuals.",
+    "Add frontend tests (vitest + testing-library) under frontend/src/**/*.test.tsx: SeriesCard renders team names + score from a Series fixture; PredictionPanel renders probability + narrative from a mocked getPrediction; a logic test for any bracket layout helper. Tests must assert real rendered output tied to props, not static constants.",
+    "Ensure `npm run build -w frontend` (vite build) and `npm test -w frontend` pass and `npm run typecheck -w frontend` is clean."
+  ],
+  "acceptance_criteria": [
+    "`npm run build -w frontend` produces a production build (frontend/dist) with no TypeScript or Vite errors.",
+    "`npm test -w frontend` passes; tests cover SeriesCard rendering and PredictionPanel rendering with mocked API.",
+    "The UI renders the bracket graphically from a Bracket object and includes committed SVG image assets (brand/hero/team badges) under frontend/src/assets - not emoji-only.",
+    "PredictionPanel displays favorite team, a win-probability indicator, and the AI narrative from the prediction API, with loading and error states.",
+    "Frontend uses @mlb/shared types (no duplicated local copies of Bracket/Series/Prediction)."
+  ],
+  "verification": [
+    "From repo root: `npm run build -w frontend` exits 0 and creates frontend/dist.",
+    "From repo root: `npm test -w frontend` exits 0 with all tests passing.",
+    "List frontend/src/assets and confirm SVG image assets are present."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

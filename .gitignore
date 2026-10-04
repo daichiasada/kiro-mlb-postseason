@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# CDK
+cdk.out/
+cdk.context.json
+
+# Frontend build
+frontend/dist/
+
+# Coverage
+coverage/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+
+# Scratch / fetched data (temporary)
+_ps2024.json
+_bracket.json

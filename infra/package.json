@@ -1,0 +1,13 @@
+{
+  "name": "@mlb/infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "synth": "echo \"cdk synth is wired up in a later feature\"",
+    "deploy": "echo \"cdk deploy is wired up in a later feature\""
+  }
+}

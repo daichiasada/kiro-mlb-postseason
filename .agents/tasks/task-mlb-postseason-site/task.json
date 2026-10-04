@@ -1,0 +1,7 @@
+{
+  "task_id": "task-mlb-postseason-site",
+  "task_description": "Build a greenfield MLB postseason information summary site for the Kiro University final exam: a React+TS (Vite) SPA that graphically shows postseason status (bracket/series/standings) with a win/loss prediction feature powered by Amazon Bedrock narratives. Backend is API Gateway + Lambda (TS) with DynamoDB caching of MLB Stats API data (seed fallback). AWS CDK (TS) provides one-command deploy. Includes Kiro steering files (University requirements + product/tech/structure) and a README. Deliverable is complete, buildable, synth-verified code; no live cdk deploy (AWS creds inactive this session).",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Author the AWS CDK (TypeScript) infrastructure for one-command deploy and the README. Provisions DynamoDB table, Lambda functions (bundled from backend), API Gateway (HTTP API) with CORS, Bedrock InvokeModel IAM permissions, S3 bucket + CloudFront distribution for the SPA, and wiring so the frontend build is deployed and pointed at the API. Verified via `cdk synth` only (no deploy - AWS creds inactive). Depends on FEAT-002 (handlers) and FEAT-003 (frontend build output).",
+  "status": "pending",
+  "steps": [
+    "Flesh out infra/package.json (name @mlb/infra) with aws-cdk-lib, constructs, and dev deps aws-cdk (CLI), typescript, ts-node, @types/node, esbuild (for NodejsFunction bundling). Scripts: build (tsc), synth (cdk synth), deploy (cdk deploy), bootstrap (cdk bootstrap), typecheck (tsc --noEmit). Add infra/cdk.json with app: `npx ts-node --prefer-ts-exts bin/app.ts`.",
+    "infra/bin/app.ts: CDK App instantiating the stack with env from CDK_DEFAULT_ACCOUNT/REGION.",
+    "infra/lib/mlb-postseason-stack.ts: define resources: (1) DynamoDB Table (PAY_PER_REQUEST, partition key pk:string, TTL attribute) for bracket cache. (2) Two aws_lambda_nodejs.NodejsFunction constructs (Node 20 runtime) pointing at backend/src/handlers/getBracket.ts and getPrediction.ts, entry resolved relative to the backend workspace, with TABLE_NAME and BEDROCK_MODEL_ID env vars, memory/timeout sensible for a Bedrock call (e.g., 512MB / 30s on prediction). (3) Grant the table read/write to both functions. (4) Grant Bedrock InvokeModel via an iam.PolicyStatement (bedrock:InvokeModel on the Claude model ARNs / * for the region) to the prediction function. (5) HTTP API (aws_apigatewayv2) with routes GET /bracket -> getBracket, GET /prediction -> getPrediction (or POST), CORS allowing the CloudFront origin and localhost dev. (6) S3 bucket (private, OAC) for the SPA + CloudFront distribution with default root object index.html and SPA error-routing (403/404 -> /index.html). (7) BucketDeployment deploying frontend/dist to the bucket (with a note/mechanism to inject the API URL - e.g., deploy-time config.js or build-time env). (8) CfnOutputs: ApiUrl, DistributionDomainName, BucketName, TableName.",
+    "Handle the frontend API URL wiring: document and implement a workable approach - e.g., a BucketDeployment that also writes a config.js with window.__API_BASE_URL__, and frontend/src/config.ts reads that at runtime (falling back to VITE_API_BASE_URL). Keep it simple and documented in README.",
+    "Add infra/.gitignore entries for cdk.out (or rely on root .gitignore).",
+    "Ensure `npm run build -w infra` (tsc) and `npm run synth -w infra` (cdk synth) succeed and produce a CloudFormation template in cdk.out. If NodejsFunction bundling via esbuild requires network/docker, prefer esbuild (no docker). If synth cannot bundle without building backend first, wire the root build order so backend is built before synth, and document it.",
+    "Write README.md at repo root: project overview; architecture diagram (ASCII or described); the MLB data strategy (MLB Stats API + DynamoDB cache + seed fallback); Bedrock usage; prerequisites (Node 20+, AWS account, Bedrock model access enabled in the region); ONE-COMMAND deploy: `npm install && npm run build && npm run deploy` (where root deploy runs cdk bootstrap if needed then cdk deploy), plus explicit `cd infra && npx cdk bootstrap && npx cdk deploy` steps; local dev instructions (`npm run dev -w frontend`, how to point at a deployed API or run against seed data); how steering files map to Kiro University lessons; and a clear note that AWS credentials must be active and Bedrock model access granted before deploy. Note the image-asset approach (committed SVGs).",
+    "Make the root `npm run build` build order: shared -> backend -> frontend -> infra, and `npm run synth`/`deploy` depend on build."
+  ],
+  "acceptance_criteria": [
+    "`npm run build -w infra` compiles the CDK app with no TypeScript errors.",
+    "`npm run synth -w infra` (cdk synth) produces a CloudFormation template in cdk.out without errors (no deploy performed).",
+    "The stack defines DynamoDB, two Lambda functions, an HTTP API with CORS, Bedrock InvokeModel IAM permission on the prediction function, and S3 + CloudFront for the SPA, with CfnOutputs for ApiUrl and the CloudFront domain.",
+    "README.md documents a one-command deploy (npm install && npm run build && npm run deploy) plus explicit cdk bootstrap/deploy, local dev, data strategy, Bedrock prerequisites, and the Kiro University mapping.",
+    "Root `npm run build` builds all workspaces in dependency order and the whole repo typechecks."
+  ],
+  "verification": [
+    "From repo root: `npm run build` exits 0 (shared, backend, frontend, infra all build).",
+    "From repo root: `npm run synth` (cdk synth) exits 0 and writes cdk.out with a template.",
+    "Confirm README.md contains the one-command deploy instructions and Bedrock/AWS prerequisites."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

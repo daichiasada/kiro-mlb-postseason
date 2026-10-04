@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Implement the backend Lambda service: MLB Stats API client + aggregation into the Bracket shape, DynamoDB caching, a win/loss probability model, and an Amazon Bedrock client that generates a natural-language series prediction narrative. Expose two handlers via API Gateway: GET bracket and GET/POST prediction. Depends on FEAT-001 (shared types + seed).",
+  "status": "pending",
+  "steps": [
+    "Flesh out backend/package.json (name @mlb/backend) with deps: @aws-sdk/client-dynamodb, @aws-sdk/lib-dynamodb, @aws-sdk/client-bedrock-runtime, and @mlb/shared (workspace). Dev deps: typescript, vitest, @types/aws-lambda, @types/node. Scripts: build (tsc), test (vitest run), typecheck (tsc --noEmit).",
+    "backend/src/mlb/client.ts: fetch(`https://statsapi.mlb.com/api/v1/schedule/postseason?sportId=1&season=${season}`) using global fetch (Node 20). Export fetchPostseasonSchedule(season): Promise<raw games[]>. Handle non-200 by throwing a typed error.",
+    "backend/src/mlb/aggregate.ts: pure function aggregateBracket(games, season): Bracket. Group games into Series by (seriesDescription + the unordered pair of team ids). Map seriesDescription to RoundName (Wild Card / Division Series / Championship Series / World Series) and league (AL/NL/WS). Compute per-series wins from isWinner, bestOf from gamesInSeries, status from whether a team reached the clinch count. Use TEAMS from @mlb/shared to attach league/abbreviation. This function must be unit-testable with no network.",
+    "backend/src/predict/model.ts: pure function predict(series, bracket): { favoriteTeamId:number; favoriteWinProbability:number } using a transparent heuristic combining current series wins (games already won toward clinch) and regular-season win pct (from leagueRecord carried on seed/teams, or neutral 0.5 if unknown). Deterministic and unit-testable. Clamp probability to [0.5, 0.95] for the favorite.",
+    "backend/src/bedrock/narrative.ts: generateNarrative(series, prediction): Promise<{narrative, model}> calling BedrockRuntimeClient InvokeModel with an Anthropic Claude model id from env (default anthropic.claude-3-haiku-20240307-v1:0). Build a prompt describing the matchup, current series score, and the computed favorite+probability, asking for a concise 2-3 sentence prediction narrative. On any Bedrock error, fall back to a deterministic templated narrative so the endpoint never hard-fails. Keep the Bedrock call isolated behind an interface so it can be mocked in tests.",
+    "backend/src/store/dynamo.ts: thin DynamoDB (DocumentClient) wrapper getCachedBracket(season)/putCachedBracket(bracket) keyed by pk=`BRACKET#${season}` with a TTL field. Table name from env TABLE_NAME. On missing table/env in local, callers handle undefined.",
+    "backend/src/service/bracketService.ts: getBracket(season): try DynamoDB cache -> if miss/stale, fetch MLB API + aggregate + cache -> on MLB failure, fall back to @mlb/shared seed (postseason-2024) when season===2024 else rethrow. getPrediction(seriesId, season): load bracket, find series, run predict(), call Bedrock narrative, assemble Prediction.",
+    "backend/src/handlers/getBracket.ts and backend/src/handlers/getPrediction.ts: APIGatewayProxyHandlerV2 wrappers that parse query/path params, call the service, return JSON with CORS headers (Access-Control-Allow-Origin *). Validate inputs; return 400 on bad input, 500 on unexpected error with a safe message.",
+    "backend/src/index.ts barrel export of handlers.",
+    "Add unit tests under backend/src/**/*.test.ts (vitest): aggregate.test.ts (feed a small raw games fixture, assert series grouping, wins, status, round/league mapping), model.test.ts (favorite selection + probability clamping + determinism), narrative.test.ts (mock the Bedrock interface, assert prompt built and fallback path on error), bracketService.test.ts (mock store + mlb client, assert cache hit path and seed fallback path). Tests must exercise real logic (not just static asserts) and fail if the implementation were reverted.",
+    "Ensure `npm run build -w backend` (tsc) and `npm test -w backend` (vitest) pass."
+  ],
+  "acceptance_criteria": [
+    "`npm run build -w backend` compiles with no TypeScript errors.",
+    "`npm test -w backend` passes; tests cover aggregation, prediction model, Bedrock narrative (mocked, incl. fallback), and service cache/seed fallback.",
+    "aggregateBracket converts raw MLB schedule games into a Bracket with series grouped by round/league and correct win counts.",
+    "getPrediction returns a Prediction object with favoriteTeamId, favoriteWinProbability in [0.5,0.95], a non-empty narrative, and the model id.",
+    "Bedrock failures degrade gracefully to a templated narrative rather than throwing out of the handler."
+  ],
+  "verification": [
+    "From repo root: `npm run build -w backend` exits 0.",
+    "From repo root: `npm test -w backend` exits 0 with all tests passing.",
+    "From repo root: `npm run typecheck -w backend` exits 0."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

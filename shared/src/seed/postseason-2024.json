@@ -1,0 +1,838 @@
+{
+  "season": 2024,
+  "updatedAt": "2024-10-31T00:00:00.000Z",
+  "series": [
+    {
+      "id": "2024-al-wildcard-117-116",
+      "round": "Wild Card",
+      "league": "AL",
+      "high": {
+        "teamId": 117,
+        "wins": 0
+      },
+      "low": {
+        "teamId": 116,
+        "wins": 2
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775345,
+          "date": "2024-10-01",
+          "away": {
+            "teamId": 116,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 117,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775344,
+          "date": "2024-10-02",
+          "away": {
+            "teamId": 116,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 117,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        }
+      ]
+    },
+    {
+      "id": "2024-al-wildcard-110-118",
+      "round": "Wild Card",
+      "league": "AL",
+      "high": {
+        "teamId": 110,
+        "wins": 0
+      },
+      "low": {
+        "teamId": 118,
+        "wins": 2
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775343,
+          "date": "2024-10-01",
+          "away": {
+            "teamId": 118,
+            "score": 1,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 110,
+            "score": 0,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775341,
+          "date": "2024-10-02",
+          "away": {
+            "teamId": 118,
+            "score": 2,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 110,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        }
+      ]
+    },
+    {
+      "id": "2024-nl-wildcard-158-121",
+      "round": "Wild Card",
+      "league": "NL",
+      "high": {
+        "teamId": 158,
+        "wins": 1
+      },
+      "low": {
+        "teamId": 121,
+        "wins": 2
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775340,
+          "date": "2024-10-01",
+          "away": {
+            "teamId": 121,
+            "score": 8,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 158,
+            "score": 4,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775339,
+          "date": "2024-10-02",
+          "away": {
+            "teamId": 121,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 158,
+            "score": 5,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775337,
+          "date": "2024-10-03",
+          "away": {
+            "teamId": 121,
+            "score": 4,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 158,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        }
+      ]
+    },
+    {
+      "id": "2024-nl-wildcard-135-144",
+      "round": "Wild Card",
+      "league": "NL",
+      "high": {
+        "teamId": 135,
+        "wins": 2
+      },
+      "low": {
+        "teamId": 144,
+        "wins": 0
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775333,
+          "date": "2024-10-01",
+          "away": {
+            "teamId": 144,
+            "score": 0,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 135,
+            "score": 4,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775336,
+          "date": "2024-10-02",
+          "away": {
+            "teamId": 144,
+            "score": 4,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 135,
+            "score": 5,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        }
+      ]
+    },
+    {
+      "id": "2024-al-divisionseries-114-116",
+      "round": "Division Series",
+      "league": "AL",
+      "high": {
+        "teamId": 114,
+        "wins": 3
+      },
+      "low": {
+        "teamId": 116,
+        "wins": 2
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775324,
+          "date": "2024-10-05",
+          "away": {
+            "teamId": 116,
+            "score": 0,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 114,
+            "score": 7,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775325,
+          "date": "2024-10-07",
+          "away": {
+            "teamId": 116,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 114,
+            "score": 0,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775328,
+          "date": "2024-10-09",
+          "away": {
+            "teamId": 114,
+            "score": 0,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 116,
+            "score": 3,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 775327,
+          "date": "2024-10-10",
+          "away": {
+            "teamId": 114,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 116,
+            "score": 4,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 775326,
+          "date": "2024-10-12",
+          "away": {
+            "teamId": 116,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 114,
+            "score": 7,
+            "isWinner": true
+          },
+          "seriesGameNumber": 5
+        }
+      ]
+    },
+    {
+      "id": "2024-al-divisionseries-147-118",
+      "round": "Division Series",
+      "league": "AL",
+      "high": {
+        "teamId": 147,
+        "wins": 3
+      },
+      "low": {
+        "teamId": 118,
+        "wins": 1
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775334,
+          "date": "2024-10-05",
+          "away": {
+            "teamId": 118,
+            "score": 5,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 147,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775332,
+          "date": "2024-10-07",
+          "away": {
+            "teamId": 118,
+            "score": 4,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 147,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775329,
+          "date": "2024-10-09",
+          "away": {
+            "teamId": 147,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 118,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 775331,
+          "date": "2024-10-10",
+          "away": {
+            "teamId": 147,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 118,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        }
+      ]
+    },
+    {
+      "id": "2024-nl-divisionseries-143-121",
+      "round": "Division Series",
+      "league": "NL",
+      "high": {
+        "teamId": 143,
+        "wins": 1
+      },
+      "low": {
+        "teamId": 121,
+        "wins": 3
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775318,
+          "date": "2024-10-05",
+          "away": {
+            "teamId": 121,
+            "score": 6,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 143,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775319,
+          "date": "2024-10-06",
+          "away": {
+            "teamId": 121,
+            "score": 6,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 143,
+            "score": 7,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775316,
+          "date": "2024-10-08",
+          "away": {
+            "teamId": 143,
+            "score": 2,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 121,
+            "score": 7,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 775313,
+          "date": "2024-10-09",
+          "away": {
+            "teamId": 143,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 121,
+            "score": 4,
+            "isWinner": true
+          },
+          "seriesGameNumber": 4
+        }
+      ]
+    },
+    {
+      "id": "2024-nl-divisionseries-119-135",
+      "round": "Division Series",
+      "league": "NL",
+      "high": {
+        "teamId": 119,
+        "wins": 3
+      },
+      "low": {
+        "teamId": 135,
+        "wins": 2
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775323,
+          "date": "2024-10-05",
+          "away": {
+            "teamId": 135,
+            "score": 5,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 7,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775322,
+          "date": "2024-10-06",
+          "away": {
+            "teamId": 135,
+            "score": 10,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 119,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775321,
+          "date": "2024-10-08",
+          "away": {
+            "teamId": 119,
+            "score": 5,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 135,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 775320,
+          "date": "2024-10-09",
+          "away": {
+            "teamId": 119,
+            "score": 8,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 135,
+            "score": 0,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 775317,
+          "date": "2024-10-11",
+          "away": {
+            "teamId": 135,
+            "score": 0,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 2,
+            "isWinner": true
+          },
+          "seriesGameNumber": 5
+        }
+      ]
+    },
+    {
+      "id": "2024-al-championshipseries-147-114",
+      "round": "Championship Series",
+      "league": "AL",
+      "high": {
+        "teamId": 147,
+        "wins": 4
+      },
+      "low": {
+        "teamId": 114,
+        "wins": 1
+      },
+      "bestOf": 7,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775314,
+          "date": "2024-10-14",
+          "away": {
+            "teamId": 114,
+            "score": 2,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 147,
+            "score": 5,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775312,
+          "date": "2024-10-15",
+          "away": {
+            "teamId": 114,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 147,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775310,
+          "date": "2024-10-17",
+          "away": {
+            "teamId": 147,
+            "score": 5,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 114,
+            "score": 7,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 775311,
+          "date": "2024-10-18",
+          "away": {
+            "teamId": 147,
+            "score": 8,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 114,
+            "score": 6,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 775309,
+          "date": "2024-10-19",
+          "away": {
+            "teamId": 147,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 114,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 5
+        }
+      ]
+    },
+    {
+      "id": "2024-nl-championshipseries-119-121",
+      "round": "Championship Series",
+      "league": "NL",
+      "high": {
+        "teamId": 119,
+        "wins": 4
+      },
+      "low": {
+        "teamId": 121,
+        "wins": 2
+      },
+      "bestOf": 7,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775307,
+          "date": "2024-10-13",
+          "away": {
+            "teamId": 121,
+            "score": 0,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 9,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775306,
+          "date": "2024-10-14",
+          "away": {
+            "teamId": 121,
+            "score": 7,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 119,
+            "score": 3,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775305,
+          "date": "2024-10-16",
+          "away": {
+            "teamId": 119,
+            "score": 8,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 121,
+            "score": 0,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 775303,
+          "date": "2024-10-17",
+          "away": {
+            "teamId": 119,
+            "score": 10,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 121,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 775299,
+          "date": "2024-10-18",
+          "away": {
+            "teamId": 119,
+            "score": 6,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 121,
+            "score": 12,
+            "isWinner": true
+          },
+          "seriesGameNumber": 5
+        },
+        {
+          "gamePk": 775302,
+          "date": "2024-10-20",
+          "away": {
+            "teamId": 121,
+            "score": 5,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 10,
+            "isWinner": true
+          },
+          "seriesGameNumber": 6
+        }
+      ]
+    },
+    {
+      "id": "2024-ws-worldseries-119-147",
+      "round": "World Series",
+      "league": "WS",
+      "high": {
+        "teamId": 119,
+        "wins": 4
+      },
+      "low": {
+        "teamId": 147,
+        "wins": 1
+      },
+      "bestOf": 7,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 775300,
+          "date": "2024-10-25",
+          "away": {
+            "teamId": 147,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 775294,
+          "date": "2024-10-26",
+          "away": {
+            "teamId": 147,
+            "score": 2,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 4,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 775298,
+          "date": "2024-10-28",
+          "away": {
+            "teamId": 119,
+            "score": 4,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 147,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 775297,
+          "date": "2024-10-29",
+          "away": {
+            "teamId": 119,
+            "score": 4,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 147,
+            "score": 11,
+            "isWinner": true
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 775296,
+          "date": "2024-10-30",
+          "away": {
+            "teamId": 119,
+            "score": 7,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 147,
+            "score": 6,
+            "isWinner": false
+          },
+          "seriesGameNumber": 5
+        }
+      ]
+    }
+  ]
+}

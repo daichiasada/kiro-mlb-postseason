@@ -1,0 +1,27 @@
+{
+  "name": "kiro-mlb-postseason",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MLB postseason information summary site with graphical bracket view and AI-powered win/loss predictions (Kiro University final exam build).",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend",
+    "infra"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "synth": "npm run synth --workspace @mlb/infra --if-present",
+    "deploy": "npm run build && npm run deploy --workspace @mlb/infra --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}
