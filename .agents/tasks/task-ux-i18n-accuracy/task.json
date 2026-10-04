@@ -1,9 +1,15 @@
 {
   "task_id": "task-ux-i18n-accuracy",
   "task_description": "Implement six follow-up requirements on the deployed year-aware MLB postseason site (branch feat/mlb-postseason-site): (1) fix the uneven 'gatagata' bracket layout alignment; (2) put per-series game detail behind a collapsed-by-default show/hide toggle; (3) show finished (final) series detail on a dedicated detail page via client-side routing; (4) turn prediction OFF at the series level for finished series (backend + frontend) even in the current predictable season; (5) add a JA/EN language switch (i18n) covering all UI strings incl. a localized unknown/preview team-name fallback; (6) make the deterministic prediction model's accuracy configurable from the UI through to predict(). Keep unit + fast-check property + Playwright e2e + cdk synth all green and keep specs/README truthful. Do NOT push/PR/deploy (orchestrator owns that).",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
   "blocked_reason": null,
+  "review": {
+    "verdict": "APPROVED",
+    "version": "v1",
+    "file": ".agents/tasks/task-ux-i18n-accuracy/2026-10-04-225222-review.md",
+    "followup": "Two non-blocking review findings addressed in commit 52c9ec5 (localized header image alt text via t(); hoisted accuracy bounds MIN/MAX/DEFAULT/STEP into shared/src/accuracy.ts so backend model and frontend import one source). Pure refactor, identical numeric values, suite still green; verdict unchanged."
+  },
   "verification": {
     "build": "pass",
     "tests": "pass",
