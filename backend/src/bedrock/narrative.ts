@@ -13,8 +13,13 @@ import {
 } from '@aws-sdk/client-bedrock-runtime';
 import type { PredictionResult } from '../predict/model.js';
 
-/** Default Anthropic Claude model id; overridable via BEDROCK_MODEL_ID. */
-export const DEFAULT_MODEL_ID = 'anthropic.claude-3-haiku-20240307-v1:0';
+/**
+ * Default Anthropic Claude model id; overridable via BEDROCK_MODEL_ID.
+ * Uses the cross-region inference-profile id (prefix `us.`) because the
+ * current-generation Claude Haiku model is only invocable on-demand through
+ * an inference profile.
+ */
+export const DEFAULT_MODEL_ID = 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
 
 export interface NarrativeResult {
   narrative: string;
@@ -117,7 +122,11 @@ export async function generateNarrative(
   try {
     const narrative = await invoker.invoke(modelId, prompt);
     return { narrative, model: modelId };
-  } catch {
+  } catch (error) {
+    console.error('Bedrock narrative generation failed; using fallback', {
+      modelId,
+      error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    });
     return { narrative: fallbackNarrative(series, prediction), model: `${modelId} (fallback)` };
   }
 }

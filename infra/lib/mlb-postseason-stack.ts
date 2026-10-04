@@ -38,8 +38,14 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const BACKEND_HANDLERS = path.join(REPO_ROOT, 'backend', 'src', 'handlers');
 const FRONTEND_DIST = path.join(REPO_ROOT, 'frontend', 'dist');
 
-/** Default Bedrock model; mirrors backend's DEFAULT_MODEL_ID. */
-const DEFAULT_BEDROCK_MODEL_ID = 'anthropic.claude-3-haiku-20240307-v1:0';
+/**
+ * Default Bedrock model; mirrors backend's DEFAULT_MODEL_ID. Uses the
+ * cross-region inference-profile id (prefix `us.`) because the current-
+ * generation Claude Haiku model is only invocable on-demand through an
+ * inference profile. Override at deploy time with
+ * `--context bedrockModelId=<id>`.
+ */
+const DEFAULT_BEDROCK_MODEL_ID = 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
 
 export class MlbPostseasonStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -99,15 +105,21 @@ export class MlbPostseasonStack extends Stack {
     table.grantReadWriteData(getBracketFn);
     table.grantReadWriteData(getPredictionFn);
 
-    // Bedrock InvokeModel for the prediction function. Scope to foundation
-    // models + inference profiles in this region/account so the policy is
-    // least-privilege while still allowing a swap of the exact model id.
+    // Bedrock InvokeModel for the prediction function. The default model id is
+    // a cross-region inference profile (e.g. `us.anthropic.claude-...`) in this
+    // account/region, but such a profile transparently routes the request to a
+    // foundation model in ANY region of its geography (us-east-1, us-east-2,
+    // us-west-2, ...). Bedrock authorizes BOTH the inference-profile ARN and the
+    // underlying foundation-model ARN in whichever region actually serves the
+    // request, so the foundation-model grant must span regions (wildcard region)
+    // rather than being pinned to `this.region`; otherwise the invoke fails with
+    // AccessDeniedException on e.g. `arn:aws:bedrock:us-east-2::foundation-model/...`.
     getPredictionFn.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
         resources: [
-          `arn:aws:bedrock:${this.region}::foundation-model/*`,
-          `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`,
+          'arn:aws:bedrock:*::foundation-model/*',
+          `arn:aws:bedrock:*:${this.account}:inference-profile/*`,
         ],
       })
     );

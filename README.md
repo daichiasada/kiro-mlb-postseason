@@ -90,7 +90,8 @@ No authentication. Public, read-only. Not a betting product.
 
 The win probability is computed by a transparent heuristic in `backend/src/predict/`
 (current series progress blended with regular-season win pct, clamped to `[0.5, 0.95]`).
-**Bedrock** (`BEDROCK_MODEL_ID`, default `anthropic.claude-3-haiku-20240307-v1:0`) is then
+**Bedrock** (`BEDROCK_MODEL_ID`, default `us.anthropic.claude-haiku-4-5-20251001-v1:0`,
+a cross-region inference profile) is then
 asked to explain the pick in a concise 2–3 sentence narrative. If Bedrock errors, the
 endpoint degrades gracefully to a deterministic templated narrative, so a prediction is
 always returned.
@@ -111,8 +112,13 @@ while satisfying the "actual image assets" requirement.
 - **An AWS account** with credentials active in your shell/session (profile, SSO, or
   environment variables).
 - **Amazon Bedrock model access granted** for the chosen Claude model
-  (`anthropic.claude-3-haiku-20240307-v1:0` by default) **in the deploy region**. Enable
-  model access in the Bedrock console before deploying.
+  (`us.anthropic.claude-haiku-4-5-20251001-v1:0` by default, a cross-region inference
+  profile) **in the deploy region**. Enable model access in the Bedrock console before
+  deploying. The default is an inference-profile id (prefix `us.`) because the current-
+  generation Claude Haiku model is only invocable on-demand through an inference profile;
+  the Lambda's IAM policy grants `bedrock:InvokeModel` on the inference profile plus the
+  underlying foundation models across US regions it may route to. Override the model with
+  `cdk deploy --context bedrockModelId=<id>`.
 - The CDK bundles Lambdas with **esbuild** (no Docker required).
 
 > **Note:** AWS credentials must be active **and** Bedrock model access must be granted
