@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Frontend wiring for the prediction-accuracy control (requirement #6 UI) and the series-level finished=>prediction OFF behavior (requirement #4 UI), plus truthful spec/README updates for all six requirements. This feature consumes the backend accuracy param and final-series gating added in FEAT-002 and the i18n layer from FEAT-004.",
+  "status": "pending",
+  "steps": [
+    "Accuracy control UI: add a user control (a labeled range slider is ideal; a select is acceptable) in the PredictionPanel (frontend/src/components/PredictionPanel.tsx) that sets the model accuracy within the same supported range the backend accepts (e.g. 0..1). Give it an accessible label and show the current value. Default it to the backend's default accuracy so initial behavior is unchanged. Localize its label/help text via the i18n t() layer.",
+    "Thread accuracy through the request: update frontend/src/api.ts getPrediction(seriesId, season, accuracy?) to append &accuracy=<value> to the /prediction query when provided (encodeURIComponent). Update PredictionPanel to re-request the prediction when the accuracy control changes (debounce if needed to avoid excessive calls while dragging the slider) and show the updated favorite/probability/narrative. Keep the existing loading/error/upcoming states.",
+    "Series-level finished=>no prediction UI (requirement #4): in SeriesCard.tsx, for a status==='final' series do NOT render the interactive 'Predict winner' button even in the predictable current season - instead show the final result and the link to the detail page (from FEAT-003). In App.tsx / PredictionPanel.tsx, if a selected series is final, do not attempt a prediction request (or handle the backend's results/no-prediction mode gracefully by showing the final result instead of a numeric prediction). This must be consistent with the backend gating from FEAT-002 (a final 2026 series returns a results/no-prediction mode).",
+    "Add/extend Playwright e2e: (1) a final current-season series shows NO 'Predict winner' button and surfaces the result/detail link instead; (2) changing the accuracy control triggers a new /prediction request carrying the accuracy param (assert via a page.route stub capturing the query, and that the UI updates). Use fixtures with both an in-progress series (for accuracy) and a final series (for no-predict).",
+    "Update the spec-driven-dev artifacts to stay truthful to the implementation (graded Kiro University lesson): .kiro/specs/mlb-postseason/requirements.md (add EARS acceptance criteria for: the game-detail toggle collapsed-by-default #2, the finished-series detail page + client-side routing #3, finished-series prediction OFF at the series level #4, the JA/EN language switch + localized unknown-team fallback #5, and the configurable accuracy parameter with its [range]+semantics + probability-bounds invariant #6, and the layout-alignment fix #1); .kiro/specs/mlb-postseason/design.md (document: the routing approach chosen - history/path-based + why it is compatible with the CloudFront /index.html rewrite; the i18n layer design + default language + persistence + unknown-team fallback wording; the accuracy parameter's precise semantics, supported range, default, the sharpening transform, and that invariants hold for all accuracy values; the series-level final gating in getPrediction; and the collapsed-by-default toggle + layout fix); .kiro/specs/mlb-postseason/tasks.md (add a task section for this task set referencing the real files).",
+    "Update README.md: document the accuracy parameter (what it means, its range/default, how it maps to confidence, and the /prediction?accuracy= query param), the JA/EN language switch, the finished-series detail page + client-side routing (noting the CloudFront SPA rewrite makes deep links work), the game-detail toggle, and the finished-series prediction-OFF rule. Keep the Bedrock default model id and cross-region note unchanged.",
+    "Run the FULL verification suite from the repo root: npm run build, npm test (all workspaces incl. property tests), npm run test:e2e -w @mlb/frontend, npm run synth. Confirm all green."
+  ],
+  "acceptance_criteria": [
+    "The PredictionPanel exposes an accessible, localized accuracy control; changing it issues a new /prediction request with an accuracy query param and updates the displayed probability/narrative, verified by an e2e test that captures the request.",
+    "A finished (final) series in the current predictable season shows NO 'Predict winner' button and instead surfaces its final result + detail-page link; the frontend never shows a numeric prediction for a final series (consistent with the backend results/no-prediction mode), verified by an e2e test.",
+    ".kiro/specs/mlb-postseason/requirements.md, design.md, and tasks.md are updated to describe all six new behaviors truthfully, with EARS-style criteria and the accuracy semantics + probability-bounds invariant documented.",
+    "README.md documents the accuracy parameter (range/default/semantics + query param), the JA/EN switch, the detail page + routing (+ CloudFront rewrite note), the game-detail toggle, and the finished=>no-prediction rule; the Bedrock model id note is unchanged.",
+    "Full suite green: PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build && npm test && npm run test:e2e -w @mlb/frontend && npm run synth."
+  ],
+  "verification": [
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run test:e2e -w @mlb/frontend",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
