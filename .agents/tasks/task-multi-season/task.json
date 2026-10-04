@@ -3,5 +3,14 @@
   "task_description": "Make the already-deployed MLB postseason site year-aware for a 'now' of 2026. Seasons 2024 and 2025 are results-only (show the completed bracket/final results; prediction feature hidden/disabled). Season 2026 fetches the latest live MLB Stats API data and keeps the prediction feature working, degrading gracefully to an empty/upcoming state when there are no in-progress series. Add a frontend season selector (2024/2025/2026). Add a real aggregated 2025 seed dataset and extend the TEAMS map. Drive results-only vs predictable from a single CURRENT_YEAR season-config in @mlb/shared, not scattered literals or per-series hacks. Update specs/README/steering to match. Keep unit + fast-check property + Playwright e2e + cdk synth all green. Work on branch feat/mlb-postseason-site with incremental commits; orchestrator owns push/PR/GitHub.",
   "status": "in_progress",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "e2e": "pass",
+    "synth": "pass",
+    "docker_build": "skipped",
+    "summary": "Final verification green after addressing semantic-review v1 (2026-10-04-164637-review.md / Issue #10). `npm run build` (shared->backend->frontend->infra) exit 0. `npm test` = 81 unit tests pass (shared 14, backend 42, frontend 19, infra 6; fast-check property tests stable over repeated runs). `npm run test:e2e -w frontend` = 9 Playwright specs pass (headless chromium --no-sandbox). `npm run synth` exit 0. Review Issue 1 (blocking) FIXED: aggregateBracket now classifies a preview-only series (games present but no decided winner - the real live MLB 'Preview' shape) as 'scheduled' not 'in_progress', and both the backend `upcoming` guard (hasStartedSeries) and the frontend hasStartedContent key on a decided game rather than games.length>0, so aggregator output and both guards agree. Review Issue 2 FIXED: added tests that feed real preview-game-shaped raw games through aggregateBracket at the aggregate, service, and App layers; verified they FAIL against pre-fix code (3 backend + 1 frontend) and PASS after the fix. Review Issue 3 (non-blocking) addressed with a clarifying comment on getBracket's seed-fallback documenting that any future results-only season added to the selector must ship a seed; justified as unreachable from SELECTABLE_SEASONS=[2026,2025,2024]. No regressions: production Bedrock model id stays 'us.anthropic.claude-haiku-4-5-20251001-v1:0'; results-only seasons still short-circuit before predict/Bedrock; a genuinely in-progress series (>=1 decided game) stays predictable. Specs (design.md, requirements.md) updated so the 'not started' definition is truthful. No Dockerfile; docker_build skipped."
+  }
 }

@@ -60,7 +60,11 @@ the frontend can branch on `mode`:
   invoking Bedrock.
 - `UpcomingPrediction` = `{ mode: 'upcoming', seriesId, season, message }` -
   returned for the current season when the series is unresolvable (empty or
-  placeholder-only bracket) or has not started (status `scheduled`).
+  placeholder-only bracket) or has not started. A series has "not started" when
+  it is `scheduled` OR has no decided game (no game with a real winner). The
+  live MLB Stats API lists not-yet-played games as "Preview" entries with null
+  scores and null winners, so a preview-only series carries games but has
+  decided nothing; `aggregateBracket` classifies it as `scheduled`.
 
 ## Frontend
 
@@ -81,8 +85,12 @@ the frontend can branch on `mode`:
     each series card instead exposes a non-interactive "View details"
     affordance so game-by-game detail still works.
   - Current season with no started content (empty / placeholder-only bracket, or
-    every series `scheduled` with no games): a "The YYYY postseason has not
-    started yet" message is shown instead of a broken bracket.
+    only not-yet-started series - including preview-only series that carry games
+    but have decided no winner): a "The YYYY postseason has not started yet"
+    message is shown instead of a broken bracket. `hasStartedContent` keys on a
+    decided game (or a recorded win), not merely on `games.length > 0`, so it
+    agrees with the aggregator and backend `upcoming` guard on the real
+    preview-game shape.
 - Playwright e2e specs in `frontend/e2e/` drive these flows.
 
 ## API and Lambdas
@@ -127,9 +135,12 @@ above):
    fails, parse the id and match by round slug plus the *unordered* team-id pair
    (this tolerates a high/low-seed ordering disagreement across the seed/live
    boundary - the ISSUE-1 fix).
-4. If the series is not resolvable OR its status is `scheduled` (not started),
-   return `{ mode: 'upcoming', ... }` so an empty/placeholder-only 2026 bracket
-   degrades gracefully instead of erroring.
+4. If the series is not resolvable OR has not started, return
+   `{ mode: 'upcoming', ... }` so an empty/placeholder-only 2026 bracket
+   degrades gracefully instead of erroring. "Not started" means the series is
+   `scheduled` OR has no decided game (no game with a real winner and no
+   recorded win) - this catches the real preview-game shape, where the
+   aggregator classifies a games-but-no-results series as `scheduled`.
 5. Otherwise `predict(series, bracket, winPct)` to compute the favorite and
    probability, then `generateNarrative(series, result, invoker)` for the prose
    (deterministic fallback on any Bedrock error), returning
@@ -151,7 +162,10 @@ only if `getBracket` itself throws.
 - `bestOf` comes from `gamesInSeries`, defaulting per round (3/5/7).
 - Wins are tallied from each game's `isWinner`; `status` is `final` when either
   team reaches the clinch count `ceil(bestOf / 2)`, `scheduled` when there are
-  no games, else `in_progress`.
+  no decided games (either no games at all, or only not-yet-played "Preview"
+  games with null scores/winners - the real pre-start 2026 shape), else
+  `in_progress`. Keying `scheduled` on "no decided game" rather than "no games"
+  is what lets a preview-only series reach the documented upcoming/empty path.
 - Series ids are `${season}-${league}-${roundSlug}-${highId}-${lowId}`.
 - Placeholder-team tolerance (current season): the live 2026 schedule can
   include placeholder teams for not-yet-determined rounds (e.g. "AL Higher

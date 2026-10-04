@@ -49,6 +49,46 @@ const bracket2026Upcoming: Bracket = {
   ],
 };
 
+/**
+ * A 2026 bracket in the REAL live preview-game shape: a placeholder series that
+ * HAS games (not an empty array), but every game is a not-yet-played "Preview"
+ * with null scores and null winners. The aggregator classifies this as
+ * 'scheduled', and the App must treat it as not-started even though
+ * `games.length > 0` - this is the shape that previously slipped through the
+ * `games.length > 0` check and rendered a live-looking grid.
+ */
+const bracket2026Preview: Bracket = {
+  season: 2026,
+  updatedAt: '2026-09-01T00:00:00.000Z',
+  series: [
+    {
+      id: '2026-al-wildcard-9001-9002',
+      round: 'Wild Card',
+      league: 'AL',
+      high: { teamId: 9001, wins: 0 },
+      low: { teamId: 9002, wins: 0 },
+      bestOf: 3,
+      status: 'scheduled',
+      games: [
+        {
+          gamePk: 10,
+          date: '2026-10-01',
+          away: { teamId: 9002, score: null, isWinner: null },
+          home: { teamId: 9001, score: null, isWinner: null },
+          seriesGameNumber: 1,
+        },
+        {
+          gamePk: 11,
+          date: '2026-10-02',
+          away: { teamId: 9001, score: null, isWinner: null },
+          home: { teamId: 9002, score: null, isWinner: null },
+          seriesGameNumber: 2,
+        },
+      ],
+    },
+  ],
+};
+
 describe('App season selector', () => {
   beforeEach(() => {
     mockedGetBracket.mockReset();
@@ -152,6 +192,28 @@ describe('App season selector', () => {
     // No bracket region / prediction panel for the empty state.
     expect(
       screen.queryByRole('region', { name: /postseason bracket/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the upcoming message for the real 2026 preview-game shape (games present, nothing decided)', async () => {
+    mockedGetBracket.mockResolvedValue({
+      bracket: bracket2026Preview,
+      usedFallback: false,
+    });
+    render(<App />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/2026 postseason has not started yet/i),
+      ).toBeInTheDocument(),
+    );
+    // Even though the series carries preview games, nothing is decided, so the
+    // bracket grid and prediction affordance must NOT render.
+    expect(
+      screen.queryByRole('region', { name: /postseason bracket/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /predict winner/i }),
     ).not.toBeInTheDocument();
   });
 });

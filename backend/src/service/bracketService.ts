@@ -78,6 +78,26 @@ function roundSlugOf(series: Series): string {
 }
 
 /**
+ * Whether a series has actually started: it is not `scheduled` and at least one
+ * game has been decided (a real winner) or a win has been recorded. The live
+ * MLB Stats API lists not-yet-played games as "Preview" entries with null
+ * scores and null winners, so a preview-only series has games but has decided
+ * nothing and is treated as not-yet-started. This agrees with the aggregator,
+ * which classifies such a series as `scheduled`.
+ */
+function hasStartedSeries(series: Series): boolean {
+  if (series.status === 'scheduled') {
+    return false;
+  }
+  if (series.high.wins > 0 || series.low.wins > 0) {
+    return true;
+  }
+  return series.games.some(
+    (game) => game.away.isWinner === true || game.home.isWinner === true,
+  );
+}
+
+/**
  * Resolves a series from the bracket, tolerating a high/low-seed ordering
  * disagreement across the seed/live boundary (ISSUE-1). An exact id match is
  * tried first; if it fails, the requested id is parsed and matched by round
@@ -145,6 +165,12 @@ export class BracketService {
       if (seed) {
         return seed;
       }
+      // No seed for this season: rethrow so the handler surfaces the failure
+      // (HTTP 500) rather than inventing data. Reachable seasons all have a
+      // seed - SELECTABLE_SEASONS is [2026, 2025, 2024] and getSeedBracket
+      // serves 2024 and 2025, with 2026 being live. A future results-only
+      // season (e.g. 2027) is NOT offered by the selector; if one is ever
+      // added it must ship a seed alongside it so this path still degrades.
       throw error;
     }
   }
@@ -181,7 +207,12 @@ export class BracketService {
 
     // Predictable season but the series is not yet resolvable (empty or
     // placeholder-only bracket) or has not started: no prediction available yet.
-    if (!series || series.status === 'scheduled') {
+    // A series has "not started" when it is scheduled OR has no decided game
+    // (the live MLB API lists not-yet-played games as "Preview" entries with
+    // null scores/winners). The aggregator already classifies a preview-only
+    // series as 'scheduled', and this guard double-checks the decided-game
+    // condition so a preview-only series is never predicted on placeholder ids.
+    if (!series || !hasStartedSeries(series)) {
       return {
         mode: 'upcoming',
         seriesId,

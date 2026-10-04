@@ -111,6 +111,83 @@ describe('aggregateBracket', () => {
     expect(series.high.wins).toBe(0);
   });
 
+  it('classifies a preview-only series (games present, nothing decided) as scheduled', () => {
+    // The real live MLB Stats API lists not-yet-played games as "Preview"
+    // entries with null scores and null winners. A series whose only games are
+    // previews has decided nothing and must be 'scheduled', NOT a live 0-0
+    // 'in_progress' card.
+    const games: RawGame[] = [
+      {
+        gamePk: 30,
+        gameDate: '2026-10-01T18:00:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 1,
+        gamesInSeries: 3,
+        status: { abstractGameState: 'Preview' },
+        teams: {
+          away: { team: { id: 9001, name: 'AL Higher Seed' }, score: null, isWinner: null },
+          home: { team: { id: 9002, name: 'AL Lower Seed' }, score: null, isWinner: null },
+        },
+      },
+      {
+        gamePk: 31,
+        gameDate: '2026-10-02T18:00:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 2,
+        gamesInSeries: 3,
+        status: { abstractGameState: 'Preview' },
+        teams: {
+          away: { team: { id: 9002, name: 'AL Lower Seed' }, score: null, isWinner: null },
+          home: { team: { id: 9001, name: 'AL Higher Seed' }, score: null, isWinner: null },
+        },
+      },
+    ];
+
+    const bracket = aggregateBracket(games, 2026);
+    expect(bracket.series).toHaveLength(1);
+    const series = bracket.series[0]!;
+    expect(series.games).toHaveLength(2); // games ARE present
+    expect(series.status).toBe('scheduled'); // but nothing is decided
+    expect(series.high.wins).toBe(0);
+    expect(series.low.wins).toBe(0);
+  });
+
+  it('marks a series with at least one decided game as in_progress', () => {
+    // A Final game mixed with a later Preview game: one decision recorded, so
+    // the series has genuinely started.
+    const games: RawGame[] = [
+      {
+        gamePk: 40,
+        gameDate: '2026-10-01T18:00:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 1,
+        gamesInSeries: 3,
+        status: { abstractGameState: 'Final' },
+        teams: {
+          away: { team: { id: 116, name: 'Detroit Tigers' }, score: 3, isWinner: true },
+          home: { team: { id: 117, name: 'Houston Astros' }, score: 1, isWinner: false },
+        },
+      },
+      {
+        gamePk: 41,
+        gameDate: '2026-10-02T18:00:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 2,
+        gamesInSeries: 3,
+        status: { abstractGameState: 'Preview' },
+        teams: {
+          away: { team: { id: 116, name: 'Detroit Tigers' }, score: null, isWinner: null },
+          home: { team: { id: 117, name: 'Houston Astros' }, score: null, isWinner: null },
+        },
+      },
+    ];
+
+    const bracket = aggregateBracket(games, 2026);
+    const series = bracket.series[0]!;
+    expect(series.status).toBe('in_progress');
+    expect(series.low.wins).toBe(1); // away team 116 is the low seed
+  });
+
   it('keeps separate series distinct and orders them by round progression', () => {
     const games: RawGame[] = [
       game({

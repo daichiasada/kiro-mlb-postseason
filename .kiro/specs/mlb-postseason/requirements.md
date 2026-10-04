@@ -41,10 +41,11 @@ current year.
    progression (Wild Card, Division Series, Championship Series, World Series).
 6. WHEN a user opens a series THEN the system SHALL show the game-by-game
    results for that series, for both results-only and current seasons.
-7. IF the current season (2026) has not started yet (every series is
-   `scheduled` with no games played, or the bracket is empty/placeholder-only)
-   THEN the system SHALL show an "has not started yet" message instead of a
-   broken bracket, and SHALL NOT error.
+7. IF the current season (2026) has not started yet (no series has a decided
+   game - the bracket is empty, placeholder-only, or every series is `scheduled`
+   including preview-only series that carry not-yet-played "Preview" games with
+   null scores/winners) THEN the system SHALL show an "has not started yet"
+   message instead of a broken bracket, and SHALL NOT error.
 8. IF the viewport is narrow THEN the bracket SHALL NOT overflow horizontally
    (regression fixed under ISSUE in the issue registry).
 

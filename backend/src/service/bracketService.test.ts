@@ -249,6 +249,131 @@ describe('BracketService.getPrediction (current predictable season)', () => {
   });
 });
 
+/**
+ * A real 2026-shaped schedule: every game is a "Preview" entry with null
+ * scores and null winners (nothing has been played yet). This is the shape the
+ * live MLB Stats API returns before the postseason starts. These games must
+ * aggregate to not-yet-started ('scheduled') series so the upcoming/empty path
+ * is reached, NOT a live 0-0 'in_progress' card.
+ */
+const previewOnly2026Games = [
+  {
+    gamePk: 10,
+    gameDate: '2026-10-01T18:00:00Z',
+    seriesDescription: 'AL Wild Card Series',
+    seriesGameNumber: 1,
+    gamesInSeries: 3,
+    status: { abstractGameState: 'Preview' },
+    teams: {
+      away: { team: { id: 9001, name: 'AL Higher Seed' }, score: null, isWinner: null },
+      home: { team: { id: 9002, name: 'AL Lower Seed' }, score: null, isWinner: null },
+    },
+  },
+  {
+    gamePk: 11,
+    gameDate: '2026-10-02T18:00:00Z',
+    seriesDescription: 'AL Wild Card Series',
+    seriesGameNumber: 2,
+    gamesInSeries: 3,
+    status: { abstractGameState: 'Preview' },
+    teams: {
+      away: { team: { id: 9002, name: 'AL Lower Seed' }, score: null, isWinner: null },
+      home: { team: { id: 9001, name: 'AL Higher Seed' }, score: null, isWinner: null },
+    },
+  },
+  {
+    gamePk: 12,
+    gameDate: '2026-10-20T18:00:00Z',
+    seriesDescription: 'World Series',
+    seriesGameNumber: 1,
+    gamesInSeries: 7,
+    status: { abstractGameState: 'Preview' },
+    teams: {
+      away: {
+        team: { id: 9003, name: 'Higher Seed League Champion' },
+        score: null,
+        isWinner: null,
+      },
+      home: {
+        team: { id: 9004, name: 'Lower Seed League Champion' },
+        score: null,
+        isWinner: null,
+      },
+    },
+  },
+];
+
+describe('BracketService preview-only 2026 schedule (real upcoming shape)', () => {
+  it('aggregates Preview games into not-yet-started (scheduled) series', async () => {
+    const store = memoryStore(undefined);
+    const fetchSchedule = vi.fn().mockResolvedValue(previewOnly2026Games);
+    const service = new BracketService({ store, fetchSchedule, bedrockInvoker: invoker });
+
+    const bracket = await service.getBracket(2026);
+
+    expect(bracket.series.length).toBeGreaterThan(0);
+    // A series whose only games are Previews has decided nothing: it must be
+    // 'scheduled', never a live 0-0 'in_progress' card.
+    for (const s of bracket.series) {
+      expect(s.status).toBe('scheduled');
+      expect(s.high.wins).toBe(0);
+      expect(s.low.wins).toBe(0);
+    }
+  });
+
+  it('returns mode:upcoming for a preview-only series (not a prediction)', async () => {
+    const store = memoryStore(undefined);
+    const fetchSchedule = vi.fn().mockResolvedValue(previewOnly2026Games);
+    const bedrockInvoke = vi.fn();
+    const service = new BracketService({
+      store,
+      fetchSchedule,
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    // Request the preview-only Wild Card series by its aggregated id.
+    const response = await service.getPrediction('2026-al-wildcard-9001-9002', 2026);
+
+    expect(response.mode).toBe('upcoming');
+    if (response.mode === 'upcoming') {
+      expect(response.season).toBe(2026);
+      expect(response.message).toBeTruthy();
+    }
+    // No prediction is produced on placeholder team ids.
+    expect(bedrockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('still predicts a genuinely in-progress series that has a decided game', async () => {
+    // One Final game decided (116 beat 117) → in_progress, predictable.
+    const store = memoryStore(undefined);
+    const fetchSchedule = vi.fn().mockResolvedValue([
+      {
+        gamePk: 20,
+        gameDate: '2026-10-01T18:00:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 1,
+        gamesInSeries: 3,
+        status: { abstractGameState: 'Final' },
+        teams: {
+          away: { team: { id: 116, name: 'Detroit Tigers' }, score: 3, isWinner: true },
+          home: { team: { id: 117, name: 'Houston Astros' }, score: 1, isWinner: false },
+        },
+      },
+    ]);
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule,
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    expect(response.mode).toBe('prediction');
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
+  });
+});
+
 describe('BracketService 2026 placeholder/mixed-game aggregation', () => {
   it('aggregates a 2026-like payload with placeholder/unknown teams and mixed game states without throwing', async () => {
     const store = memoryStore(undefined);

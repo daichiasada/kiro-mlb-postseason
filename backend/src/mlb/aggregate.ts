@@ -142,11 +142,23 @@ export function aggregateBracket(games: RawGame[], season: number): Bracket {
       else if (winnerId === acc.lowId) lowWins += 1;
     }
 
+    // A game counts as "decided" once it has a real winner. The live MLB Stats
+    // API lists not-yet-played games as "Preview" entries with null scores and
+    // null isWinner; a series whose only games are previews has decided nothing
+    // and must be treated as not-yet-started ('scheduled'), not 'in_progress'.
+    // Otherwise a preview-only 2026 series would render as a live 0-0 card and
+    // be treated as predictable, which is the opposite of the intended
+    // upcoming/empty behavior (see the upcoming guard in bracketService and
+    // hasStartedContent in the frontend App).
+    const decidedGames = acc.games.filter(
+      (g) => g.away.isWinner === true || g.home.isWinner === true,
+    ).length;
+
     const clinch = Math.ceil(acc.bestOf / 2);
     let status: SeriesStatus;
     if (highWins >= clinch || lowWins >= clinch) {
       status = 'final';
-    } else if (acc.games.length === 0) {
+    } else if (decidedGames === 0) {
       status = 'scheduled';
     } else {
       status = 'in_progress';
