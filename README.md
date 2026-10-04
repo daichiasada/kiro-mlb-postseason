@@ -1,5 +1,7 @@
 # MLB Postseason Summary Site
 
+**English** | [日本語](README.ja.md)
+
 A lightweight, serverless web app that gives a **graphical summary of the MLB postseason**
 plus an **AI-powered win/loss prediction** for any series. Built end to end in TypeScript
 and deployed to AWS with one command via AWS CDK.
@@ -7,7 +9,7 @@ and deployed to AWS with one command via AWS CDK.
 This project is a submission for the [Kiro University Challenge](https://kiro.dev/2026/university/)
 final exam.
 
-> **Judges:** see [DEMONSTRATED_LESSONS.md](./DEMONSTRATED_LESSONS.md) (実証された教訓)
+> **Judges:** see [DEMONSTRATED_LESSONS.md](./DEMONSTRATED_LESSONS.md)
 > for how each of the seven required lessons and the two bonuses is demonstrated,
 > with links to the relevant files.
 
@@ -38,28 +40,11 @@ No authentication. Public, read-only. Not a betting product.
 
 ## Architecture
 
-```
-                      ┌──────────────────────────────┐
-   Browser  ──────▶   │  CloudFront (HTTPS, SPA)      │
-                      │   └─ S3 (private, OAC)        │  static React/Vite bundle
-                      └──────────────┬───────────────┘
-                                     │  /config.js injects window.__API_BASE_URL__
-                                     ▼
-                      ┌──────────────────────────────┐
-   fetch /bracket ──▶ │  API Gateway (HTTP API, CORS)│
-   fetch /prediction  └──────┬───────────────┬───────┘
-                             ▼               ▼
-                  ┌───────────────┐  ┌────────────────────┐
-                  │ getBracket λ  │  │ getPrediction λ     │
-                  │ (Node 20)     │  │ (Node 20, Bedrock)  │
-                  └───┬───────────┘  └───┬────────────┬────┘
-                      │                  │            │
-                      ▼                  ▼            ▼
-             ┌─────────────────┐  ┌───────────┐  ┌──────────────────┐
-             │ DynamoDB cache  │  │ MLB Stats │  │ Amazon Bedrock    │
-             │ (pk, TTL ttl)   │  │ API       │  │ (Anthropic Claude)│
-             └─────────────────┘  └───────────┘  └──────────────────┘
-```
+![Architecture](docs/architecture.png)
+
+The editable diagram is [`docs/architecture.drawio`](docs/architecture.drawio) (open with
+draw.io / diagrams.net). A vector export [`docs/architecture.svg`](docs/architecture.svg)
+and a PNG (`docs/architecture.png`) are included.
 
 - **Frontend:** React + TypeScript (Vite), hosted on **S3** (private, Origin Access
   Control) and served through **CloudFront**.
