@@ -1,0 +1,42 @@
+{
+  "project_type": "npm workspaces monorepo (shared/, backend/, frontend/, infra/) for a serverless MLB postseason summary site: React+Vite SPA, API Gateway + Lambda (Node 20) backend, DynamoDB cache, Amazon Bedrock narrative, AWS CDK IaC. Strict TypeScript, ESM.",
+  "language": "TypeScript (ESM, strict)",
+  "build_system": "npm workspaces. Root `npm run build` builds in dependency order shared -> backend -> frontend -> infra. Node 22 local, Lambda targets Node 20.",
+  "test_framework": "Vitest for unit + fast-check property tests (backend/frontend/infra). Playwright for frontend e2e (headless chromium --no-sandbox).",
+  "build_command": "npm run build",
+  "test_command": "npm test",
+  "verification_instructions": "From repo root: `npm install` (already done), `npm run build` (ordered shared->backend->frontend->infra, must exit 0), `npm test` (vitest across workspaces, all pass), `npm run test:e2e -w frontend` (Playwright specs pass), `npm run synth` (cdk synth, no AWS calls, exits 0). Do NOT run cdk deploy. Do NOT make live Bedrock calls in tests.",
+  "snapshot_or_generated_files": "shared/src/seed/postseason-2024.json is a committed seed dataset. A new shared/src/seed/postseason-2025.json must be added (real aggregated 2025 results). dist/ folders are build output. No automated snapshot regeneration command; seed JSON is authored/generated once and committed.",
+  "setup_instructions": "npm install at repo root (already installed). Network is available this session (OPEN/COMMON) so statsapi.mlb.com fetches work for generating the 2025 seed.",
+  "environment_constraints": "AWS credentials active but do NOT run cdk deploy and do NOT run live Bedrock calls in tests. Network to statsapi.mlb.com IS available this session for generating seed data. /tmp does NOT persist across separate execute_bash calls (each runs in a fresh sandbox) - fetch+process in a single command.",
+  "contribution_requirements": "Steering (.kiro/steering/*.md, inclusion:always) governs: incremental commits per coherent change, spec-driven development (keep .kiro/specs/mlb-postseason/* truthful to implementation), three test layers all green (unit, fast-check property, Playwright e2e), add/update tests in the same change as the behavior. Stay on branch feat/mlb-postseason-site. Make incremental local commits. Do NOT push, open PRs, or touch GitHub (orchestrator owns publishing).",
+  "key_patterns": "DEFAULT_SEASON constant appears in TWO places: backend/src/handlers/http.ts (DEFAULT_SEASON=2024) and frontend/src/config.ts (DEFAULT_SEASON=2024). Series id format: `${season}-${league}-${roundSlug}-${highId}-${lowId}`. BracketService.getBracket resolution: cache -> live statsapi -> getSeedBracket fallback. getSeedBracket(season) currently returns seed only for 2024. aggregateBracket is a pure function; TEAMS map in shared/src/types.ts must be extended with 2025 teams (111 Boston Red Sox, 112 Chicago Cubs, 113 Cincinnati Reds, 136 Seattle Mariners, 141 Toronto Blue Jays). 2026 statsapi returns placeholder teams like 'AL Higher Seed'/'Higher Seed League Champion' for not-yet-determined future rounds, plus some real Final games - aggregation must not crash on teams absent from TEAMS (frontend teamName already falls back to `Team <id>`).",
+  "relevant_files": [
+    "backend/src/handlers/http.ts (DEFAULT_SEASON, parseSeason)",
+    "shared/src/seed/index.ts (getSeedBracket - add 2025)",
+    "shared/src/seed/postseason-2024.json (seed shape to mirror for 2025)",
+    "shared/src/types.ts (TEAMS map, Bracket/Series/Prediction types)",
+    "shared/src/index.ts (barrel exports)",
+    "frontend/src/App.tsx (hardcoded single season; add season selector + results-only UX)",
+    "frontend/src/config.ts (DEFAULT_SEASON=2024 -> make year-aware)",
+    "frontend/src/components/PredictionPanel.tsx (hide/disable for results-only seasons)",
+    "frontend/src/api.ts (getBracket seed fallback; getPrediction)",
+    "backend/src/service/bracketService.ts (getBracket/getPrediction resolution)",
+    "backend/src/mlb/aggregate.ts (pure aggregation; placeholder-team tolerance)",
+    "backend/src/mlb/client.ts (fetchPostseasonSchedule)",
+    "backend/src/predict/model.ts (deterministic predict)",
+    "backend/src/handlers/getPrediction.ts (prediction endpoint)",
+    "frontend/e2e/home.spec.ts, frontend/e2e/prediction.spec.ts, frontend/e2e/fixtures.ts",
+    ".kiro/specs/mlb-postseason/requirements.md, design.md, tasks.md",
+    ".kiro/steering/product.md",
+    "README.md"
+  ],
+  "directory_structure": "shared/ = @mlb/shared domain types + seed datasets. backend/ = @mlb/backend Lambda handlers (http.ts, getBracket.ts, getPrediction.ts), mlb/ (client+aggregate), predict/ (model), bedrock/ (narrative), service/ (bracketService), store/ (dynamo). frontend/ = @mlb/frontend React SPA (App.tsx, config.ts, api.ts, components/, assets/, e2e/). infra/ = @mlb/infra CDK stack. .kiro/specs + .kiro/steering = spec-driven dev artifacts.",
+  "data_decisions": {
+    "current_year": "App 'now' is 2026. Define a single CURRENT_YEAR / current-season constant (shared is the natural home so backend+frontend agree) rather than scattering 2026 literals. Default season = 2026.",
+    "season_2024": "RESULTS-ONLY. Existing real seed postseason-2024.json (final). Prediction feature hidden/disabled.",
+    "season_2025": "RESULTS-ONLY. Real completed postseason confirmed fetchable from statsapi (47 final games, Los Angeles Dodgers beat Toronto Blue Jays 4-3 in the World Series). Generate postseason-2025.json by aggregating real statsapi data (prefer real over fabricated). Prediction feature hidden/disabled.",
+    "season_2026": "PREDICTABLE (current/in-progress). Fetch latest from live statsapi. Observed snapshot: 13 Final games + 37 scheduled 'Preview' games with placeholder teams ('AL Higher Seed', 'Higher Seed League Champion'). Keep prediction feature working for in-progress series. Must gracefully handle an EMPTY/UPCOMING state (no in-progress/real series) without crashing.",
+    "results_vs_predictable": "Driven by season status / current-year logic, NOT per-series hardcoding. A season strictly before CURRENT_YEAR (2024, 2025) is results-only; the current year (2026) is predictable."
+  }
+}

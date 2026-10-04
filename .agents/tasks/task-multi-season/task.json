@@ -1,0 +1,7 @@
+{
+  "task_id": "task-multi-season",
+  "task_description": "Make the already-deployed MLB postseason site year-aware for a 'now' of 2026. Seasons 2024 and 2025 are results-only (show the completed bracket/final results; prediction feature hidden/disabled). Season 2026 fetches the latest live MLB Stats API data and keeps the prediction feature working, degrading gracefully to an empty/upcoming state when there are no in-progress series. Add a frontend season selector (2024/2025/2026). Add a real aggregated 2025 seed dataset and extend the TEAMS map. Drive results-only vs predictable from a single CURRENT_YEAR season-config in @mlb/shared, not scattered literals or per-series hacks. Update specs/README/steering to match. Keep unit + fast-check property + Playwright e2e + cdk synth all green. Work on branch feat/mlb-postseason-site with incremental commits; orchestrator owns push/PR/GitHub.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

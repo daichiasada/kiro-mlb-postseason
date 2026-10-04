@@ -80,7 +80,37 @@ function makeGame(
 }
 
 /**
- * Generates one series worth of games (a distinct team pair + description).
+ * The specification of one series: its description and an unordered team pair.
+ * {@link aggregateBracket} groups games by `(description + unordered pair)`, so
+ * this tuple is exactly a series' grouping key. Generating the whole bracket as
+ * a set of specs that are UNIQUE on this key guarantees distinct generated
+ * series never collide and get merged (which would sum their wins past the
+ * clinch count and break the `wins <= clinch` invariant).
+ */
+interface SeriesSpec {
+  description: string;
+  pair: readonly [number, number];
+}
+
+/** The grouping key aggregateBracket uses: description + unordered team pair. */
+function specKey({ description, pair }: SeriesSpec): string {
+  const [a, b] = [...pair].sort((x, y) => x - y);
+  return `${description}::${a}-${b}`;
+}
+
+/** Arbitrary for a single series spec (description + a distinct team pair). */
+function seriesSpecArb(): fc.Arbitrary<SeriesSpec> {
+  return fc.record({
+    description: fc.constantFrom(...SERIES_DESCRIPTIONS),
+    pair: fc
+      .uniqueArray(fc.constantFrom(...TEAM_IDS), { minLength: 2, maxLength: 2 })
+      .map(([a, b]) => [a!, b!] as const),
+  });
+}
+
+/**
+ * Generates one series worth of games from a fixed spec (its description and
+ * team pair are supplied so the caller can guarantee cross-series uniqueness).
  *
  * A real postseason series stops the moment one team reaches the clinch count
  * `ceil(bestOf / 2)`, so no team can ever win MORE than clinch games. To keep
@@ -89,19 +119,16 @@ function makeGame(
  * at clinch: at most one team may reach clinch, and the loser's wins stay in
  * `[0, clinch - 1]`. Games are then emitted with explicit winners.
  */
-function seriesGamesArb(): fc.Arbitrary<RawGame[]> {
+function seriesGamesArb(spec: SeriesSpec): fc.Arbitrary<RawGame[]> {
   return fc
     .record({
-      description: fc.constantFrom(...SERIES_DESCRIPTIONS),
       gamesInSeries: fc.constantFrom(3, 5, 7),
-      pair: fc
-        .uniqueArray(fc.constantFrom(...TEAM_IDS), { minLength: 2, maxLength: 2 })
-        .map(([a, b]) => [a!, b!] as const),
       clinched: fc.boolean(),
       basePk: fc.integer({ min: 1, max: 900_000 }),
     })
-    .chain(({ description, gamesInSeries, pair, clinched, basePk }) => {
-      const [awayId, homeId] = pair;
+    .chain(({ gamesInSeries, clinched, basePk }) => {
+      const { description } = spec;
+      const [awayId, homeId] = spec.pair;
       const clinch = Math.ceil(gamesInSeries / 2);
       // Away team is the home team of every generated game except game 1, where
       // we keep away/home as the pair so homeId is the game-1 high seed. We cap
@@ -144,9 +171,22 @@ describe('aggregateBracket (property-based)', () => {
   it('produces series whose win counts never exceed the clinch count and whose round/league/status are valid', () => {
     fc.assert(
       fc.property(
-        fc.array(seriesGamesArb(), { minLength: 1, maxLength: 4 }).map((nested) =>
-          nested.flat(),
-        ),
+        // Draw a set of series specs that are UNIQUE on their (description +
+        // unordered pair) grouping key, then expand each to its games and flat
+        // them. Because no two specs share a key, aggregateBracket can never
+        // merge two distinct generated series into one (which would sum wins
+        // past the clinch count).
+        fc
+          .uniqueArray(seriesSpecArb(), {
+            minLength: 1,
+            maxLength: 4,
+            selector: specKey,
+          })
+          .chain((specs) =>
+            fc
+              .tuple(...specs.map((spec) => seriesGamesArb(spec)))
+              .map((nested) => nested.flat()),
+          ),
         (games) => {
           const bracket = aggregateBracket(games, 2024);
           expect(bracket.season).toBe(2024);

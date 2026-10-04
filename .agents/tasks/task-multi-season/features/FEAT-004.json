@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-004",
+  "type": "docs",
+  "description": "Update the spec-driven-development artifacts and README to tell the truth about the new year-aware multi-season behavior: current year = 2026, 2024/2025 results-only (prediction hidden), 2026 predictable with graceful empty/upcoming handling, season selector, the 2025 real-data decision, and the results-only /prediction contract chosen in FEAT-002. Depends on FEAT-001..003 (document what was actually built).",
+  "status": "pending",
+  "steps": [
+    "Update .kiro/specs/mlb-postseason/requirements.md: revise Requirement 1 (default season is now the current year 2026, selectable among 2024/2025/2026) and Requirement 2 (prediction only for the current predictable season; past seasons are results-only). Add EARS acceptance criteria for: the season selector, results-only seasons hiding the prediction feature and the /prediction endpoint returning the defined results-only response, and the 2026 empty/upcoming graceful state. Add/extend Requirement 4 to state getSeedBracket now serves 2024 AND 2025 (2025 being real aggregated data). Keep EARS WHEN/THEN style.",
+    "Update .kiro/specs/mlb-postseason/design.md: document the single CURRENT_YEAR season-config source of truth in @mlb/shared and the season-status helper; the results-only vs predictable rule (season < CURRENT_YEAR = results-only, == CURRENT_YEAR = predictable); the exact results-only /prediction response contract implemented in FEAT-002 (status code + body shape); the 2026 placeholder-team tolerance in aggregateBracket and the empty/upcoming handling; and the frontend season selector + conditional prediction UI. Update the 'Seed fallback' section to cover 2024 and 2025.",
+    "Update .kiro/specs/mlb-postseason/tasks.md to reflect the multi-season work (add the implemented tasks / check them off per the file's existing convention).",
+    "Update README.md: Overview/features mention multiple seasons and the season selector; the 'MLB data strategy' section notes the seed fallback now covers 2024 and 2025 (2025 real aggregated results, Dodgers champions) and that 2026 is the live/current season with graceful upcoming handling; clarify the prediction feature is only offered for the current (in-progress) season. Remove or correct any now-stale 'currently the 2024 season' phrasing.",
+    "Update .kiro/steering/product.md where it says the dataset is 'currently the 2024 season' / 'currently the 2024 MLB postseason' so steering stays truthful (multi-season, current year 2026, past seasons results-only). Keep inclusion:always frontmatter."
+  ],
+  "acceptance_criteria": [
+    "requirements.md, design.md, and tasks.md describe the year-aware multi-season behavior, the results-only vs predictable rule, the results-only /prediction contract, and the 2025 real-data + 2026 upcoming decisions, matching the implementation.",
+    "README.md no longer claims the site is single-season 2024-only and documents the season selector, 2024/2025 results-only, 2026 live/predictable, and the seed coverage for 2024+2025.",
+    "steering/product.md is updated to remain truthful and keeps its inclusion:always frontmatter.",
+    "No stale references claiming prediction is available for past completed seasons."
+  ],
+  "verification": [
+    "Re-read the edited spec/README/steering files and confirm they match the code shipped in FEAT-001..003 (default 2026, results-only 2024/2025, predictable 2026, selector, 2025 real seed, documented /prediction results-only contract).",
+    "Run `npm run build`, `npm test`, and `npm run synth` once more to confirm nothing regressed and the template still synthesizes."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

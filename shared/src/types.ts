@@ -86,6 +86,44 @@ export interface Prediction {
 }
 
 /**
+ * Response returned by the /prediction endpoint for a completed, results-only
+ * season (any season before the current year). The frontend branches on `mode`
+ * to show final results instead of a prediction, without ever invoking the
+ * prediction model or Bedrock.
+ */
+export interface ResultsOnlyPrediction {
+  mode: 'results';
+  seriesId: string;
+  season: number;
+  message: string;
+}
+
+/**
+ * Response returned by the /prediction endpoint for the current, predictable
+ * season when the requested series is not yet started or otherwise not
+ * resolvable to a live/in-progress matchup (e.g. an empty or placeholder-only
+ * bracket). Lets the frontend show a graceful "no prediction yet" state rather
+ * than treating it as an error.
+ */
+export interface UpcomingPrediction {
+  mode: 'upcoming';
+  seriesId: string;
+  season: number;
+  message: string;
+}
+
+/**
+ * The full /prediction response contract. A successful numeric prediction is
+ * tagged with `mode: 'prediction'`; the other variants cover the results-only
+ * and upcoming cases. All three are returned with HTTP 200 so the frontend can
+ * branch on `mode`.
+ */
+export type PredictionResponse =
+  | (Prediction & { mode: 'prediction' })
+  | ResultsOnlyPrediction
+  | UpcomingPrediction;
+
+/**
  * Teams appearing in the 2024 and 2025 MLB postseasons, keyed by MLB Stats API
  * team id. Ids and names are sourced from
  * https://statsapi.mlb.com/api/v1/schedule/postseason.

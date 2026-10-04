@@ -3,6 +3,7 @@
  * CORS-enabled JSON responses and a season query parser.
  */
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import { CURRENT_YEAR } from '@mlb/shared';
 
 export const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -23,8 +24,12 @@ export function jsonResponse(
   };
 }
 
-/** Default season when none is supplied by the caller. */
-export const DEFAULT_SEASON = 2024;
+/**
+ * Default season when none is supplied by the caller. Derived from the shared
+ * {@link CURRENT_YEAR} so the app's notion of "now" lives in one place rather
+ * than being a scattered literal.
+ */
+export const DEFAULT_SEASON = CURRENT_YEAR;
 
 /**
  * Parses a season from a query string value. Returns a valid 4-digit year or

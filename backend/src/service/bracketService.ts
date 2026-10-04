@@ -5,7 +5,13 @@
  * All collaborators are injectable so the service can be unit-tested without a
  * network or AWS access.
  */
-import { getSeedBracket, type Bracket, type Prediction, type Series } from '@mlb/shared';
+import {
+  getSeedBracket,
+  isResultsOnly,
+  type Bracket,
+  type PredictionResponse,
+  type Series,
+} from '@mlb/shared';
 import { aggregateBracket } from '../mlb/aggregate.js';
 import { fetchPostseasonSchedule } from '../mlb/client.js';
 import { predict, type WinPctMap } from '../predict/model.js';
@@ -120,7 +126,8 @@ export class BracketService {
    * Returns the bracket for a season. Resolution order:
    *   1. DynamoDB cache (hit).
    *   2. Live MLB Stats API fetch + aggregate + cache.
-   *   3. On MLB failure, the bundled seed when season === 2024, else rethrow.
+   *   3. On MLB failure, the bundled seed when one exists for the season
+   *      (currently 2024 and 2025), else rethrow.
    */
   async getBracket(season: number): Promise<Bracket> {
     const cached = await this.store.getCachedBracket(season);
@@ -142,18 +149,52 @@ export class BracketService {
     }
   }
 
-  /** Loads the bracket, finds the series, predicts, and builds a narrative. */
-  async getPrediction(seriesId: string, season: number): Promise<Prediction> {
+  /**
+   * Resolves a series and returns a prediction response.
+   *
+   * The response is a discriminated union (see {@link PredictionResponse}):
+   *   - `mode: 'results'`  for a completed, results-only season (season <
+   *     CURRENT_YEAR). This short-circuits BEFORE loading the bracket, running
+   *     the prediction model, or invoking Bedrock - final results are shown
+   *     instead of a prediction.
+   *   - `mode: 'upcoming'` for the current, predictable season when the series
+   *     is not resolvable yet (empty/placeholder-only bracket) or has not
+   *     started (status 'scheduled'). This degrades gracefully instead of
+   *     erroring, so an empty 2026 bracket never produces a 500.
+   *   - `mode: 'prediction'` for a resolvable, started series in the current
+   *     season: the full numeric prediction with a Bedrock narrative.
+   */
+  async getPrediction(seriesId: string, season: number): Promise<PredictionResponse> {
+    // Results-only seasons short-circuit without touching the predict model or
+    // the Bedrock invoker.
+    if (isResultsOnly(season)) {
+      return {
+        mode: 'results',
+        seriesId,
+        season,
+        message: `The ${season} postseason is complete; final results are shown instead of a prediction.`,
+      };
+    }
+
     const bracket = await this.getBracket(season);
     const series = resolveSeries(bracket, seriesId);
-    if (!series) {
-      throw new SeriesNotFoundError(seriesId);
+
+    // Predictable season but the series is not yet resolvable (empty or
+    // placeholder-only bracket) or has not started: no prediction available yet.
+    if (!series || series.status === 'scheduled') {
+      return {
+        mode: 'upcoming',
+        seriesId,
+        season,
+        message: `No prediction is available yet for this ${season} series; it has not started.`,
+      };
     }
 
     const result = predict(series, bracket, this.winPct);
     const { narrative, model } = await generateNarrative(series, result, this.bedrockInvoker);
 
     return {
+      mode: 'prediction',
       seriesId,
       favoriteTeamId: result.favoriteTeamId,
       favoriteWinProbability: result.favoriteWinProbability,

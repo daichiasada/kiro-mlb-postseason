@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { getSeedBracket, type Bracket } from '@mlb/shared';
-import { BracketService, SeriesNotFoundError } from './bracketService.js';
+import { BracketService } from './bracketService.js';
 import type { BracketStore } from '../store/dynamo.js';
 import type { BedrockInvoker } from '../bedrock/narrative.js';
 
@@ -89,58 +89,238 @@ describe('BracketService.getBracket', () => {
   });
 });
 
-describe('BracketService.getPrediction', () => {
-  it('builds a Prediction for an existing series', async () => {
+/** An in-progress 2026 bracket with one resolvable, started series. */
+const current2026Bracket: Bracket = {
+  season: 2026,
+  updatedAt: '2026-10-01T00:00:00.000Z',
+  series: [
+    {
+      id: '2026-al-wildcard-117-116',
+      round: 'Wild Card',
+      league: 'AL',
+      high: { teamId: 117, wins: 0 },
+      low: { teamId: 116, wins: 2 },
+      bestOf: 3,
+      status: 'in_progress',
+      games: [],
+    },
+  ],
+};
+
+describe('BracketService.getPrediction (results-only seasons)', () => {
+  it('returns a results-only response for 2024 without calling predict or Bedrock', async () => {
     const store = memoryStore(sampleBracket);
-    const service = new BracketService({ store, fetchSchedule: vi.fn(), bedrockInvoker: invoker });
+    const fetchSchedule = vi.fn();
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule,
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
 
-    const prediction = await service.getPrediction('2024-al-wildcard-117-116', 2024);
+    const response = await service.getPrediction('2024-al-wildcard-117-116', 2024);
 
-    expect(prediction.seriesId).toBe('2024-al-wildcard-117-116');
-    expect(prediction.favoriteTeamId).toBe(116); // low seed led the series 2-0
-    expect(prediction.favoriteWinProbability).toBeGreaterThanOrEqual(0.5);
-    expect(prediction.favoriteWinProbability).toBeLessThanOrEqual(0.95);
-    expect(prediction.narrative).toBe('narrative text');
-    expect(prediction.model).toBeTruthy();
-    expect(prediction.generatedAt).toBeTruthy();
+    expect(response.mode).toBe('results');
+    expect(response.seriesId).toBe('2024-al-wildcard-117-116');
+    if (response.mode === 'results') {
+      expect(response.season).toBe(2024);
+      expect(response.message).toContain('2024');
+    }
+    // The results-only path must short-circuit entirely: no Bedrock invoke and
+    // no bracket load (the store is never consulted).
+    expect(bedrockInvoke).not.toHaveBeenCalled();
+    expect(store.getCachedBracket).not.toHaveBeenCalled();
+    expect(fetchSchedule).not.toHaveBeenCalled();
+  });
+
+  it('returns a results-only response for 2025 without calling Bedrock', async () => {
+    const store = memoryStore(undefined);
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2025-ws-worldseries-119-141', 2025);
+
+    expect(response.mode).toBe('results');
+    expect(bedrockInvoke).not.toHaveBeenCalled();
+  });
+});
+
+describe('BracketService.getPrediction (current predictable season)', () => {
+  it('builds a numeric Prediction for an in-progress series', async () => {
+    const store = memoryStore(current2026Bracket);
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    expect(response.mode).toBe('prediction');
+    if (response.mode === 'prediction') {
+      expect(response.seriesId).toBe('2026-al-wildcard-117-116');
+      expect(response.favoriteTeamId).toBe(116); // low seed led the series 2-0
+      expect(response.favoriteWinProbability).toBeGreaterThanOrEqual(0.5);
+      expect(response.favoriteWinProbability).toBeLessThanOrEqual(0.95);
+      expect(response.narrative).toBe('narrative text');
+      expect(response.model).toBeTruthy();
+      expect(response.generatedAt).toBeTruthy();
+    }
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
   });
 
   it('resolves a series whose high/low ids are swapped vs the stored bracket (ISSUE-1)', async () => {
-    // The stored series id is 2024-al-wildcard-117-116 (high 117, low 116).
-    // A client holding seed data may have derived the ids in the other order;
-    // the request below swaps high/low and must still resolve the same series
-    // via round + unordered team-pair matching rather than 404ing.
-    const store = memoryStore(sampleBracket);
+    // The stored series id is 2026-al-wildcard-117-116 (high 117, low 116). A
+    // client may have derived the ids in the other order; the swapped request
+    // must still resolve the same series via round + unordered team-pair match.
+    const store = memoryStore(current2026Bracket);
     const service = new BracketService({ store, fetchSchedule: vi.fn(), bedrockInvoker: invoker });
 
-    const prediction = await service.getPrediction('2024-al-wildcard-116-117', 2024);
+    const response = await service.getPrediction('2026-al-wildcard-116-117', 2026);
 
-    // The seriesId echoed back is the one requested, but it resolved the stored
-    // series (same favorite/probability as the exact-id lookup would produce).
-    expect(prediction.seriesId).toBe('2024-al-wildcard-116-117');
-    expect(prediction.favoriteTeamId).toBe(116);
-    expect(prediction.favoriteWinProbability).toBeGreaterThanOrEqual(0.5);
-    expect(prediction.favoriteWinProbability).toBeLessThanOrEqual(0.95);
-    expect(prediction.narrative).toBe('narrative text');
+    expect(response.mode).toBe('prediction');
+    if (response.mode === 'prediction') {
+      expect(response.seriesId).toBe('2026-al-wildcard-116-117');
+      expect(response.favoriteTeamId).toBe(116);
+      expect(response.favoriteWinProbability).toBeGreaterThanOrEqual(0.5);
+      expect(response.favoriteWinProbability).toBeLessThanOrEqual(0.95);
+      expect(response.narrative).toBe('narrative text');
+    }
   });
 
-  it('throws SeriesNotFoundError for an unknown series', async () => {
-    const store = memoryStore(sampleBracket);
-    const service = new BracketService({ store, fetchSchedule: vi.fn(), bedrockInvoker: invoker });
+  it('returns an upcoming response (not a 500) for an unresolvable series in an empty bracket', async () => {
+    const emptyBracket: Bracket = {
+      season: 2026,
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      series: [],
+    };
+    const store = memoryStore(emptyBracket);
+    const bedrockInvoke = vi.fn();
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
 
-    await expect(service.getPrediction('does-not-exist', 2024)).rejects.toBeInstanceOf(
-      SeriesNotFoundError,
-    );
+    const response = await service.getPrediction('2026-al-wildcard-999-998', 2026);
+
+    expect(response.mode).toBe('upcoming');
+    if (response.mode === 'upcoming') {
+      expect(response.season).toBe(2026);
+      expect(response.message).toBeTruthy();
+    }
+    expect(bedrockInvoke).not.toHaveBeenCalled();
   });
 
-  it('throws SeriesNotFoundError when the team pair does not match any series (ISSUE-1)', async () => {
-    // Well-formed id, correct round slug, but an unknown team pair must not
-    // resolve by accident - the fallback is pair-scoped, not round-wide.
-    const store = memoryStore(sampleBracket);
-    const service = new BracketService({ store, fetchSchedule: vi.fn(), bedrockInvoker: invoker });
+  it('returns an upcoming response for a resolvable but not-yet-started (scheduled) series', async () => {
+    const scheduledBracket: Bracket = {
+      season: 2026,
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      series: [
+        {
+          id: '2026-al-wildcard-117-116',
+          round: 'Wild Card',
+          league: 'AL',
+          high: { teamId: 117, wins: 0 },
+          low: { teamId: 116, wins: 0 },
+          bestOf: 3,
+          status: 'scheduled',
+          games: [],
+        },
+      ],
+    };
+    const store = memoryStore(scheduledBracket);
+    const bedrockInvoke = vi.fn();
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
 
-    await expect(
-      service.getPrediction('2024-al-wildcard-200-201', 2024),
-    ).rejects.toBeInstanceOf(SeriesNotFoundError);
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    expect(response.mode).toBe('upcoming');
+    expect(bedrockInvoke).not.toHaveBeenCalled();
+  });
+});
+
+describe('BracketService 2026 placeholder/mixed-game aggregation', () => {
+  it('aggregates a 2026-like payload with placeholder/unknown teams and mixed game states without throwing', async () => {
+    const store = memoryStore(undefined);
+    // A mix of a real Final Wild Card game (known team ids) and scheduled
+    // 'Preview' games whose teams are placeholders not present in TEAMS.
+    const fetchSchedule = vi.fn().mockResolvedValue([
+      {
+        gamePk: 1,
+        gameDate: '2026-10-01T18:00:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 1,
+        gamesInSeries: 3,
+        status: { abstractGameState: 'Final' },
+        teams: {
+          away: { team: { id: 116, name: 'Detroit Tigers' }, score: 3, isWinner: true },
+          home: { team: { id: 117, name: 'Houston Astros' }, score: 1, isWinner: false },
+        },
+      },
+      {
+        gamePk: 2,
+        gameDate: '2026-10-10T18:00:00Z',
+        seriesDescription: 'AL Championship Series',
+        seriesGameNumber: 1,
+        gamesInSeries: 7,
+        status: { abstractGameState: 'Preview' },
+        teams: {
+          away: { team: { id: 9001, name: 'AL Higher Seed' }, score: null, isWinner: null },
+          home: { team: { id: 9002, name: 'AL Lower Seed' }, score: null, isWinner: null },
+        },
+      },
+      {
+        gamePk: 3,
+        gameDate: '2026-10-20T18:00:00Z',
+        seriesDescription: 'World Series',
+        seriesGameNumber: 1,
+        gamesInSeries: 7,
+        status: { abstractGameState: 'Preview' },
+        teams: {
+          away: {
+            team: { id: 9003, name: 'Higher Seed League Champion' },
+            score: null,
+            isWinner: null,
+          },
+          home: {
+            team: { id: 9004, name: 'Lower Seed League Champion' },
+            score: null,
+            isWinner: null,
+          },
+        },
+      },
+    ]);
+    const service = new BracketService({ store, fetchSchedule, bedrockInvoker: invoker });
+
+    const bracket = await service.getBracket(2026);
+
+    expect(bracket.season).toBe(2026);
+    expect(bracket.series).toHaveLength(3);
+    // The real Final game (1-0 in a best-of-3) resolves to a Wild Card series
+    // with the known team ids and no clinch yet.
+    const wildCard = bracket.series.find((s) => s.round === 'Wild Card');
+    expect(wildCard?.high.teamId).toBe(117);
+    expect(wildCard?.status).toBe('in_progress');
+    // The placeholder-team series still aggregate (ids unknown to TEAMS is OK)
+    // without throwing, preserving their placeholder ids verbatim.
+    const allIds = bracket.series.flatMap((s) => [s.high.teamId, s.low.teamId]);
+    expect(allIds).toContain(9001);
+    expect(allIds).toContain(9003);
+    // No win count ever exceeds its clinch count.
+    for (const s of bracket.series) {
+      const clinch = Math.ceil(s.bestOf / 2);
+      expect(s.high.wins).toBeLessThanOrEqual(clinch);
+      expect(s.low.wins).toBeLessThanOrEqual(clinch);
+    }
   });
 });

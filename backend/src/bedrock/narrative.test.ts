@@ -65,8 +65,8 @@ describe('generateNarrative', () => {
     expect(result.narrative).toContain('Los Angeles Dodgers');
   });
 
-  it('defaults to the Anthropic Claude Haiku model id', () => {
-    expect(DEFAULT_MODEL_ID).toBe('anthropic.claude-3-haiku-20240307-v1:0');
+  it('defaults to the Anthropic Claude Haiku cross-region inference profile', () => {
+    expect(DEFAULT_MODEL_ID).toBe('us.anthropic.claude-haiku-4-5-20251001-v1:0');
   });
 });
 

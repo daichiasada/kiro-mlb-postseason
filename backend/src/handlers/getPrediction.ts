@@ -4,12 +4,18 @@
  *   GET  /prediction?seriesId=...&season=YYYY
  *   POST /prediction            body: { "seriesId": "...", "season"?: YYYY }
  *
- * Returns a {@link Prediction} with the favorite, a clamped win probability, a
- * natural-language narrative (Bedrock, with deterministic fallback), and the
- * model id. Responses carry CORS headers.
+ * Returns a {@link PredictionResponse} discriminated union with HTTP 200:
+ *   - `mode: 'prediction'` for a current-season, in-progress series: the
+ *     favorite, a clamped win probability, a natural-language narrative
+ *     (Bedrock, with deterministic fallback), and the model id.
+ *   - `mode: 'results'` for a completed, results-only season (< CURRENT_YEAR):
+ *     a documented message, with no predict/Bedrock call.
+ *   - `mode: 'upcoming'` for a current-season series that is not resolvable yet
+ *     or has not started.
+ * Responses carry CORS headers.
  */
 import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
-import { BracketService, SeriesNotFoundError } from '../service/bracketService.js';
+import { BracketService } from '../service/bracketService.js';
 import { jsonResponse, parseSeason } from './http.js';
 
 const service = new BracketService();
@@ -50,12 +56,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   }
 
   try {
+    // getPrediction returns a discriminated union (mode: 'prediction' |
+    // 'results' | 'upcoming'); all three are valid 200 responses the frontend
+    // branches on. Results-only seasons never reach the predict/Bedrock path.
     const prediction = await service.getPrediction(seriesId, season);
     return jsonResponse(200, prediction);
-  } catch (error) {
-    if (error instanceof SeriesNotFoundError) {
-      return jsonResponse(404, { message: error.message });
-    }
+  } catch {
     return jsonResponse(500, { message: 'Failed to generate the prediction.' });
   }
 };
