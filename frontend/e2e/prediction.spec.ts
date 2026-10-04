@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 import {
+  SAMPLE_2026_FINAL_SERIES_ID,
   SAMPLE_2026_SERIES_ID,
   SAMPLE_PREDICTION,
   stubBracket2026,
+  stubPredictionCapturingAccuracy,
   stubPredictionError,
   stubPredictionSuccess,
 } from './fixtures';
@@ -85,5 +87,72 @@ test.describe('prediction panel (2026 predictable season)', () => {
       path: 'test-results/prediction-error.png',
       fullPage: true,
     });
+  });
+
+  test('accuracy control: default request + a new request carrying the chosen accuracy updates the UI', async ({
+    page,
+  }) => {
+    await stubBracket2026(page);
+    const captured = await stubPredictionCapturingAccuracy(page);
+    await page.goto('/');
+
+    const wsCard = page.locator(`[data-series-id="${SAMPLE_2026_SERIES_ID}"]`);
+    await wsCard.locator('.series-card__predict').click();
+
+    const panel = page.getByRole('region', { name: /勝敗予測/ });
+    await expect(panel).toBeVisible();
+
+    // The initial request carries the default accuracy (0.5) and renders a
+    // probability of 0.5 + 0.4*0.5 = 0.70 -> 70.0%.
+    await expect(panel.getByText(/70\.0%/)).toBeVisible();
+    await expect.poll(() => captured[0]).toBe('0.5');
+
+    // The accessible, localized accuracy slider is present.
+    const slider = panel.locator('.prediction__accuracy-slider');
+    await expect(slider).toBeVisible();
+    await expect(slider).toHaveValue('0.5');
+
+    // Drag to maximum accuracy; a NEW /prediction request fires carrying the
+    // accuracy param and the displayed probability updates (0.5 + 0.4*1 = 0.90
+    // -> 90.0%).
+    await slider.fill('1');
+    await expect.poll(() => captured.at(-1)).toBe('1');
+    await expect(panel.getByText(/90\.0%/)).toBeVisible();
+
+    await page.screenshot({
+      path: 'test-results/prediction-accuracy.png',
+      fullPage: true,
+    });
+  });
+
+  test('final series: no predict button, surfaces the detail link instead, and no numeric prediction', async ({
+    page,
+  }) => {
+    await stubBracket2026(page);
+    // If any /prediction request were made for the final series it would be
+    // captured; we assert it is NOT.
+    const captured = await stubPredictionCapturingAccuracy(page);
+    await page.goto('/');
+
+    const finalCard = page.locator(
+      `[data-series-id="${SAMPLE_2026_FINAL_SERIES_ID}"]`,
+    );
+    await expect(finalCard).toBeVisible();
+
+    // The finished series exposes NO interactive predict button, even in the
+    // predictable 2026 season.
+    await expect(finalCard.locator('.series-card__predict')).toHaveCount(0);
+    // It surfaces the detail-page link instead.
+    const detailLink = finalCard.locator('.series-card__detail-link');
+    await expect(detailLink).toBeVisible();
+
+    // Clicking the link navigates to the detail page (no numeric prediction).
+    await detailLink.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/season/2026/series/${SAMPLE_2026_FINAL_SERIES_ID}$`),
+    );
+    await expect(page.getByRole('progressbar')).toHaveCount(0);
+    // No prediction request was ever issued for the final series.
+    expect(captured).toHaveLength(0);
   });
 });

@@ -50,3 +50,15 @@ export const DEFAULT_SEASON = CURRENT_YEAR;
 
 /** Seasons offered in the UI selector (newest-first), re-exported from shared. */
 export { SELECTABLE_SEASONS };
+
+/**
+ * The model-accuracy control bounds and default, mirroring the backend's
+ * MIN_ACCURACY / MAX_ACCURACY / DEFAULT_ACCURACY (backend/src/predict/model.ts).
+ * The default is deliberately 0.5 so the initial UI behavior is unchanged (the
+ * backend's default accuracy is also 0.5, an identity transform). The slider
+ * steps in 0.05 increments across [0, 1].
+ */
+export const MIN_ACCURACY = 0;
+export const MAX_ACCURACY = 1;
+export const DEFAULT_ACCURACY = 0.5;
+export const ACCURACY_STEP = 0.05;

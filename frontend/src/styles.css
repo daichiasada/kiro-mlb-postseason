@@ -697,6 +697,57 @@ body {
   color: var(--muted);
 }
 
+/* Model-accuracy control */
+.prediction__accuracy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 0.9rem;
+  padding: 0.6rem 0.7rem;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.prediction__accuracy-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.prediction__accuracy-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.prediction__accuracy-value {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy);
+}
+
+.prediction__accuracy-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--navy);
+}
+
+.prediction__accuracy-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.prediction__accuracy-help {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
 /* Responsive */
 
 /* Tablet / small laptop: stack the aside under the bracket and let the

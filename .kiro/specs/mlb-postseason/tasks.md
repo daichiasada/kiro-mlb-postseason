@@ -149,3 +149,80 @@ not change the mapping of those sections.
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`,
         `.kiro/steering/product.md`.
 - _Requirements: 1, 2, 4, 5_
+
+## UX, i18n, and configurable accuracy (task-ux-i18n-accuracy)
+
+A follow-up task set under `.agents/tasks/task-ux-i18n-accuracy/` (features
+FEAT-001 through FEAT-005) implements six UX/behavior requirements on top of the
+year-aware app: a layout-alignment fix, a collapsed-by-default game-detail
+toggle, a finished-series detail page via client-side routing, finished-series
+prediction turned OFF at the series level (backend + frontend), a JA/EN language
+switch, and a configurable prediction-accuracy parameter.
+
+### U1. Verify green baseline (task-ux-i18n-accuracy FEAT-001)
+
+- [x] Confirm build/test/e2e/synth are green before starting the feature work.
+- _Requirements: 6, 7, 8, 9, 10, 11 (baseline)_
+
+### U2. Configurable accuracy + series-level final gating, backend (task-ux-i18n-accuracy FEAT-002)
+
+- [x] Add the `accuracy` sharpness control to the pure model (4th positional
+      arg, range `[0, 1]`, default `0.5`, `f = 2 * accuracy` sharpening), with
+      invariants holding for all accuracy values.
+      - `backend/src/predict/model.ts`, `backend/src/predict/model.test.ts`,
+        `backend/src/predict/model.property.test.ts`.
+- [x] Series-level finished-series gating in `getPrediction` (final series ->
+      `mode: 'results'`, no predict/Bedrock, even in the current season) and
+      thread `accuracy` through handler -> service -> `predict()`; parse
+      `accuracy` from GET query and POST body (never a `400`).
+      - `backend/src/service/bracketService.ts`,
+        `backend/src/service/bracketService.test.ts`,
+        `backend/src/handlers/getPrediction.ts`, `backend/src/handlers/http.ts`,
+        `backend/src/handlers/getPrediction.test.ts`.
+- _Requirements: 9, 11_
+
+### U3. Routing, detail page, collapsible toggle, layout fix (task-ux-i18n-accuracy FEAT-003)
+
+- [x] Path-based client-side routing (`react-router-dom` v6 `BrowserRouter`),
+      compatible with the CloudFront `/index.html` rewrite; route table in
+      `App.tsx`; season from the route param.
+      - `frontend/src/main.tsx`, `frontend/src/App.tsx`,
+        `frontend/src/pages/HomePage.tsx`, `frontend/src/seasonRoute.ts`.
+- [x] Finished-series detail page + friendly not-found; collapsed-by-default
+      game-detail toggle; bracket layout-alignment fix.
+      - `frontend/src/pages/SeriesDetailPage.tsx`,
+        `frontend/src/components/SeriesCard.tsx`,
+        `frontend/src/components/BracketView.tsx`, `frontend/src/styles.css`,
+        `frontend/e2e/detail.spec.ts`, `frontend/e2e/fixtures.ts`.
+- _Requirements: 6, 7, 8, 9_
+
+### U4. JA/EN i18n (task-ux-i18n-accuracy FEAT-004)
+
+- [x] Lightweight in-repo i18n context (no new dependency): flat dotted-key
+      dictionary, `useI18n()` + `t()`, round/status/team helpers, default `ja`,
+      `localStorage` persistence, localized unknown-team fallback.
+      - `frontend/src/i18n/messages.ts`, `frontend/src/i18n/index.ts`,
+        `frontend/src/components/LanguageToggle.tsx`,
+        `frontend/src/i18n/index.test.ts`,
+        `frontend/src/components/LanguageToggle.test.tsx`,
+        `frontend/e2e/i18n.spec.ts`.
+- [x] Localize all existing UI strings across the components.
+- _Requirements: 10_
+
+### U5. Accuracy control UI + final-series prediction-OFF UI + spec/README (task-ux-i18n-accuracy FEAT-005)
+
+- [x] Accessible, localized accuracy slider in the prediction panel (default
+      `0.5`, step `0.05`), debounced re-request appending `&accuracy=`; threads
+      accuracy through `api.ts`.
+      - `frontend/src/components/PredictionPanel.tsx`, `frontend/src/api.ts`,
+        `frontend/src/config.ts`, `frontend/src/i18n/messages.ts`,
+        `frontend/src/components/PredictionPanel.test.tsx`.
+- [x] Finished-series prediction-OFF UI consistency (no predict button, detail
+      link instead, never a numeric prediction) with e2e coverage; accuracy e2e
+      capturing the query param.
+      - `frontend/e2e/prediction.spec.ts`, `frontend/e2e/fixtures.ts`.
+- [x] Keep the spec-driven-dev artifacts and README truthful.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`.
+- _Requirements: 6, 7, 8, 9, 10, 11_

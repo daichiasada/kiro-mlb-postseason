@@ -62,6 +62,11 @@ export type MessageKey =
   | 'prediction.winProbability'
   | 'prediction.over'
   | 'prediction.model'
+  | 'prediction.accuracy.label'
+  | 'prediction.accuracy.help'
+  | 'prediction.accuracy.value'
+  | 'prediction.accuracy.conservative'
+  | 'prediction.accuracy.aggressive'
   | 'detail.breadcrumb'
   | 'detail.back'
   | 'detail.return'
@@ -136,6 +141,12 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.winProbability': 'Win probability',
     'prediction.over': 'over {team}',
     'prediction.model': 'Model: {model}',
+    'prediction.accuracy.label': 'Model accuracy',
+    'prediction.accuracy.help':
+      'Higher accuracy sharpens the prediction toward the favorite (more confident); lower accuracy softens it toward a coin flip. The probability always stays between 50% and 95%.',
+    'prediction.accuracy.value': 'Accuracy: {value}',
+    'prediction.accuracy.conservative': 'Conservative',
+    'prediction.accuracy.aggressive': 'Confident',
     'detail.breadcrumb': 'Breadcrumb',
     'detail.back': '← Back to the {season} bracket',
     'detail.return': 'Return to the {season} bracket',
@@ -212,6 +223,12 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.winProbability': '勝利確率',
     'prediction.over': '対 {team}',
     'prediction.model': 'モデル: {model}',
+    'prediction.accuracy.label': 'モデル精度',
+    'prediction.accuracy.help':
+      '精度を上げると予測は優勢チーム寄りに鋭くなり（より自信を持った予測）、下げると五分五分に近づきます。確率は常に50%〜95%の範囲に収まります。',
+    'prediction.accuracy.value': '精度: {value}',
+    'prediction.accuracy.conservative': '控えめ',
+    'prediction.accuracy.aggressive': '強気',
     'detail.breadcrumb': 'パンくずリスト',
     'detail.back': '← {season}年のトーナメント表に戻る',
     'detail.return': '{season}年のトーナメント表に戻る',

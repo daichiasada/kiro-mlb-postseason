@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import type { PredictionResponse } from '@mlb/shared';
 import { PredictionPanel } from './PredictionPanel';
@@ -55,9 +55,44 @@ describe('PredictionPanel', () => {
 
     const bar = screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuenow', '73');
+    // The panel threads the default model accuracy (0.5) through the request.
     expect(mockedGetPrediction).toHaveBeenCalledWith(
       '2024-ws-worldseries-119-147',
       2024,
+      0.5,
+    );
+  });
+
+  it('re-requests the prediction with the chosen accuracy when the slider changes', async () => {
+    mockedGetPrediction.mockResolvedValue(prediction);
+    const { container } = renderWithI18n(
+      <PredictionPanel series={worldSeries} season={2024} />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('Los Angeles Dodgers')).toBeInTheDocument(),
+    );
+    // Initial request used the default accuracy (0.5).
+    expect(mockedGetPrediction).toHaveBeenNthCalledWith(
+      1,
+      worldSeries.id,
+      2024,
+      0.5,
+    );
+
+    const slider = container.querySelector(
+      '.prediction__accuracy-slider',
+    ) as HTMLInputElement;
+    expect(slider).not.toBeNull();
+
+    // Dragging to a higher accuracy issues a new request carrying it (debounced).
+    fireEvent.change(slider, { target: { value: '0.9' } });
+    await waitFor(() =>
+      expect(mockedGetPrediction).toHaveBeenLastCalledWith(
+        worldSeries.id,
+        2024,
+        0.9,
+      ),
     );
   });
 

@@ -111,6 +111,61 @@ offered for its in-progress series; `/prediction` returns `mode: 'prediction'` f
 started series or `mode: 'upcoming'` when a series has not started yet. All variants are
 returned with HTTP 200 and the frontend branches on `mode`.
 
+### Finished series: prediction turned OFF
+
+Even within the current, predictable season, a series that has already finished
+(`status === 'final'`) shows its **final result, never a speculative prediction**. This is
+enforced on both tiers:
+
+- **Backend:** `/prediction` resolves the series and, if it is `final`, returns
+  `mode: 'results'` **without** running the prediction model or invoking Bedrock.
+- **Frontend:** a finished series card does **not** render the "Predict winner" button and
+  surfaces a **"View series detail"** link instead, so no numeric win probability is ever
+  shown for a completed series.
+
+### Configurable prediction accuracy
+
+The prediction panel exposes a labeled **accuracy** slider that tunes how confident the
+model is. `accuracy` is a sharpness control in the range **`[0, 1]`** with a **default of
+`0.5`**:
+
+- `0.5` (default) is an **identity** transform — the historical model behavior, unchanged.
+- **Higher** accuracy (> 0.5) sharpens the pick toward the favorite (more confident, up
+  toward `0.95`).
+- **Lower** accuracy (< 0.5) softens it toward a coin flip (`0` collapses the favorite to
+  exactly `0.5`).
+
+The win probability **always stays within `[0.5, 0.95]`** for any accuracy value (an
+invariant covered by property tests). The control is threaded end to end: the slider
+appends an **`&accuracy=<value>`** query parameter to `GET /prediction` (also accepted in
+the `POST /prediction` body), e.g.
+`GET /prediction?seriesId=...&season=2026&accuracy=0.8`. A missing or invalid `accuracy`
+falls back to the default and never causes a `400`. Dragging the slider debounces and
+re-requests the prediction, updating the favorite, probability, and narrative live.
+
+### Japanese / English language switch
+
+The UI ships a **JA/EN language toggle** in the header. **Japanese is the default**; the
+choice is persisted to `localStorage` (key `mlb.lang`) and restored on reload. All
+user-facing strings are localized (title/subtitle, season label, statuses, round names,
+legend, standings, the prediction panel including the accuracy control, the game-detail
+toggle, and the detail page). Unknown/preview team ids (not in the `TEAMS` map) render a
+localized placeholder — EN `TBD (#<id>)`, JA `未定 (#<id>)` — rather than a raw
+`Team <id>`.
+
+### Game-detail toggle and the finished-series detail page
+
+- **Collapsed-by-default game detail.** Each series card hides its game-by-game list
+  behind a per-series **Show games / Hide games** toggle that starts collapsed. This keeps
+  the bracket compact and is the primary fix for the previously uneven ("gatagata") card
+  heights and column alignment.
+- **Finished-series detail page + client-side routing.** The SPA uses path-based
+  (history) client-side routing (`react-router-dom`). A finished series links to a
+  dedicated detail page at `/season/:season/series/:seriesId` showing the full
+  game-by-game result; an unknown id shows a friendly "Series not found" page. Path-based
+  deep links work in production because CloudFront rewrites `403`/`404` responses to
+  `/index.html` (HTTP 200), so the SPA shell loads and renders the requested route.
+
 ## Amazon Bedrock usage
 
 The win probability is computed by a transparent heuristic in `backend/src/predict/`

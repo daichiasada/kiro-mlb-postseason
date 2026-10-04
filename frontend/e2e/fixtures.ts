@@ -136,3 +136,39 @@ export async function stubPredictionError(
     });
   });
 }
+
+/**
+ * Routes `**\/prediction*`, recording every requested `accuracy` query param
+ * (in order) and echoing it back in the response so the UI can be asserted to
+ * update per accuracy. The returned array is mutated as requests arrive, so a
+ * test can poll it after changing the accuracy control.
+ *
+ * The echoed probability is a deterministic function of accuracy clamped to
+ * [0.5, 0.95]: p = 0.5 + 0.4 * accuracy (so the displayed percentage visibly
+ * changes with the slider), matching the backend's "higher accuracy => higher
+ * favorite probability" semantics.
+ */
+export async function stubPredictionCapturingAccuracy(
+  page: Page,
+): Promise<string[]> {
+  const captured: string[] = [];
+  await page.route('**/prediction*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const accuracyParam = url.searchParams.get('accuracy');
+    captured.push(accuracyParam ?? '');
+    const accuracy = accuracyParam === null ? 0.5 : Number(accuracyParam);
+    const safe = Number.isFinite(accuracy)
+      ? Math.min(1, Math.max(0, accuracy))
+      : 0.5;
+    const probability = Math.min(0.95, Math.max(0.5, 0.5 + 0.4 * safe));
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...SAMPLE_PREDICTION,
+        favoriteWinProbability: Number(probability.toFixed(4)),
+      }),
+    });
+  });
+  return captured;
+}

@@ -68,11 +68,21 @@ export async function getBracket(season: number): Promise<BracketResult> {
  * carry a message the UI shows instead. All three are HTTP 200; the UI branches
  * on `mode`. Throws an {@link ApiError} the UI can display on transport/HTTP
  * failures (no silent fallback).
+ *
+ * The optional `accuracy` is the model sharpness control in the range [0, 1]
+ * (default 0.5 on the backend). When provided it is appended as the
+ * `&accuracy=` query param so the backend's `predict()` can sharpen or soften
+ * the favorite's probability. The probability always stays within [0.5, 0.95]
+ * regardless of accuracy.
  */
 export async function getPrediction(
   seriesId: string,
   season: number,
+  accuracy?: number,
 ): Promise<PredictionResponse> {
-  const query = `?seriesId=${encodeURIComponent(seriesId)}&season=${season}`;
+  let query = `?seriesId=${encodeURIComponent(seriesId)}&season=${season}`;
+  if (accuracy !== undefined) {
+    query += `&accuracy=${encodeURIComponent(accuracy)}`;
+  }
   return requestJson<PredictionResponse>(`/prediction${query}`);
 }
