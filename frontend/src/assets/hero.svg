@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="Baseball diamond at dusk">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b2748" />
+      <stop offset="1" stop-color="#1b3a6b" />
+    </linearGradient>
+    <linearGradient id="turf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f7d32" />
+      <stop offset="1" stop-color="#1f5a22" />
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" fill="url(#sky)" />
+  <circle cx="268" cy="40" r="20" fill="#f5e9c8" opacity="0.9" />
+  <path d="M0 120 Q160 70 320 120 L320 180 L0 180 Z" fill="url(#turf)" />
+  <!-- infield diamond -->
+  <g transform="translate(160 134)">
+    <polygon points="0,-34 34,0 0,34 -34,0" fill="#c08a4e" stroke="#e8d2a6" stroke-width="2" />
+    <polygon points="0,-18 18,0 0,18 -18,0" fill="#2f7d32" />
+    <rect x="-3" y="30" width="6" height="6" fill="#ffffff" transform="rotate(45 0 33)" />
+    <rect x="31" y="-3" width="6" height="6" fill="#ffffff" transform="rotate(45 34 0)" />
+    <rect x="-37" y="-3" width="6" height="6" fill="#ffffff" transform="rotate(45 -34 0)" />
+    <rect x="-3" y="-37" width="6" height="6" fill="#ffffff" transform="rotate(45 0 -34)" />
+    <circle cx="0" cy="0" r="4" fill="#d9c08f" />
+  </g>
+  <!-- baseball -->
+  <g transform="translate(54 46)">
+    <circle r="22" fill="#ffffff" stroke="#d8d8d8" stroke-width="1" />
+    <path d="M-14 -14 Q-4 0 -14 14" fill="none" stroke="#c8102e" stroke-width="2" />
+    <path d="M14 -14 Q4 0 14 14" fill="none" stroke="#c8102e" stroke-width="2" />
+  </g>
+</svg>
