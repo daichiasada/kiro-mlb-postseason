@@ -1,6 +1,7 @@
 import { TEAMS } from '@mlb/shared';
-import type { Bracket, League } from '@mlb/shared';
+import type { Bracket, League, RoundName } from '@mlb/shared';
 import { ROUND_ORDER, clinchWins } from '../bracketLayout';
+import { roundName, teamName, useI18n, type TFn } from '../i18n';
 import { TeamBadge } from './TeamBadge';
 
 interface StandingsPanelProps {
@@ -9,7 +10,7 @@ interface StandingsPanelProps {
 
 interface TeamProgress {
   teamId: number;
-  furthestRound: string;
+  furthestRound: RoundName;
   eliminated: boolean;
   isChampion: boolean;
 }
@@ -61,23 +62,25 @@ export function computeStandings(bracket: Bracket): Record<League, TeamProgress[
   return grouped;
 }
 
-function statusLabel(entry: TeamProgress): string {
-  if (entry.isChampion) return 'Champion';
-  if (entry.eliminated) return `Out (${entry.furthestRound})`;
-  return `Active (${entry.furthestRound})`;
+function progressLabel(t: TFn, entry: TeamProgress): string {
+  const round = roundName(t, entry.furthestRound);
+  if (entry.isChampion) return t('standings.champion');
+  if (entry.eliminated) return t('standings.out', { round });
+  return t('standings.active', { round });
 }
 
 export function StandingsPanel({ bracket }: StandingsPanelProps) {
+  const { t } = useI18n();
   const standings = computeStandings(bracket);
 
   return (
-    <section className="standings" aria-label="Postseason standings">
-      <h2 className="standings__title">Standings</h2>
+    <section className="standings" aria-label={t('standings.region')}>
+      <h2 className="standings__title">{t('standings.title')}</h2>
       <div className="standings__leagues">
         {(['AL', 'NL'] as League[]).map((league) => (
           <div key={league} className="standings__league">
             <h3 className="standings__league-title">
-              {league === 'AL' ? 'American League' : 'National League'}
+              {league === 'AL' ? t('standings.al') : t('standings.nl')}
             </h3>
             <ul className="standings__list">
               {standings[league].map((entry) => (
@@ -88,8 +91,12 @@ export function StandingsPanel({ bracket }: StandingsPanelProps) {
                   data-champion={entry.isChampion || undefined}
                 >
                   <TeamBadge teamId={entry.teamId} size={28} />
-                  <span className="standings__team">{TEAMS[entry.teamId]?.name}</span>
-                  <span className="standings__progress">{statusLabel(entry)}</span>
+                  <span className="standings__team">
+                    {teamName(t, entry.teamId)}
+                  </span>
+                  <span className="standings__progress">
+                    {progressLabel(t, entry)}
+                  </span>
                 </li>
               ))}
             </ul>

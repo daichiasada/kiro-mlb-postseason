@@ -67,6 +67,37 @@ body {
   border-radius: 12px;
 }
 
+/* Language (JA/EN) toggle in the header */
+.app__lang {
+  display: inline-flex;
+  gap: 0.25rem;
+  z-index: 1;
+  padding: 0.2rem;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+.app__lang-button {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  background: transparent;
+  color: #c4d2e8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.app__lang-button:hover {
+  color: #fff;
+}
+
+.app__lang-button--active {
+  background: #fff;
+  border-color: #fff;
+  color: var(--navy);
+}
+
 .app__status {
   padding: 1rem;
   text-align: center;

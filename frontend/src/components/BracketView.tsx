@@ -1,5 +1,6 @@
 import type { Bracket } from '@mlb/shared';
 import { buildRoundColumns } from '../bracketLayout';
+import { roundName, useI18n } from '../i18n';
 import { SeriesCard } from './SeriesCard';
 import alMark from '../assets/al.svg';
 import nlMark from '../assets/nl.svg';
@@ -22,26 +23,30 @@ export function BracketView({
   onSelectSeries,
   predictable = true,
 }: BracketViewProps) {
+  const { t } = useI18n();
   const columns = buildRoundColumns(bracket);
+  const alLabel = t('bracket.legend.al');
+  const wsLabel = t('bracket.legend.ws');
+  const nlLabel = t('bracket.legend.nl');
 
   return (
-    <section className="bracket" aria-label="Postseason bracket">
+    <section className="bracket" aria-label={t('bracket.region')}>
       <div className="bracket__legend">
         <span className="bracket__legend-item">
-          <img src={alMark} alt="American League" width={22} height={22} /> American League
+          <img src={alMark} alt={alLabel} width={22} height={22} /> {alLabel}
         </span>
         <span className="bracket__legend-item">
-          <img src={wsMark} alt="World Series" width={22} height={22} /> World Series
+          <img src={wsMark} alt={wsLabel} width={22} height={22} /> {wsLabel}
         </span>
         <span className="bracket__legend-item">
-          <img src={nlMark} alt="National League" width={22} height={22} /> National League
+          <img src={nlMark} alt={nlLabel} width={22} height={22} /> {nlLabel}
         </span>
       </div>
 
       <div className="bracket__grid" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
         {columns.map((column) => (
           <div key={column.round} className="bracket__column">
-            <h3 className="bracket__round-title">{column.round}</h3>
+            <h3 className="bracket__round-title">{roundName(t, column.round)}</h3>
             <div className="bracket__series-list">
               {column.series.map((series) => (
                 <SeriesCard

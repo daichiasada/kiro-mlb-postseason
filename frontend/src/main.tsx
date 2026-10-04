@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
+import { I18nProvider } from './i18n';
 import './styles.css';
 
 const container = document.getElementById('root');
@@ -18,7 +19,14 @@ createRoot(container).render(
       /season/2024/series/<id> resolve to the SPA after deploy.
     */}
     <BrowserRouter>
-      <App />
+      {/*
+        The i18n context lives inside the router so route components can both
+        read params and translate. It hydrates the language from localStorage
+        (default 'ja') and persists changes made via the header toggle.
+      */}
+      <I18nProvider>
+        <App />
+      </I18nProvider>
     </BrowserRouter>
   </StrictMode>,
 );

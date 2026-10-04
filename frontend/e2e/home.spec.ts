@@ -43,7 +43,7 @@ test.describe('home / bracket', () => {
   }) => {
     await page.goto('/');
 
-    const group = page.getByRole('group', { name: /season/i });
+    const group = page.getByTestId('season-group');
     await expect(group.getByRole('button', { name: '2024' })).toBeVisible();
     await expect(group.getByRole('button', { name: '2025' })).toBeVisible();
     const current = group.getByRole('button', { name: '2026' });
@@ -56,44 +56,46 @@ test.describe('home / bracket', () => {
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+    await page.getByTestId('season-group').getByRole('button', {
       name: '2024',
     }).click();
 
-    await expect(page.getByText(/bundled offline data/i)).toBeVisible();
+    // Offline notice text is localized (default language is Japanese).
+    await expect(page.getByText(/オフラインの収録データ/)).toBeVisible();
   });
 
   test('renders all four rounds and AL/NL/WS lanes for 2024', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+    await page.getByTestId('season-group').getByRole('button', {
       name: '2024',
     }).click();
 
-    const bracket = page.getByRole('region', { name: /postseason bracket/i });
+    const bracket = page.getByRole('region', { name: /トーナメント表/ });
     await expect(bracket).toBeVisible();
 
+    // Round headings are localized; the default UI language is Japanese.
     for (const round of [
-      'Wild Card',
-      'Division Series',
-      'Championship Series',
-      'World Series',
+      'ワイルドカード',
+      '地区シリーズ',
+      'リーグ優勝決定シリーズ',
+      'ワールドシリーズ',
     ]) {
       await expect(
         bracket.getByRole('heading', { name: round, exact: true }).first(),
       ).toBeVisible();
     }
 
-    // League legend covers AL, NL and WS lanes.
-    await expect(page.getByRole('img', { name: 'American League' })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'National League' })).toBeVisible();
-    await expect(page.getByRole('img', { name: 'World Series' })).toBeVisible();
+    // League legend covers AL, NL and WS lanes (localized alt text).
+    await expect(page.getByRole('img', { name: 'アメリカンリーグ' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'ナショナルリーグ' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'ワールドシリーズ' })).toBeVisible();
   });
 
   test('2024 is results-only: WS card shows Dodgers over Yankees 4-1 and no Predict button', async ({
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+    await page.getByTestId('season-group').getByRole('button', {
       name: '2024',
     }).click();
 
@@ -108,14 +110,15 @@ test.describe('home / bracket', () => {
     await expect(wsCard.locator('.series-card__meta')).toContainText('1');
 
     // Results-only: no interactive Predict affordance, and no prediction panel.
+    // Labels are localized (default language is Japanese).
     await expect(
-      wsCard.getByRole('button', { name: /predict/i }),
+      wsCard.getByRole('button', { name: /予測/ }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole('region', { name: /win\/loss prediction/i }),
+      page.getByRole('region', { name: /勝敗予測/ }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole('region', { name: /final results/i }),
+      page.getByRole('region', { name: /最終結果/ }),
     ).toBeVisible();
 
     await wsCard.scrollIntoViewIfNeeded();
@@ -129,7 +132,7 @@ test.describe('home / bracket', () => {
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+    await page.getByTestId('season-group').getByRole('button', {
       name: '2025',
     }).click();
 
@@ -144,7 +147,7 @@ test.describe('home / bracket', () => {
     await expect(wsCard.locator('.series-card__meta')).toContainText('4');
 
     await expect(
-      wsCard.getByRole('button', { name: /predict/i }),
+      wsCard.getByRole('button', { name: /予測/ }),
     ).toHaveCount(0);
 
     await page.screenshot({
@@ -157,13 +160,13 @@ test.describe('home / bracket', () => {
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+    await page.getByTestId('season-group').getByRole('button', {
       name: '2024',
     }).click();
 
     // Wait for the 2024 bracket to render before inspecting the cards.
     await expect(
-      page.getByRole('region', { name: /postseason bracket/i }),
+      page.getByRole('region', { name: /トーナメント表/ }),
     ).toBeVisible();
 
     // Every rendered game list starts hidden (collapsed-by-default), so cards
@@ -175,8 +178,9 @@ test.describe('home / bracket', () => {
     for (let i = 0; i < count; i++) {
       await expect(lists.nth(i)).toBeHidden();
     }
-    // Every "Show games" toggle reports the collapsed state.
-    const toggles = page.getByRole('button', { name: /show games/i });
+    // Every "show games" toggle (localized "試合を表示") reports the collapsed
+    // state. Match structurally by class to stay language-agnostic.
+    const toggles = page.locator('.series-card__games-toggle');
     await expect(toggles.first()).toHaveAttribute('aria-expanded', 'false');
 
     // Full-page screenshot of the aligned, collapsed bracket for visual review.

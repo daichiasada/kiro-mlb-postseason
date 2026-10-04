@@ -2,14 +2,21 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SeriesCard } from './SeriesCard';
+import { I18nProvider } from '../i18n';
 import { wildCardSeries } from '../test/fixtures';
 import type { Series } from '@mlb/shared';
 
-/** Renders a SeriesCard inside a router (it uses <Link> for the detail page). */
+/**
+ * Renders a SeriesCard inside a router + the i18n provider (pinned to English
+ * so these assertions read natural English strings). The card uses <Link> for
+ * the detail page and useI18n() for its labels.
+ */
 function renderCard(props: Partial<React.ComponentProps<typeof SeriesCard>> = {}) {
   return render(
     <MemoryRouter>
-      <SeriesCard series={wildCardSeries} season={2024} {...props} />
+      <I18nProvider initialLang="en">
+        <SeriesCard series={wildCardSeries} season={2024} {...props} />
+      </I18nProvider>
     </MemoryRouter>,
   );
 }
@@ -69,12 +76,14 @@ describe('SeriesCard', () => {
     const onSelect = vi.fn();
     render(
       <MemoryRouter>
-        <SeriesCard
-          series={inProgress}
-          season={2026}
-          onSelect={onSelect}
-          predictable
-        />
+        <I18nProvider initialLang="en">
+          <SeriesCard
+            series={inProgress}
+            season={2026}
+            onSelect={onSelect}
+            predictable
+          />
+        </I18nProvider>
       </MemoryRouter>,
     );
     fireEvent.click(screen.getByRole('button', { name: /predict winner/i }));

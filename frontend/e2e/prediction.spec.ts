@@ -26,10 +26,11 @@ test.describe('prediction panel (2026 predictable season)', () => {
     const wsCard = page.locator(`[data-series-id="${SAMPLE_2026_SERIES_ID}"]`);
     await expect(wsCard).toBeVisible();
 
-    // Select the series via its Predict affordance (available for 2026).
-    await wsCard.getByRole('button', { name: /predict/i }).click();
+    // Select the series via its Predict affordance (available for 2026). The
+    // label is localized, so match the predict button structurally.
+    await wsCard.locator('.series-card__predict').click();
 
-    const panel = page.getByRole('region', { name: /win\/loss prediction/i });
+    const panel = page.getByRole('region', { name: /勝敗予測/ });
     await expect(panel).toBeVisible();
 
     // Favorite team name.
@@ -72,12 +73,13 @@ test.describe('prediction panel (2026 predictable season)', () => {
     await page.goto('/');
 
     const wsCard = page.locator(`[data-series-id="${SAMPLE_2026_SERIES_ID}"]`);
-    await wsCard.getByRole('button', { name: /predict/i }).click();
+    await wsCard.locator('.series-card__predict').click();
 
-    const panel = page.getByRole('region', { name: /win\/loss prediction/i });
+    const panel = page.getByRole('region', { name: /勝敗予測/ });
     const alert = panel.getByRole('alert');
     await expect(alert).toBeVisible();
-    await expect(alert).toContainText(/could not load prediction/i);
+    // The localized error prefix ("予測を読み込めませんでした") wraps the message.
+    await expect(alert).toContainText(/予測を読み込めませんでした/);
 
     await page.screenshot({
       path: 'test-results/prediction-error.png',

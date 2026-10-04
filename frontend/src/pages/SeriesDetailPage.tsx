@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { TEAMS } from '@mlb/shared';
 import type { Bracket, GameResult, Series } from '@mlb/shared';
 import { getBracket } from '../api';
 import { parseSeasonParam } from '../seasonRoute';
 import { clinchWins } from '../bracketLayout';
+import {
+  roundName,
+  teamAbbr,
+  teamName,
+  useI18n,
+  type TFn,
+} from '../i18n';
 import { TeamBadge } from '../components/TeamBadge';
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; bracket: Bracket };
-
-function teamName(teamId: number): string {
-  return TEAMS[teamId]?.name ?? `Team ${teamId}`;
-}
-
-function teamAbbr(teamId: number): string {
-  return TEAMS[teamId]?.abbreviation ?? String(teamId);
-}
 
 /**
  * Dedicated detail page for a finished (status==='final') series. Loads the
@@ -31,6 +29,7 @@ function teamAbbr(teamId: number): string {
  */
 export function SeriesDetailPage() {
   const params = useParams();
+  const { t } = useI18n();
   const season = parseSeasonParam(params.season);
   const seriesId = params.seriesId ?? '';
 
@@ -63,15 +62,15 @@ export function SeriesDetailPage() {
 
   return (
     <div className="app">
-      <nav className="detail__nav" aria-label="Breadcrumb">
+      <nav className="detail__nav" aria-label={t('detail.breadcrumb')}>
         <Link className="detail__back" to={backTo}>
-          &larr; Back to the {season} bracket
+          {t('detail.back', { season })}
         </Link>
       </nav>
 
       {state.status === 'loading' && (
         <p className="app__status" role="status">
-          Loading series detail&hellip;
+          {t('detail.loading')}
         </p>
       )}
 
@@ -82,26 +81,36 @@ export function SeriesDetailPage() {
       )}
 
       {state.status === 'ready' && !series && (
-        <section className="detail detail--missing" aria-label="Series not found">
-          <h1 className="detail__title">Series not found</h1>
+        <section
+          className="detail detail--missing"
+          aria-label={t('detail.notFound.region')}
+        >
+          <h1 className="detail__title">{t('detail.notFound.title')}</h1>
           <p className="detail__hint">
-            We could not find a series with id &ldquo;{seriesId}&rdquo; in the{' '}
-            {season} postseason.
+            {t('detail.notFound.hint', { seriesId, season })}
           </p>
           <Link className="detail__back" to={backTo}>
-            Return to the {season} bracket
+            {t('detail.return', { season })}
           </Link>
         </section>
       )}
 
       {state.status === 'ready' && series && (
-        <SeriesDetail series={series} season={season} />
+        <SeriesDetail t={t} series={series} season={season} />
       )}
     </div>
   );
 }
 
-function SeriesDetail({ series, season }: { series: Series; season: number }) {
+function SeriesDetail({
+  t,
+  series,
+  season,
+}: {
+  t: TFn;
+  series: Series;
+  season: number;
+}) {
   const needed = clinchWins(series.bestOf);
   const highWon = series.status === 'final' && series.high.wins >= needed;
   const lowWon = series.status === 'final' && series.low.wins >= needed;
@@ -114,55 +123,64 @@ function SeriesDetail({ series, season }: { series: Series; season: number }) {
   return (
     <section
       className="detail"
-      aria-label={`${teamName(series.high.teamId)} versus ${teamName(series.low.teamId)} detail`}
+      aria-label={t('detail.region', {
+        high: teamName(t, series.high.teamId),
+        low: teamName(t, series.low.teamId),
+      })}
     >
       <header className="detail__header">
         <p className="detail__round">
-          {season} &middot; {series.round}
+          {season} &middot; {roundName(t, series.round)}
         </p>
         <h1 className="detail__title">
-          {teamName(series.high.teamId)} vs {teamName(series.low.teamId)}
+          {teamName(t, series.high.teamId)} {t('detail.vs')}{' '}
+          {teamName(t, series.low.teamId)}
         </h1>
         <p className="detail__result">
           {winnerId !== null ? (
             <>
-              <strong>{teamName(winnerId)}</strong> won the series{' '}
-              {Math.max(series.high.wins, series.low.wins)}&ndash;
-              {Math.min(series.high.wins, series.low.wins)}
+              <strong>{teamName(t, winnerId)}</strong>{' '}
+              {t('detail.wonSeries', {
+                hi: Math.max(series.high.wins, series.low.wins),
+                lo: Math.min(series.high.wins, series.low.wins),
+              })}
             </>
           ) : (
-            <>
-              Series {series.high.wins}&ndash;{series.low.wins} &middot; Best of{' '}
-              {series.bestOf}
-            </>
+            t('detail.seriesScore', {
+              hi: series.high.wins,
+              lo: series.low.wins,
+              bestOf: series.bestOf,
+            })
           )}
         </p>
       </header>
 
       <div className="detail__teams">
-        <DetailTeam teamId={series.high.teamId} wins={series.high.wins} isWinner={highWon} />
-        <DetailTeam teamId={series.low.teamId} wins={series.low.wins} isWinner={lowWon} />
+        <DetailTeam t={t} teamId={series.high.teamId} wins={series.high.wins} isWinner={highWon} />
+        <DetailTeam t={t} teamId={series.low.teamId} wins={series.low.wins} isWinner={lowWon} />
       </div>
 
-      <h2 className="detail__games-title">Game by game</h2>
+      <h2 className="detail__games-title">{t('detail.gameByGame')}</h2>
       {series.games.length > 0 ? (
         <ol className="detail__games">
           {series.games.map((game) => (
-            <DetailGame key={game.gamePk} game={game} />
+            <DetailGame key={game.gamePk} t={t} game={game} />
           ))}
         </ol>
       ) : (
-        <p className="detail__hint">No game detail is available for this series.</p>
+        <p className="detail__hint">{t('detail.noGames')}</p>
       )}
     </section>
   );
 }
 
 function DetailTeam({
+  t,
   teamId,
   wins,
   isWinner,
 }: {
+  t: TFn;
   teamId: number;
   wins: number;
   isWinner: boolean;
@@ -172,13 +190,13 @@ function DetailTeam({
   return (
     <div className={classes.join(' ')}>
       <TeamBadge teamId={teamId} size={44} />
-      <span className="detail__team-name">{teamName(teamId)}</span>
+      <span className="detail__team-name">{teamName(t, teamId)}</span>
       <span className="detail__team-wins">{wins}</span>
     </div>
   );
 }
 
-function DetailGame({ game }: { game: GameResult }) {
+function DetailGame({ t, game }: { t: TFn; game: GameResult }) {
   const awayScore = game.away.score ?? '-';
   const homeScore = game.home.score ?? '-';
   const winnerSide =
@@ -190,23 +208,25 @@ function DetailGame({ game }: { game: GameResult }) {
 
   return (
     <li className="detail__game">
-      <span className="detail__game-num">Game {game.seriesGameNumber}</span>
+      <span className="detail__game-num">
+        {t('detail.game', { n: game.seriesGameNumber })}
+      </span>
       <span
         className={
           'detail__game-side' +
           (winnerSide === 'away' ? ' detail__game-side--winner' : '')
         }
       >
-        {teamAbbr(game.away.teamId)} {awayScore}
+        {teamAbbr(t, game.away.teamId)} {awayScore}
       </span>
-      <span className="detail__game-at">@</span>
+      <span className="detail__game-at">{t('detail.at')}</span>
       <span
         className={
           'detail__game-side' +
           (winnerSide === 'home' ? ' detail__game-side--winner' : '')
         }
       >
-        {teamAbbr(game.home.teamId)} {homeScore}
+        {teamAbbr(t, game.home.teamId)} {homeScore}
       </span>
     </li>
   );

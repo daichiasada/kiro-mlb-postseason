@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { TEAMS } from '@mlb/shared';
 import type { Prediction, PredictionResponse, Series } from '@mlb/shared';
 import { getPrediction } from '../api';
+import { teamName, useI18n, type TFn } from '../i18n';
 import { TeamBadge } from './TeamBadge';
 
 interface PredictionPanelProps {
@@ -16,11 +16,8 @@ type LoadState =
   | { status: 'success'; prediction: Prediction }
   | { status: 'upcoming'; message: string };
 
-function teamName(teamId: number): string {
-  return TEAMS[teamId]?.name ?? `Team ${teamId}`;
-}
-
 export function PredictionPanel({ series, season }: PredictionPanelProps) {
+  const { t } = useI18n();
   const [state, setState] = useState<LoadState>({ status: 'idle' });
 
   useEffect(() => {
@@ -54,19 +51,16 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
   }, [series, season]);
 
   return (
-    <section className="prediction" aria-label="Win/loss prediction">
-      <h2 className="prediction__title">AI Prediction</h2>
+    <section className="prediction" aria-label={t('prediction.region')}>
+      <h2 className="prediction__title">{t('prediction.title')}</h2>
 
       {state.status === 'idle' && (
-        <p className="prediction__hint">
-          Select a series from the bracket to see an AI-generated win/loss
-          prediction.
-        </p>
+        <p className="prediction__hint">{t('prediction.idleHint')}</p>
       )}
 
       {state.status === 'loading' && (
         <p className="prediction__loading" role="status">
-          Generating prediction&hellip;
+          {t('prediction.loading')}
         </p>
       )}
 
@@ -78,26 +72,28 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
 
       {state.status === 'error' && (
         <p className="prediction__error" role="alert">
-          Could not load prediction: {state.message}
+          {t('prediction.errorPrefix', { message: state.message })}
         </p>
       )}
 
       {state.status === 'success' && (
-        <PredictionResult prediction={state.prediction} series={series} />
+        <PredictionResult t={t} prediction={state.prediction} series={series} />
       )}
     </section>
   );
 }
 
 function PredictionResult({
+  t,
   prediction,
   series,
 }: {
+  t: TFn;
   prediction: Prediction;
   series: Series | null;
 }) {
   const percent = Math.round(prediction.favoriteWinProbability * 1000) / 10;
-  const favoriteName = teamName(prediction.favoriteTeamId);
+  const favoriteName = teamName(t, prediction.favoriteTeamId);
   const underdogId =
     series && series.high.teamId !== prediction.favoriteTeamId
       ? series.high.teamId
@@ -108,14 +104,16 @@ function PredictionResult({
       <div className="prediction__favorite">
         <TeamBadge teamId={prediction.favoriteTeamId} size={44} />
         <div>
-          <p className="prediction__favorite-label">Favorite</p>
+          <p className="prediction__favorite-label">
+            {t('prediction.favorite')}
+          </p>
           <p className="prediction__favorite-name">{favoriteName}</p>
         </div>
       </div>
 
       <div className="prediction__prob">
         <div className="prediction__prob-head">
-          <span>Win probability</span>
+          <span>{t('prediction.winProbability')}</span>
           <span className="prediction__prob-value">{percent.toFixed(1)}%</span>
         </div>
         <div
@@ -130,13 +128,15 @@ function PredictionResult({
         </div>
         {underdogId !== undefined && (
           <p className="prediction__underdog">
-            over {teamName(underdogId)}
+            {t('prediction.over', { team: teamName(t, underdogId) })}
           </p>
         )}
       </div>
 
       <p className="prediction__narrative">{prediction.narrative}</p>
-      <p className="prediction__model">Model: {prediction.model}</p>
+      <p className="prediction__model">
+        {t('prediction.model', { model: prediction.model })}
+      </p>
     </div>
   );
 }

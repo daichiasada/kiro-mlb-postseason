@@ -1,9 +1,16 @@
 import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TEAMS } from '@mlb/shared';
 import type { Series, SeriesTeam } from '@mlb/shared';
 import { TeamBadge } from './TeamBadge';
 import { clinchWins, seriesLeaderId } from '../bracketLayout';
+import {
+  roundName,
+  statusLabel,
+  teamAbbr,
+  teamName,
+  useI18n,
+  type TFn,
+} from '../i18n';
 
 interface SeriesCardProps {
   series: Series;
@@ -20,21 +27,13 @@ interface SeriesCardProps {
   predictable?: boolean;
 }
 
-function teamName(teamId: number): string {
-  return TEAMS[teamId]?.name ?? `Team ${teamId}`;
-}
-
-const STATUS_LABEL: Record<Series['status'], string> = {
-  scheduled: 'Scheduled',
-  in_progress: 'In progress',
-  final: 'Final',
-};
-
 function TeamRow({
+  t,
   team,
   isLeader,
   isWinner,
 }: {
+  t: TFn;
   team: SeriesTeam;
   isLeader: boolean;
   isWinner: boolean;
@@ -46,7 +45,7 @@ function TeamRow({
   return (
     <div className={classes.join(' ')}>
       <TeamBadge teamId={team.teamId} size={32} />
-      <span className="series-team__name">{teamName(team.teamId)}</span>
+      <span className="series-team__name">{teamName(t, team.teamId)}</span>
       <span className="series-team__wins">{team.wins}</span>
     </div>
   );
@@ -59,6 +58,7 @@ export function SeriesCard({
   onSelect,
   predictable = true,
 }: SeriesCardProps) {
+  const { t } = useI18n();
   const leaderId = seriesLeaderId(series);
   const needed = clinchWins(series.bestOf);
   const isFinal = series.status === 'final';
@@ -81,22 +81,27 @@ export function SeriesCard({
     <article
       className={classes.join(' ')}
       data-series-id={series.id}
-      aria-label={`${teamName(series.high.teamId)} versus ${teamName(series.low.teamId)}`}
+      aria-label={t('series.region', {
+        high: teamName(t, series.high.teamId),
+        low: teamName(t, series.low.teamId),
+      })}
     >
       <header className="series-card__header">
-        <span className="series-card__round">{series.round}</span>
+        <span className="series-card__round">{roundName(t, series.round)}</span>
         <span className="series-card__status" data-status={series.status}>
-          {STATUS_LABEL[series.status]}
+          {statusLabel(t, series.status)}
         </span>
       </header>
 
       <div className="series-card__teams">
         <TeamRow
+          t={t}
           team={series.high}
           isLeader={leaderId === series.high.teamId}
           isWinner={isFinal && series.high.wins >= needed}
         />
         <TeamRow
+          t={t}
           team={series.low}
           isLeader={leaderId === series.low.teamId}
           isWinner={isFinal && series.low.wins >= needed}
@@ -104,7 +109,11 @@ export function SeriesCard({
       </div>
 
       <p className="series-card__meta">
-        Best of {series.bestOf} &middot; {series.high.wins}&ndash;{series.low.wins}
+        {t('series.bestOf', {
+          bestOf: series.bestOf,
+          highWins: series.high.wins,
+          lowWins: series.low.wins,
+        })}
       </p>
 
       {hasGames && (
@@ -116,7 +125,7 @@ export function SeriesCard({
             aria-controls={gamesListId}
             onClick={() => setGamesOpen((open) => !open)}
           >
-            {gamesOpen ? 'Hide games' : 'Show games'}
+            {gamesOpen ? t('series.hideGames') : t('series.showGames')}
           </button>
           <ol
             id={gamesListId}
@@ -129,10 +138,8 @@ export function SeriesCard({
                   G{game.seriesGameNumber}
                 </span>
                 <span className="series-card__game-score">
-                  {TEAMS[game.away.teamId]?.abbreviation ?? game.away.teamId}{' '}
-                  {game.away.score ?? '-'} @{' '}
-                  {TEAMS[game.home.teamId]?.abbreviation ?? game.home.teamId}{' '}
-                  {game.home.score ?? '-'}
+                  {teamAbbr(t, game.away.teamId)} {game.away.score ?? '-'} @{' '}
+                  {teamAbbr(t, game.home.teamId)} {game.home.score ?? '-'}
                 </span>
               </li>
             ))}
@@ -150,7 +157,7 @@ export function SeriesCard({
           className="series-card__detail-link"
           to={`/season/${season}/series/${encodeURIComponent(series.id)}`}
         >
-          View series detail
+          {t('series.viewDetail')}
         </Link>
       )}
 
@@ -160,7 +167,7 @@ export function SeriesCard({
           className="series-card__predict"
           onClick={() => onSelect(series.id)}
         >
-          {selected ? 'Selected for prediction' : 'Predict winner'}
+          {selected ? t('series.selected') : t('series.predict')}
         </button>
       )}
     </article>

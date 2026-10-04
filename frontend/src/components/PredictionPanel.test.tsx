@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import type { PredictionResponse } from '@mlb/shared';
 import { PredictionPanel } from './PredictionPanel';
+import { I18nProvider } from '../i18n';
 import { worldSeries } from '../test/fixtures';
 import * as api from '../api';
+
+/** Renders a node inside the i18n provider pinned to English. */
+function renderWithI18n(node: ReactElement) {
+  return render(<I18nProvider initialLang="en">{node}</I18nProvider>);
+}
 
 vi.mock('../api', async () => {
   const actual = await vi.importActual<typeof import('../api')>('../api');
@@ -28,14 +35,14 @@ describe('PredictionPanel', () => {
   });
 
   it('shows the idle hint when no series is selected', () => {
-    render(<PredictionPanel series={null} season={2024} />);
+    renderWithI18n(<PredictionPanel series={null} season={2024} />);
     expect(screen.getByText(/Select a series/)).toBeInTheDocument();
     expect(mockedGetPrediction).not.toHaveBeenCalled();
   });
 
   it('renders favorite, probability and narrative from the mocked prediction', async () => {
     mockedGetPrediction.mockResolvedValue(prediction);
-    render(<PredictionPanel series={worldSeries} season={2024} />);
+    renderWithI18n(<PredictionPanel series={worldSeries} season={2024} />);
 
     await waitFor(() =>
       expect(screen.getByText('Los Angeles Dodgers')).toBeInTheDocument(),
@@ -56,7 +63,7 @@ describe('PredictionPanel', () => {
 
   it('shows an error message when the prediction request fails', async () => {
     mockedGetPrediction.mockRejectedValue(new api.ApiError('series not found', 404));
-    render(<PredictionPanel series={worldSeries} season={2024} />);
+    renderWithI18n(<PredictionPanel series={worldSeries} season={2024} />);
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(/series not found/),
@@ -71,7 +78,7 @@ describe('PredictionPanel', () => {
       message: 'No prediction is available yet for this 2026 series; it has not started.',
     };
     mockedGetPrediction.mockResolvedValue(upcoming);
-    render(<PredictionPanel series={worldSeries} season={2026} />);
+    renderWithI18n(<PredictionPanel series={worldSeries} season={2026} />);
 
     await waitFor(() =>
       expect(screen.getByText(/has not started/i)).toBeInTheDocument(),

@@ -26,10 +26,10 @@ test.describe('game-detail toggle', () => {
     await expect(finalCard).toBeVisible();
 
     // The single toggle button inside the card (its label flips, so match it
-    // structurally rather than by name).
+    // structurally rather than by name). Labels are localized (default: ja).
     const toggle = finalCard.locator('.series-card__games-toggle');
     await expect(toggle).toBeVisible();
-    await expect(toggle).toHaveText(/show games/i);
+    await expect(toggle).toHaveText(/試合を表示/);
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
     // Collapsed by default: the controlled game list is not visible.
@@ -41,7 +41,7 @@ test.describe('game-detail toggle', () => {
     // game list appears.
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(toggle).toHaveText(/hide games/i);
+    await expect(toggle).toHaveText(/試合を隠す/);
     await expect(list).toBeVisible();
     await expect(list).toContainText('G1');
 
@@ -62,30 +62,33 @@ test.describe('finished-series detail page', () => {
     const finalCard = page.locator(
       `[data-series-id="${SAMPLE_2026_FINAL_SERIES_ID}"]`,
     );
-    await finalCard.getByRole('link', { name: /view series detail/i }).click();
+    // The detail link label is localized; match it structurally.
+    await finalCard.locator('.series-card__detail-link').click();
 
     // We are now on the dedicated detail page URL.
     await expect(page).toHaveURL(
       new RegExp(`/season/2026/series/${SAMPLE_2026_FINAL_SERIES_ID}$`),
     );
 
+    // The region label embeds the English club names and the localized "詳細".
     const detail = page.getByRole('region', {
-      name: /houston astros versus seattle mariners detail/i,
+      name: /houston astros .* seattle mariners .*詳細/i,
     });
     await expect(detail).toBeVisible();
-    // Series result + game-by-game detail render on the page.
+    // Series result (localized "がシリーズを … で制しました") + game-by-game
+    // detail render on the page. Club names stay English in both languages.
     await expect(detail).toContainText(/Houston Astros/);
-    await expect(detail).toContainText(/won the series/i);
-    await expect(detail.getByText('Game 1')).toBeVisible();
-    await expect(detail.getByText('Game 2')).toBeVisible();
+    await expect(detail).toContainText(/シリーズを/);
+    await expect(detail.getByText('第1戦')).toBeVisible();
+    await expect(detail.getByText('第2戦')).toBeVisible();
 
     await page.screenshot({
       path: 'test-results/series-detail.png',
       fullPage: true,
     });
 
-    // Back link returns to the bracket for the same season.
-    await page.getByRole('link', { name: /back to the 2026 bracket/i }).click();
+    // Back link returns to the bracket for the same season (localized).
+    await page.locator('.detail__back').first().click();
     await expect(page).toHaveURL(/\/season\/2026$/);
     await expect(
       page.locator(`[data-series-id="${SAMPLE_2026_SERIES_ID}"]`),
@@ -100,10 +103,10 @@ test.describe('finished-series detail page', () => {
 
     await expect(
       page.getByRole('region', {
-        name: /houston astros versus seattle mariners detail/i,
+        name: /houston astros .* seattle mariners .*詳細/i,
       }),
     ).toBeVisible();
-    await expect(page.getByText('Game 1')).toBeVisible();
+    await expect(page.getByText('第1戦')).toBeVisible();
   });
 
   test('an unknown series id shows a friendly not-found message with a back link', async ({
@@ -112,11 +115,14 @@ test.describe('finished-series detail page', () => {
     await stubBracket2026(page);
     await page.goto('/season/2026/series/does-not-exist');
 
+    // Localized not-found region + hint (default language is Japanese).
     await expect(
-      page.getByRole('region', { name: /series not found/i }),
+      page.getByRole('region', { name: /シリーズが見つかりません/ }),
     ).toBeVisible();
-    await expect(page.getByText(/could not find a series/i)).toBeVisible();
-    await page.getByRole('link', { name: /return to the 2026 bracket/i }).click();
+    await expect(page.getByText(/シリーズは見つかりませんでした/)).toBeVisible();
+    // Two back links exist on this page (breadcrumb + the in-body return link);
+    // use the breadcrumb (first) to navigate back.
+    await page.locator('.detail__back').first().click();
     await expect(page).toHaveURL(/\/season\/2026$/);
   });
 });

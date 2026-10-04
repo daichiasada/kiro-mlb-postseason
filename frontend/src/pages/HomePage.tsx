@@ -8,6 +8,8 @@ import { hasStartedContent, parseSeasonParam } from '../seasonRoute';
 import { BracketView } from '../components/BracketView';
 import { StandingsPanel } from '../components/StandingsPanel';
 import { PredictionPanel } from '../components/PredictionPanel';
+import { LanguageToggle } from '../components/LanguageToggle';
+import { useI18n } from '../i18n';
 import brand from '../assets/brand.svg';
 import hero from '../assets/hero.svg';
 
@@ -27,6 +29,7 @@ type BracketState =
 export function HomePage() {
   const params = useParams();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const season = parseSeasonParam(params.season);
 
   const [state, setState] = useState<BracketState>({ status: 'loading' });
@@ -73,24 +76,30 @@ export function HomePage() {
         <div className="app__brand">
           <img src={brand} alt="MLB Postseason Pulse logo" width={52} height={52} />
           <div>
-            <h1 className="app__title">MLB Postseason Pulse</h1>
+            <h1 className="app__title">{t('app.title')}</h1>
             <p className="app__subtitle">
-              {season} postseason bracket, standings, and{' '}
-              {predictable ? 'AI predictions' : 'final results'}
+              {t(
+                predictable
+                  ? 'app.subtitle.predictions'
+                  : 'app.subtitle.results',
+                { season },
+              )}
             </p>
           </div>
         </div>
+        <LanguageToggle />
         <img className="app__hero" src={hero} alt="Baseball diamond at dusk" />
       </header>
 
-      <nav className="app__seasons" aria-label="Select a postseason year">
+      <nav className="app__seasons" aria-label={t('app.season')}>
         <span className="app__seasons-label" id="season-selector-label">
-          Season
+          {t('app.season')}
         </span>
         <div
           className="app__season-buttons"
           role="group"
           aria-labelledby="season-selector-label"
+          data-testid="season-group"
         >
           {SELECTABLE_SEASONS.map((year) => (
             <button
@@ -111,7 +120,7 @@ export function HomePage() {
 
       {state.status === 'loading' && (
         <p className="app__status" role="status">
-          Loading the {season} postseason&hellip;
+          {t('app.loading', { season })}
         </p>
       )}
 
@@ -123,8 +132,7 @@ export function HomePage() {
 
       {state.status === 'ready' && !bracketStarted && (
         <p className="app__status app__status--upcoming" role="status">
-          The {season} postseason has not started yet. Check back once the games
-          begin.
+          {t('app.notStarted', { season })}
         </p>
       )}
 
@@ -132,7 +140,7 @@ export function HomePage() {
         <>
           {state.usedFallback && (
             <p className="app__notice" role="status">
-              Showing bundled offline data (the live API was unreachable).
+              {t('app.offlineNotice')}
             </p>
           )}
           <main className="app__main">
@@ -149,13 +157,11 @@ export function HomePage() {
               ) : (
                 <section
                   className="prediction prediction--results"
-                  aria-label="Final results"
+                  aria-label={t('results.title')}
                 >
-                  <h2 className="prediction__title">Final results</h2>
+                  <h2 className="prediction__title">{t('results.title')}</h2>
                   <p className="prediction__hint">
-                    The {season} postseason is complete. Final results are shown
-                    on the bracket; AI predictions are available only for the
-                    current season.
+                    {t('results.hint', { season })}
                   </p>
                 </section>
               )}
@@ -166,10 +172,7 @@ export function HomePage() {
       )}
 
       <footer className="app__footer">
-        <p>
-          Data from the public MLB Stats API with bundled 2024 and 2025 seed
-          fallbacks. Built for the Kiro University challenge.
-        </p>
+        <p>{t('app.footer')}</p>
       </footer>
     </div>
   );

@@ -16,6 +16,15 @@ export const SAMPLE_2026_SERIES_ID = '2026-ws-worldseries-119-147';
  */
 export const SAMPLE_2026_FINAL_SERIES_ID = '2026-al-championship-117-136';
 
+/**
+ * A Division Series between two UNKNOWN/preview team ids (not in the TEAMS
+ * map), mirroring the real 2026 live-data case that previously leaked a raw
+ * "Team 5513" string. The i18n layer must render a LOCALIZED placeholder
+ * (EN "TBD (#5513)" / JA "未定 (#5513)") instead.
+ */
+export const SAMPLE_2026_UNKNOWN_SERIES_ID = '2026-nl-division-5513-5599';
+export const SAMPLE_2026_UNKNOWN_TEAM_ID = 5513;
+
 export const SAMPLE_2026_BRACKET = {
   season: 2026,
   updatedAt: '2026-10-25T00:00:00.000Z',
@@ -56,6 +65,18 @@ export const SAMPLE_2026_BRACKET = {
           seriesGameNumber: 2,
         },
       ],
+    },
+    {
+      id: SAMPLE_2026_UNKNOWN_SERIES_ID,
+      round: 'Division Series',
+      league: 'NL',
+      // Both ids are NOT in TEAMS (the real preview-data case): must render as
+      // a localized "TBD/未定 (#id)" placeholder, never "Team 5513".
+      high: { teamId: SAMPLE_2026_UNKNOWN_TEAM_ID, wins: 1 },
+      low: { teamId: 5599, wins: 0 },
+      bestOf: 5,
+      status: 'in_progress',
+      games: [],
     },
   ],
 };
