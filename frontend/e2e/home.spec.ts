@@ -1,16 +1,19 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * App load, image assets, full bracket, and offline-fallback coverage.
+ * App load, image assets, season selector, full bracket, and offline-fallback
+ * coverage.
  *
- * No backend runs during E2E, so `getBracket` falls back to the bundled
- * `@mlb/shared` 2024 seed and the app shows an offline notice.
+ * No backend runs during E2E. The default season is the current year (2026),
+ * which has no offline seed, so these specs drive the season selector to a
+ * completed, results-only season (2024 / 2025) where `getBracket` falls back to
+ * the bundled `@mlb/shared` seed and the app shows the offline notice.
  */
 test.describe('home / bracket', () => {
   test('loads the app shell with brand + hero image assets', async ({ page }) => {
     await page.goto('/');
 
-    // Title header renders.
+    // Title header renders regardless of the fetched season.
     await expect(
       page.getByRole('heading', { name: 'MLB Postseason Pulse' }),
     ).toBeVisible();
@@ -35,15 +38,36 @@ test.describe('home / bracket', () => {
     });
   });
 
-  test('shows the offline-fallback notice (no backend)', async ({ page }) => {
+  test('offers a season selector for 2024, 2025 and 2026, defaulting to 2026', async ({
+    page,
+  }) => {
     await page.goto('/');
-    await expect(
-      page.getByText(/bundled offline data/i),
-    ).toBeVisible();
+
+    const group = page.getByRole('group', { name: /season/i });
+    await expect(group.getByRole('button', { name: '2024' })).toBeVisible();
+    await expect(group.getByRole('button', { name: '2025' })).toBeVisible();
+    const current = group.getByRole('button', { name: '2026' });
+    await expect(current).toBeVisible();
+    // 2026 (current year) is selected by default.
+    await expect(current).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('renders all four rounds and AL/NL/WS lanes', async ({ page }) => {
+  test('shows the offline-fallback notice for a results-only season (2024)', async ({
+    page,
+  }) => {
     await page.goto('/');
+    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+      name: '2024',
+    }).click();
+
+    await expect(page.getByText(/bundled offline data/i)).toBeVisible();
+  });
+
+  test('renders all four rounds and AL/NL/WS lanes for 2024', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+      name: '2024',
+    }).click();
 
     const bracket = page.getByRole('region', { name: /postseason bracket/i });
     await expect(bracket).toBeVisible();
@@ -65,8 +89,13 @@ test.describe('home / bracket', () => {
     await expect(page.getByRole('img', { name: 'World Series' })).toBeVisible();
   });
 
-  test('World Series card shows Dodgers over Yankees 4-1', async ({ page }) => {
+  test('2024 is results-only: WS card shows Dodgers over Yankees 4-1 and no Predict button', async ({
+    page,
+  }) => {
     await page.goto('/');
+    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+      name: '2024',
+    }).click();
 
     const wsCard = page.locator(
       '[data-series-id="2024-ws-worldseries-119-147"]',
@@ -78,9 +107,48 @@ test.describe('home / bracket', () => {
     await expect(wsCard.locator('.series-card__meta')).toContainText('4');
     await expect(wsCard.locator('.series-card__meta')).toContainText('1');
 
+    // Results-only: no interactive Predict affordance, and no prediction panel.
+    await expect(
+      wsCard.getByRole('button', { name: /predict/i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('region', { name: /win\/loss prediction/i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('region', { name: /final results/i }),
+    ).toBeVisible();
+
     await wsCard.scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: 'test-results/bracket-full.png',
+      path: 'test-results/bracket-2024.png',
+      fullPage: true,
+    });
+  });
+
+  test('2025 is results-only: WS card shows Dodgers over Blue Jays 4-3', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+      name: '2025',
+    }).click();
+
+    const wsCard = page.locator(
+      '[data-series-id="2025-ws-worldseries-141-119"]',
+    );
+    await expect(wsCard).toBeVisible();
+    await expect(wsCard).toContainText('Los Angeles Dodgers');
+    await expect(wsCard).toContainText('Toronto Blue Jays');
+    // Blue Jays (high) 3 - Dodgers (low) 4: the meta shows both.
+    await expect(wsCard.locator('.series-card__meta')).toContainText('3');
+    await expect(wsCard.locator('.series-card__meta')).toContainText('4');
+
+    await expect(
+      wsCard.getByRole('button', { name: /predict/i }),
+    ).toHaveCount(0);
+
+    await page.screenshot({
+      path: 'test-results/bracket-2025.png',
       fullPage: true,
     });
   });

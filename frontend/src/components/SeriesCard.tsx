@@ -7,6 +7,13 @@ interface SeriesCardProps {
   series: Series;
   selected?: boolean;
   onSelect?: (seriesId: string) => void;
+  /**
+   * Whether the current season is predictable (current year). When false
+   * (results-only seasons) the interactive "Predict winner" button is replaced
+   * with a non-interactive affordance to view game-by-game detail, so a user
+   * cannot trigger a prediction the backend refuses. Defaults to true.
+   */
+  predictable?: boolean;
 }
 
 function teamName(teamId: number): string {
@@ -41,7 +48,12 @@ function TeamRow({
   );
 }
 
-export function SeriesCard({ series, selected = false, onSelect }: SeriesCardProps) {
+export function SeriesCard({
+  series,
+  selected = false,
+  onSelect,
+  predictable = true,
+}: SeriesCardProps) {
   const leaderId = seriesLeaderId(series);
   const needed = clinchWins(series.bestOf);
   const isFinal = series.status === 'final';
@@ -94,13 +106,23 @@ export function SeriesCard({ series, selected = false, onSelect }: SeriesCardPro
         </ol>
       )}
 
-      {onSelect && (
+      {onSelect && predictable && (
         <button
           type="button"
           className="series-card__predict"
           onClick={() => onSelect(series.id)}
         >
           {selected ? 'Selected for prediction' : 'Predict winner'}
+        </button>
+      )}
+
+      {onSelect && !predictable && (
+        <button
+          type="button"
+          className="series-card__detail"
+          onClick={() => onSelect(series.id)}
+        >
+          {selected ? 'Viewing details' : 'View details'}
         </button>
       )}
     </article>

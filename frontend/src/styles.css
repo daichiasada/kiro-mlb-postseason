@@ -87,6 +87,58 @@ body {
   font-size: 0.9rem;
 }
 
+.app__status--upcoming {
+  margin: 1.25rem 0 0;
+  padding: 1.25rem;
+  background: #eef3fb;
+  border: 1px dashed #b9c8e2;
+  border-radius: 10px;
+  color: var(--navy);
+}
+
+/* Season selector */
+.app__seasons {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.app__seasons-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.app__season-buttons {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.app__season-button {
+  border: 1px solid #c3d0e6;
+  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.app__season-button:hover {
+  border-color: var(--navy);
+}
+
+.app__season-button--active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
 .app__main {
   display: grid;
   grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr);
@@ -274,6 +326,27 @@ body {
 
 .series-card--selected .series-card__predict {
   background: var(--red);
+}
+
+.series-card__detail {
+  margin-top: 0.3rem;
+  border: 1px solid #c3d0e6;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.series-card__detail:hover {
+  border-color: var(--navy);
+}
+
+.series-card--selected .series-card__detail {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
 }
 
 /* Standings */

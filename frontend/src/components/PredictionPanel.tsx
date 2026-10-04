@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TEAMS } from '@mlb/shared';
-import type { Prediction, Series } from '@mlb/shared';
+import type { Prediction, PredictionResponse, Series } from '@mlb/shared';
 import { getPrediction } from '../api';
 import { TeamBadge } from './TeamBadge';
 
@@ -13,7 +13,8 @@ type LoadState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'success'; prediction: Prediction };
+  | { status: 'success'; prediction: Prediction }
+  | { status: 'upcoming'; message: string };
 
 function teamName(teamId: number): string {
   return TEAMS[teamId]?.name ?? `Team ${teamId}`;
@@ -30,8 +31,15 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
     let cancelled = false;
     setState({ status: 'loading' });
     getPrediction(series.id, season)
-      .then((prediction) => {
-        if (!cancelled) setState({ status: 'success', prediction });
+      .then((response: PredictionResponse) => {
+        if (cancelled) return;
+        if (response.mode === 'prediction') {
+          setState({ status: 'success', prediction: response });
+        } else {
+          // 'upcoming' (and the defensive 'results' case) carry a human message
+          // and no numeric prediction; show a graceful no-prediction state.
+          setState({ status: 'upcoming', message: response.message });
+        }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -59,6 +67,12 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
       {state.status === 'loading' && (
         <p className="prediction__loading" role="status">
           Generating prediction&hellip;
+        </p>
+      )}
+
+      {state.status === 'upcoming' && (
+        <p className="prediction__hint" role="status">
+          {state.message}
         </p>
       )}
 

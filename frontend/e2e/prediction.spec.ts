@@ -1,26 +1,32 @@
 import { test, expect } from '@playwright/test';
 import {
+  SAMPLE_2026_SERIES_ID,
   SAMPLE_PREDICTION,
+  stubBracket2026,
   stubPredictionError,
   stubPredictionSuccess,
 } from './fixtures';
 
 /**
- * Prediction flow coverage. The `/prediction` endpoint has no offline fallback,
- * so it is stubbed per-test with `page.route` to exercise both the success and
- * error UI states deterministically.
+ * Prediction flow coverage for the current, predictable season (2026).
+ *
+ * The default season is 2026, which has no offline seed, so both `/bracket` and
+ * `/prediction` are stubbed per-test with `page.route` to make the predictable
+ * UI and prediction states deterministic without a backend.
  */
-test.describe('prediction panel', () => {
+test.describe('prediction panel (2026 predictable season)', () => {
   test('success: favorite, labeled probability bar, and narrative render', async ({
     page,
   }) => {
+    await stubBracket2026(page);
     await stubPredictionSuccess(page);
     await page.goto('/');
 
-    // Select the World Series via its Predict affordance.
-    const wsCard = page.locator(
-      '[data-series-id="2024-ws-worldseries-119-147"]',
-    );
+    // The 2026 World Series card renders from the stubbed in-progress bracket.
+    const wsCard = page.locator(`[data-series-id="${SAMPLE_2026_SERIES_ID}"]`);
+    await expect(wsCard).toBeVisible();
+
+    // Select the series via its Predict affordance (available for 2026).
     await wsCard.getByRole('button', { name: /predict/i }).click();
 
     const panel = page.getByRole('region', { name: /win\/loss prediction/i });
@@ -61,12 +67,11 @@ test.describe('prediction panel', () => {
   test('error: shows an alert when the prediction request fails', async ({
     page,
   }) => {
+    await stubBracket2026(page);
     await stubPredictionError(page, 500);
     await page.goto('/');
 
-    const wsCard = page.locator(
-      '[data-series-id="2024-ws-worldseries-119-147"]',
-    );
+    const wsCard = page.locator(`[data-series-id="${SAMPLE_2026_SERIES_ID}"]`);
     await wsCard.getByRole('button', { name: /predict/i }).click();
 
     const panel = page.getByRole('region', { name: /win\/loss prediction/i });

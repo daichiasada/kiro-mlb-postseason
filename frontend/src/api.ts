@@ -1,4 +1,4 @@
-import type { Bracket, Prediction } from '@mlb/shared';
+import type { Bracket, PredictionResponse } from '@mlb/shared';
 import { getSeedBracket } from '@mlb/shared';
 import { API_BASE_URL } from './config';
 
@@ -61,13 +61,18 @@ export async function getBracket(season: number): Promise<BracketResult> {
 }
 
 /**
- * Fetches an AI-generated win/loss prediction for a single series.
- * Throws an {@link ApiError} the UI can display (no silent fallback).
+ * Fetches a win/loss prediction response for a single series.
+ *
+ * Returns the {@link PredictionResponse} discriminated union: `mode:'prediction'`
+ * carries the numeric result, while `mode:'results'` and `mode:'upcoming'`
+ * carry a message the UI shows instead. All three are HTTP 200; the UI branches
+ * on `mode`. Throws an {@link ApiError} the UI can display on transport/HTTP
+ * failures (no silent fallback).
  */
 export async function getPrediction(
   seriesId: string,
   season: number,
-): Promise<Prediction> {
+): Promise<PredictionResponse> {
   const query = `?seriesId=${encodeURIComponent(seriesId)}&season=${season}`;
-  return requestJson<Prediction>(`/prediction${query}`);
+  return requestJson<PredictionResponse>(`/prediction${query}`);
 }

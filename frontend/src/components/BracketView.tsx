@@ -9,12 +9,15 @@ interface BracketViewProps {
   bracket: Bracket;
   selectedSeriesId: string | null;
   onSelectSeries: (seriesId: string) => void;
+  /** Whether the season is predictable; forwarded to each SeriesCard. */
+  predictable?: boolean;
 }
 
 export function BracketView({
   bracket,
   selectedSeriesId,
   onSelectSeries,
+  predictable = true,
 }: BracketViewProps) {
   const columns = buildRoundColumns(bracket);
 
@@ -43,6 +46,7 @@ export function BracketView({
                   series={series}
                   selected={series.id === selectedSeriesId}
                   onSelect={onSelectSeries}
+                  predictable={predictable}
                 />
               ))}
             </div>

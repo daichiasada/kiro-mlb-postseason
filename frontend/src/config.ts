@@ -11,6 +11,8 @@
  *      locally running API.
  */
 
+import { CURRENT_YEAR, SELECTABLE_SEASONS } from '@mlb/shared';
+
 declare global {
   interface Window {
     __API_BASE_URL__?: string;
@@ -39,5 +41,12 @@ export const API_BASE_URL: string = (
   LOCAL_DEFAULT
 ).replace(/\/+$/, '');
 
-/** The default season rendered when the app first loads. */
-export const DEFAULT_SEASON = 2024;
+/**
+ * The default season rendered when the app first loads: the shared
+ * {@link CURRENT_YEAR} so the app's notion of "now" lives in one place rather
+ * than being a scattered literal.
+ */
+export const DEFAULT_SEASON = CURRENT_YEAR;
+
+/** Seasons offered in the UI selector (newest-first), re-exported from shared. */
+export { SELECTABLE_SEASONS };

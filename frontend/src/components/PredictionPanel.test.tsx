@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import type { Prediction } from '@mlb/shared';
+import type { PredictionResponse } from '@mlb/shared';
 import { PredictionPanel } from './PredictionPanel';
 import { worldSeries } from '../test/fixtures';
 import * as api from '../api';
@@ -12,7 +12,8 @@ vi.mock('../api', async () => {
 
 const mockedGetPrediction = vi.mocked(api.getPrediction);
 
-const prediction: Prediction = {
+const prediction: PredictionResponse = {
+  mode: 'prediction',
   seriesId: '2024-ws-worldseries-119-147',
   favoriteTeamId: 119,
   favoriteWinProbability: 0.73,
@@ -60,5 +61,22 @@ describe('PredictionPanel', () => {
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(/series not found/),
     );
+  });
+
+  it('renders a graceful message for an upcoming (not-yet-started) series', async () => {
+    const upcoming: PredictionResponse = {
+      mode: 'upcoming',
+      seriesId: worldSeries.id,
+      season: 2026,
+      message: 'No prediction is available yet for this 2026 series; it has not started.',
+    };
+    mockedGetPrediction.mockResolvedValue(upcoming);
+    render(<PredictionPanel series={worldSeries} season={2026} />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/has not started/i)).toBeInTheDocument(),
+    );
+    // No numeric prediction bar is shown for the upcoming state.
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 });
