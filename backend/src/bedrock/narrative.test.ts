@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Series } from '@mlb/shared';
+import { InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import {
   buildPrompt,
   DEFAULT_MODEL_ID,
   fallbackNarrative,
   generateNarrative,
+  RealBedrockInvoker,
   type BedrockInvoker,
 } from './narrative.js';
 import type { PredictionResult } from '../predict/model.js';
@@ -65,5 +67,74 @@ describe('generateNarrative', () => {
 
   it('defaults to the Anthropic Claude Haiku model id', () => {
     expect(DEFAULT_MODEL_ID).toBe('anthropic.claude-3-haiku-20240307-v1:0');
+  });
+});
+
+describe('RealBedrockInvoker request/response shaping (ISSUE-2)', () => {
+  // Guards the real InvokeModel body/parse path that higher-level tests only
+  // exercise through a mocked `invoke`. The BedrockRuntimeClient is injected
+  // and its send() stubbed so no live AWS call is made.
+  function anthropicResponseBody(text: string | string[]): { body: Uint8Array } {
+    const content = (Array.isArray(text) ? text : [text]).map((t) => ({
+      type: 'text',
+      text: t,
+    }));
+    const payload = JSON.stringify({ id: 'msg_1', type: 'message', content });
+    return { body: new TextEncoder().encode(payload) };
+  }
+
+  it('sends an Anthropic messages body and parses content[].text', async () => {
+    const send = vi.fn().mockResolvedValue(anthropicResponseBody('The Dodgers are rolling.'));
+    const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
+    const invoker = new RealBedrockInvoker(client);
+
+    const text = await invoker.invoke('anthropic.test-model', 'Why is LA favored?');
+
+    // (b) response parsing: content[].text is extracted.
+    expect(text).toBe('The Dodgers are rolling.');
+
+    // (a) request shaping: a single InvokeModelCommand with the Anthropic body.
+    expect(send).toHaveBeenCalledTimes(1);
+    const command = send.mock.calls[0]![0] as InvokeModelCommand;
+    expect(command).toBeInstanceOf(InvokeModelCommand);
+    expect(command.input.modelId).toBe('anthropic.test-model');
+    expect(command.input.contentType).toBe('application/json');
+    expect(command.input.accept).toBe('application/json');
+
+    const sentBody = JSON.parse(command.input.body as string) as {
+      anthropic_version: string;
+      max_tokens: number;
+      temperature: number;
+      messages: Array<{ role: string; content: Array<{ type: string; text: string }> }>;
+    };
+    expect(sentBody.anthropic_version).toBe('bedrock-2023-05-31');
+    expect(sentBody.max_tokens).toBe(300);
+    expect(typeof sentBody.temperature).toBe('number');
+    expect(sentBody.messages).toHaveLength(1);
+    expect(sentBody.messages[0]!.role).toBe('user');
+    expect(sentBody.messages[0]!.content[0]!.type).toBe('text');
+    expect(sentBody.messages[0]!.content[0]!.text).toBe('Why is LA favored?');
+  });
+
+  it('concatenates multiple text blocks from the response', async () => {
+    const send = vi.fn().mockResolvedValue(anthropicResponseBody(['Part one. ', 'Part two.']));
+    const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
+    const invoker = new RealBedrockInvoker(client);
+
+    const text = await invoker.invoke('anthropic.test-model', 'prompt');
+
+    expect(text).toBe('Part one. Part two.');
+  });
+
+  it('throws when the response contains no text content', async () => {
+    const send = vi.fn().mockResolvedValue({
+      body: new TextEncoder().encode(JSON.stringify({ content: [] })),
+    });
+    const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
+    const invoker = new RealBedrockInvoker(client);
+
+    await expect(invoker.invoke('anthropic.test-model', 'prompt')).rejects.toThrow(
+      /no text content/,
+    );
   });
 });
