@@ -8,7 +8,10 @@
 import {
   getSeedBracket,
   isResultsOnly,
+  resolveModelId,
+  DEFAULT_NARRATIVE_LANGUAGE,
   type Bracket,
+  type NarrativeLanguage,
   type PredictionResponse,
   type Series,
 } from '@mlb/shared';
@@ -200,6 +203,8 @@ export class BracketService {
     seriesId: string,
     season: number,
     accuracy?: number,
+    language?: NarrativeLanguage,
+    model?: string,
   ): Promise<PredictionResponse> {
     // Results-only seasons short-circuit without touching the predict model or
     // the Bedrock invoker.
@@ -246,7 +251,17 @@ export class BracketService {
     }
 
     const result = predict(series, bracket, this.winPct, accuracy);
-    const { narrative, model } = await generateNarrative(series, result, this.bedrockInvoker);
+    // Resolve the requested model against the shared allowlist (unknown/missing
+    // falls back to the default) and default the language server-side.
+    const resolvedModel = resolveModelId(model);
+    const resolvedLanguage = language ?? DEFAULT_NARRATIVE_LANGUAGE;
+    const { narrative, model: usedModel } = await generateNarrative(
+      series,
+      result,
+      this.bedrockInvoker,
+      resolvedModel,
+      resolvedLanguage,
+    );
 
     return {
       mode: 'prediction',
@@ -254,7 +269,7 @@ export class BracketService {
       favoriteTeamId: result.favoriteTeamId,
       favoriteWinProbability: result.favoriteWinProbability,
       narrative,
-      model,
+      model: usedModel,
       generatedAt: new Date().toISOString(),
     };
   }

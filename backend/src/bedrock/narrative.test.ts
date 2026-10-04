@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Series } from '@mlb/shared';
+import {
+  DEFAULT_NARRATIVE_MODEL_ID,
+  NARRATIVE_MODEL_OPTIONS,
+  resolveModelId,
+  type Series,
+} from '@mlb/shared';
 import { InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import {
   buildPrompt,
@@ -28,13 +33,54 @@ const prediction: PredictionResult = {
 };
 
 describe('buildPrompt', () => {
-  it('includes team names, series score, favorite, and probability', () => {
-    const prompt = buildPrompt(series, prediction);
+  it('includes team names, series score, favorite, and probability (EN)', () => {
+    const prompt = buildPrompt(series, prediction, 'en');
     expect(prompt).toContain('Los Angeles Dodgers');
     expect(prompt).toContain('New York Yankees');
     expect(prompt).toContain('World Series');
     expect(prompt).toContain('90%');
     expect(prompt).toContain('best-of-7');
+    // English instruction wording.
+    expect(prompt).toContain('concise baseball analyst');
+  });
+
+  it('defaults to English when no language is supplied', () => {
+    expect(buildPrompt(series, prediction)).toBe(buildPrompt(series, prediction, 'en'));
+  });
+
+  it('produces a Japanese prompt for language ja with identical team names/percent', () => {
+    const prompt = buildPrompt(series, prediction, 'ja');
+    // Localized instruction prose (contains Japanese characters).
+    expect(prompt).toContain('野球アナリスト');
+    expect(prompt).toContain('日本語');
+    // Team club names stay in English per the i18n convention.
+    expect(prompt).toContain('Los Angeles Dodgers');
+    expect(prompt).toContain('New York Yankees');
+    // Numeric percent is identical across languages.
+    expect(prompt).toContain('90%');
+    // No English instruction wording leaked into the JA prompt.
+    expect(prompt).not.toContain('concise baseball analyst');
+  });
+});
+
+describe('fallbackNarrative', () => {
+  it('is English prose for language en', () => {
+    const text = fallbackNarrative(series, prediction, 'en');
+    expect(text).toContain('Los Angeles Dodgers');
+    expect(text).toContain('New York Yankees');
+    expect(text).toContain('90%');
+    expect(text).toContain('favored to win');
+  });
+
+  it('is Japanese prose for language ja with identical team names/percent', () => {
+    const text = fallbackNarrative(series, prediction, 'ja');
+    // Localized surrounding prose.
+    expect(text).toContain('有利と予測され');
+    // Team club names and percent unchanged.
+    expect(text).toContain('Los Angeles Dodgers');
+    expect(text).toContain('New York Yankees');
+    expect(text).toContain('90%');
+    expect(text).not.toContain('favored to win');
   });
 });
 
@@ -53,20 +99,80 @@ describe('generateNarrative', () => {
     expect(prompt).toContain('Los Angeles Dodgers');
   });
 
-  it('falls back to a deterministic narrative when the invoker throws', async () => {
+  it('passes an English prompt to the invoker for language en', async () => {
+    const invoke = vi.fn().mockResolvedValue('ok');
+    await generateNarrative(series, prediction, { invoke }, 'test-model', 'en');
+    const [, prompt] = invoke.mock.calls[0]!;
+    expect(prompt).toContain('concise baseball analyst');
+    expect(prompt).not.toContain('野球アナリスト');
+  });
+
+  it('passes a Japanese prompt to the invoker for language ja', async () => {
+    const invoke = vi.fn().mockResolvedValue('ok');
+    await generateNarrative(series, prediction, { invoke }, 'test-model', 'ja');
+    const [, prompt] = invoke.mock.calls[0]!;
+    expect(prompt).toContain('野球アナリスト');
+    expect(prompt).not.toContain('concise baseball analyst');
+  });
+
+  it('falls back to the English deterministic narrative when the invoker throws', async () => {
     const invoker: BedrockInvoker = {
       invoke: vi.fn().mockRejectedValue(new Error('bedrock unavailable')),
     };
 
-    const result = await generateNarrative(series, prediction, invoker, 'test-model');
+    const result = await generateNarrative(series, prediction, invoker, 'test-model', 'en');
 
-    expect(result.narrative).toBe(fallbackNarrative(series, prediction));
+    expect(result.narrative).toBe(fallbackNarrative(series, prediction, 'en'));
     expect(result.model).toContain('fallback');
     expect(result.narrative).toContain('Los Angeles Dodgers');
+    expect(result.narrative).toContain('favored to win');
   });
 
-  it('defaults to the Anthropic Claude Haiku cross-region inference profile', () => {
-    expect(DEFAULT_MODEL_ID).toBe('us.anthropic.claude-haiku-4-5-20251001-v1:0');
+  it('falls back to the Japanese deterministic narrative for language ja', async () => {
+    const invoker: BedrockInvoker = {
+      invoke: vi.fn().mockRejectedValue(new Error('bedrock unavailable')),
+    };
+
+    const result = await generateNarrative(series, prediction, invoker, 'test-model', 'ja');
+
+    expect(result.narrative).toBe(fallbackNarrative(series, prediction, 'ja'));
+    expect(result.model).toContain('fallback');
+    expect(result.narrative).toContain('有利と予測され');
+  });
+
+  it('defaults to the shared Amazon Nova default model id', () => {
+    expect(DEFAULT_MODEL_ID).toBe(DEFAULT_NARRATIVE_MODEL_ID);
+    expect(DEFAULT_MODEL_ID).toBe('us.amazon.nova-lite-v1:0');
+  });
+});
+
+describe('shared model allowlist (resolveModelId)', () => {
+  it('exposes exactly the three Nova ids plus the Claude id', () => {
+    const ids = NARRATIVE_MODEL_OPTIONS.map((o) => o.id);
+    expect(ids).toEqual([
+      'us.amazon.nova-micro-v1:0',
+      'us.amazon.nova-lite-v1:0',
+      'us.amazon.nova-pro-v1:0',
+      'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+    ]);
+  });
+
+  it('passes through a known Amazon model id', () => {
+    expect(resolveModelId('us.amazon.nova-pro-v1:0')).toBe('us.amazon.nova-pro-v1:0');
+  });
+
+  it('passes through the known Claude model id', () => {
+    expect(resolveModelId('us.anthropic.claude-haiku-4-5-20251001-v1:0')).toBe(
+      'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+    );
+  });
+
+  it('falls back to the Amazon default for an unknown id', () => {
+    expect(resolveModelId('made-up-model')).toBe('us.amazon.nova-lite-v1:0');
+  });
+
+  it('falls back to the default for an undefined id', () => {
+    expect(resolveModelId(undefined)).toBe('us.amazon.nova-lite-v1:0');
   });
 });
 
@@ -83,12 +189,21 @@ describe('RealBedrockInvoker request/response shaping (ISSUE-2)', () => {
     return { body: new TextEncoder().encode(payload) };
   }
 
-  it('sends an Anthropic messages body and parses content[].text', async () => {
+  function novaResponseBody(text: string | string[]): { body: Uint8Array } {
+    const content = (Array.isArray(text) ? text : [text]).map((t) => ({ text: t }));
+    const payload = JSON.stringify({ output: { message: { role: 'assistant', content } } });
+    return { body: new TextEncoder().encode(payload) };
+  }
+
+  it('sends an Anthropic messages body and parses content[].text for a Claude id', async () => {
     const send = vi.fn().mockResolvedValue(anthropicResponseBody('The Dodgers are rolling.'));
     const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
     const invoker = new RealBedrockInvoker(client);
 
-    const text = await invoker.invoke('anthropic.test-model', 'Why is LA favored?');
+    const text = await invoker.invoke(
+      'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+      'Why is LA favored?',
+    );
 
     // (b) response parsing: content[].text is extracted.
     expect(text).toBe('The Dodgers are rolling.');
@@ -97,7 +212,7 @@ describe('RealBedrockInvoker request/response shaping (ISSUE-2)', () => {
     expect(send).toHaveBeenCalledTimes(1);
     const command = send.mock.calls[0]![0] as InvokeModelCommand;
     expect(command).toBeInstanceOf(InvokeModelCommand);
-    expect(command.input.modelId).toBe('anthropic.test-model');
+    expect(command.input.modelId).toBe('us.anthropic.claude-haiku-4-5-20251001-v1:0');
     expect(command.input.contentType).toBe('application/json');
     expect(command.input.accept).toBe('application/json');
 
@@ -116,24 +231,80 @@ describe('RealBedrockInvoker request/response shaping (ISSUE-2)', () => {
     expect(sentBody.messages[0]!.content[0]!.text).toBe('Why is LA favored?');
   });
 
-  it('concatenates multiple text blocks from the response', async () => {
+  it('sends an Amazon Nova messages/inferenceConfig body and parses output.message.content[].text', async () => {
+    const send = vi.fn().mockResolvedValue(novaResponseBody('The Dodgers are rolling.'));
+    const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
+    const invoker = new RealBedrockInvoker(client);
+
+    const text = await invoker.invoke('us.amazon.nova-lite-v1:0', 'Why is LA favored?');
+
+    // (b) response parsing: output.message.content[].text is extracted.
+    expect(text).toBe('The Dodgers are rolling.');
+
+    // (a) request shaping: the Nova messages/inferenceConfig body (NOT Anthropic).
+    expect(send).toHaveBeenCalledTimes(1);
+    const command = send.mock.calls[0]![0] as InvokeModelCommand;
+    expect(command).toBeInstanceOf(InvokeModelCommand);
+    expect(command.input.modelId).toBe('us.amazon.nova-lite-v1:0');
+    expect(command.input.contentType).toBe('application/json');
+
+    const sentBody = JSON.parse(command.input.body as string) as {
+      messages: Array<{ role: string; content: Array<{ text: string }> }>;
+      inferenceConfig: { maxTokens: number; temperature: number };
+      anthropic_version?: string;
+    };
+    expect(sentBody.anthropic_version).toBeUndefined();
+    expect(sentBody.inferenceConfig.maxTokens).toBe(300);
+    expect(typeof sentBody.inferenceConfig.temperature).toBe('number');
+    expect(sentBody.messages).toHaveLength(1);
+    expect(sentBody.messages[0]!.role).toBe('user');
+    expect(sentBody.messages[0]!.content[0]!.text).toBe('Why is LA favored?');
+    // Nova content blocks have no `type` field.
+    expect(
+      (sentBody.messages[0]!.content[0] as { type?: string }).type,
+    ).toBeUndefined();
+  });
+
+  it('concatenates multiple text blocks from an Anthropic response', async () => {
     const send = vi.fn().mockResolvedValue(anthropicResponseBody(['Part one. ', 'Part two.']));
     const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
     const invoker = new RealBedrockInvoker(client);
 
-    const text = await invoker.invoke('anthropic.test-model', 'prompt');
+    const text = await invoker.invoke('us.anthropic.claude-haiku-4-5-20251001-v1:0', 'prompt');
 
     expect(text).toBe('Part one. Part two.');
   });
 
-  it('throws when the response contains no text content', async () => {
+  it('concatenates multiple text blocks from a Nova response', async () => {
+    const send = vi.fn().mockResolvedValue(novaResponseBody(['Part one. ', 'Part two.']));
+    const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
+    const invoker = new RealBedrockInvoker(client);
+
+    const text = await invoker.invoke('us.amazon.nova-micro-v1:0', 'prompt');
+
+    expect(text).toBe('Part one. Part two.');
+  });
+
+  it('throws when an Anthropic response contains no text content', async () => {
     const send = vi.fn().mockResolvedValue({
       body: new TextEncoder().encode(JSON.stringify({ content: [] })),
     });
     const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
     const invoker = new RealBedrockInvoker(client);
 
-    await expect(invoker.invoke('anthropic.test-model', 'prompt')).rejects.toThrow(
+    await expect(
+      invoker.invoke('us.anthropic.claude-haiku-4-5-20251001-v1:0', 'prompt'),
+    ).rejects.toThrow(/no text content/);
+  });
+
+  it('throws when a Nova response contains no text content', async () => {
+    const send = vi.fn().mockResolvedValue({
+      body: new TextEncoder().encode(JSON.stringify({ output: { message: { content: [] } } })),
+    });
+    const client = { send } as unknown as import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient;
+    const invoker = new RealBedrockInvoker(client);
+
+    await expect(invoker.invoke('us.amazon.nova-lite-v1:0', 'prompt')).rejects.toThrow(
       /no text content/,
     );
   });

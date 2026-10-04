@@ -406,6 +406,65 @@ describe('BracketService.getPrediction (configurable accuracy)', () => {
   });
 });
 
+describe('BracketService.getPrediction (language + model threading)', () => {
+  it('threads ja + the resolved model into generateNarrative', async () => {
+    const store = memoryStore(current2026Bracket);
+    const bedrockInvoke = vi.fn().mockResolvedValue('物語');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction(
+      '2026-al-wildcard-117-116',
+      2026,
+      undefined,
+      'ja',
+      'us.amazon.nova-pro-v1:0',
+    );
+
+    expect(response.mode).toBe('prediction');
+    if (response.mode === 'prediction') {
+      // The resolved (allowlisted) model id is reported back.
+      expect(response.model).toBe('us.amazon.nova-pro-v1:0');
+      expect(response.narrative).toBe('物語');
+    }
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
+    const [modelId, prompt] = bedrockInvoke.mock.calls[0]!;
+    expect(modelId).toBe('us.amazon.nova-pro-v1:0');
+    // The ja prompt reached the invoker (localized instruction prose).
+    expect(prompt).toContain('野球アナリスト');
+  });
+
+  it('falls back to the default model for an unknown model id (no error)', async () => {
+    const store = memoryStore(current2026Bracket);
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction(
+      '2026-al-wildcard-117-116',
+      2026,
+      undefined,
+      undefined,
+      'totally-unknown-model',
+    );
+
+    expect(response.mode).toBe('prediction');
+    if (response.mode === 'prediction') {
+      expect(response.model).toBe('us.amazon.nova-lite-v1:0');
+    }
+    const [modelId, prompt] = bedrockInvoke.mock.calls[0]!;
+    expect(modelId).toBe('us.amazon.nova-lite-v1:0');
+    // Missing language defaults to English prose.
+    expect(prompt).toContain('concise baseball analyst');
+  });
+});
+
 describe('BracketService preview-only 2026 schedule (real upcoming shape)', () => {
   it('aggregates Preview games into not-yet-started (scheduled) series', async () => {
     const store = memoryStore(undefined);

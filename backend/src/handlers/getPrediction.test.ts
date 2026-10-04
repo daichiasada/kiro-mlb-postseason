@@ -100,6 +100,57 @@ describe('getPrediction handler', () => {
     expect(body.season).toBe(2024);
   });
 
+  it('accepts optional lang and model query params without error (GET)', async () => {
+    const result = (await handler(
+      getEvent({
+        seriesId: '2024-al-wildcard-117-116',
+        season: '2024',
+        lang: 'ja',
+        model: 'us.amazon.nova-pro-v1:0',
+      }),
+      {} as never,
+      () => {},
+    )) as { statusCode: number; body: string };
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body) as ResultsOnlyPrediction;
+    expect(body.mode).toBe('results');
+  });
+
+  it('does not 400 for an unknown lang or model (lenient optional params)', async () => {
+    const result = (await handler(
+      getEvent({
+        seriesId: '2024-al-wildcard-117-116',
+        season: '2024',
+        lang: 'zz',
+        model: 'not-a-real-model',
+      }),
+      {} as never,
+      () => {},
+    )) as { statusCode: number; body: string };
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body) as ResultsOnlyPrediction;
+    expect(body.mode).toBe('results');
+  });
+
+  it('accepts language and model fields in the POST body without error', async () => {
+    const result = (await handler(
+      postEvent({
+        seriesId: '2024-al-wildcard-117-116',
+        season: 2024,
+        language: 'ja',
+        model: 'us.amazon.nova-micro-v1:0',
+      }),
+      {} as never,
+      () => {},
+    )) as { statusCode: number; body: string };
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body) as ResultsOnlyPrediction;
+    expect(body.mode).toBe('results');
+  });
+
   it('still returns 400 for a missing seriesId even when accuracy is present', async () => {
     const result = await handler(
       getEvent({ season: '2024', accuracy: '0.5' }),
