@@ -7,6 +7,10 @@ and deployed to AWS with one command via AWS CDK.
 This project is a submission for the [Kiro University Challenge](https://kiro.dev/2026/university/)
 final exam.
 
+> **Judges:** see [DEMONSTRATED_LESSONS.md](./DEMONSTRATED_LESSONS.md) (実証された教訓)
+> for how each of the seven required lessons and the two bonuses is demonstrated,
+> with links to the relevant files.
+
 ---
 
 ## Overview
