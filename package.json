@@ -13,11 +13,12 @@
     "infra"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @mlb/shared && npm run build -w @mlb/backend && npm run build -w @mlb/frontend && npm run build -w @mlb/infra",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "synth": "npm run synth --workspace @mlb/infra --if-present",
-    "deploy": "npm run build && npm run deploy --workspace @mlb/infra --if-present"
+    "synth": "npm run build -w @mlb/frontend && npm run synth -w @mlb/infra",
+    "bootstrap": "npm run bootstrap -w @mlb/infra",
+    "deploy": "npm run build && npm run deploy -w @mlb/infra"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
