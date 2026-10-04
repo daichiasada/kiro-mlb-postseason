@@ -185,7 +185,15 @@ body {
 .bracket__grid {
   display: grid;
   gap: 0.9rem;
+  /* Keep every round column anchored to the top so cards line up across
+     columns regardless of how many series a round has (fixes the uneven
+     "gatagata" drift). Expanding one card's game list only grows that grid
+     row; other columns stay aligned. */
   align-items: start;
+}
+
+.bracket__column {
+  min-width: 0;
 }
 
 .bracket__round-title {
@@ -212,6 +220,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  /* With the game list collapsed by default, cards differ only by their
+     action row. Push any single trailing action (toggle / detail link /
+     predict button) to the bottom so headers, teams, and meta line up across
+     cards and columns. */
+  justify-content: flex-start;
+}
+
+.series-card__games-wrap,
+.series-card__detail-link,
+.series-card__predict {
+  margin-top: auto;
 }
 
 .series-card--selected {
@@ -288,6 +307,28 @@ body {
   color: var(--muted);
 }
 
+.series-card__games-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.series-card__games-toggle {
+  align-self: flex-start;
+  border: 1px solid #c3d0e6;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.series-card__games-toggle:hover {
+  border-color: var(--navy);
+}
+
 .series-card__games {
   list-style: none;
   margin: 0;
@@ -297,6 +338,11 @@ body {
   gap: 0.15rem;
   font-size: 0.76rem;
   color: #475569;
+}
+
+/* `hidden` collapses the list entirely so a collapsed card stays compact. */
+.series-card__games[hidden] {
+  display: none;
 }
 
 .series-card__game {
@@ -328,25 +374,159 @@ body {
   background: var(--red);
 }
 
-.series-card__detail {
-  margin-top: 0.3rem;
+.series-card__detail-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
   border: 1px solid #c3d0e6;
   border-radius: 8px;
   padding: 0.45rem 0.6rem;
   background: #fff;
   color: var(--navy);
-  cursor: pointer;
   font-size: 0.82rem;
+  font-weight: 600;
 }
 
-.series-card__detail:hover {
+.series-card__detail-link:hover {
   border-color: var(--navy);
-}
-
-.series-card--selected .series-card__detail {
   background: var(--navy);
-  border-color: var(--navy);
   color: #fff;
+}
+
+/* Series detail page */
+.detail__nav {
+  margin-bottom: 1rem;
+}
+
+.detail__back {
+  display: inline-block;
+  color: var(--navy);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.detail__back:hover {
+  text-decoration: underline;
+}
+
+.detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.detail__round {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.detail__title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--navy);
+}
+
+.detail__result {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.detail__teams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.detail__team {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fbfcfe;
+}
+
+.detail__team--winner {
+  background: #ecfdf5;
+  border-color: #86efac;
+  font-weight: 700;
+}
+
+.detail__team-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detail__team-wins {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.detail__games-title {
+  margin: 1rem 0 0.6rem;
+  font-size: 1rem;
+  color: var(--navy);
+}
+
+.detail__games {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail__game {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.9rem;
+}
+
+.detail__game-num {
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.detail__game-side {
+  font-variant-numeric: tabular-nums;
+}
+
+.detail__game-side--winner {
+  font-weight: 700;
+  color: #166534;
+}
+
+.detail__game-at {
+  color: var(--muted);
+  text-align: center;
+}
+
+.detail--missing {
+  text-align: center;
+}
+
+.detail__hint {
+  margin: 0.5rem 0;
+  color: var(--muted);
 }
 
 /* Standings */

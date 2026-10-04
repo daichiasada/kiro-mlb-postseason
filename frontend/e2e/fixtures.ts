@@ -9,6 +9,13 @@ import type { Page, Route } from '@playwright/test';
  */
 export const SAMPLE_2026_SERIES_ID = '2026-ws-worldseries-119-147';
 
+/**
+ * A FINISHED (status==='final') 2026 ALCS used to exercise the per-series
+ * game-detail toggle and the finished-series detail PAGE deterministically
+ * within the predictable 2026 season. Houston (117) beat Seattle (136) 4-2.
+ */
+export const SAMPLE_2026_FINAL_SERIES_ID = '2026-al-championship-117-136';
+
 export const SAMPLE_2026_BRACKET = {
   season: 2026,
   updatedAt: '2026-10-25T00:00:00.000Z',
@@ -23,6 +30,32 @@ export const SAMPLE_2026_BRACKET = {
       bestOf: 7,
       status: 'in_progress',
       games: [],
+    },
+    {
+      id: SAMPLE_2026_FINAL_SERIES_ID,
+      round: 'Championship Series',
+      league: 'AL',
+      // Houston Astros (117) beat the Seattle Mariners (136) 4-2.
+      high: { teamId: 117, wins: 4 },
+      low: { teamId: 136, wins: 2 },
+      bestOf: 7,
+      status: 'final',
+      games: [
+        {
+          gamePk: 800001,
+          date: '2026-10-12',
+          away: { teamId: 136, score: 3, isWinner: false },
+          home: { teamId: 117, score: 5, isWinner: true },
+          seriesGameNumber: 1,
+        },
+        {
+          gamePk: 800002,
+          date: '2026-10-13',
+          away: { teamId: 136, score: 2, isWinner: false },
+          home: { teamId: 117, score: 4, isWinner: true },
+          seriesGameNumber: 2,
+        },
+      ],
     },
   ],
 };

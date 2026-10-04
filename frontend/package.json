@@ -14,7 +14,8 @@
   "dependencies": {
     "@mlb/shared": "*",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

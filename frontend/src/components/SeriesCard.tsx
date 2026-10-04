@@ -1,3 +1,5 @@
+import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { TEAMS } from '@mlb/shared';
 import type { Series, SeriesTeam } from '@mlb/shared';
 import { TeamBadge } from './TeamBadge';
@@ -5,6 +7,8 @@ import { clinchWins, seriesLeaderId } from '../bracketLayout';
 
 interface SeriesCardProps {
   series: Series;
+  /** The season being viewed; used to build the series detail-page link. */
+  season: number;
   selected?: boolean;
   onSelect?: (seriesId: string) => void;
   /**
@@ -50,6 +54,7 @@ function TeamRow({
 
 export function SeriesCard({
   series,
+  season,
   selected = false,
   onSelect,
   predictable = true,
@@ -57,6 +62,18 @@ export function SeriesCard({
   const leaderId = seriesLeaderId(series);
   const needed = clinchWins(series.bestOf);
   const isFinal = series.status === 'final';
+  const hasGames = series.games.length > 0;
+
+  // Game-by-game detail is collapsed by default so every card starts at a
+  // consistent compact height (the primary fix for the uneven "gatagata"
+  // layout). A per-series toggle reveals/hides the list.
+  const [gamesOpen, setGamesOpen] = useState(false);
+  // React's useId() returns ids containing colons (e.g. ":r5:") which are not
+  // valid in CSS id selectors; strip them so `aria-controls`/`#id` lookups work
+  // in the browser and in Playwright locators.
+  const reactId = useId().replace(/:/g, '');
+  const gamesListId = `games-${reactId}`;
+
   const classes = ['series-card'];
   if (selected) classes.push('series-card--selected');
 
@@ -90,39 +107,60 @@ export function SeriesCard({
         Best of {series.bestOf} &middot; {series.high.wins}&ndash;{series.low.wins}
       </p>
 
-      {series.games.length > 0 && (
-        <ol className="series-card__games">
-          {series.games.map((game) => (
-            <li key={game.gamePk} className="series-card__game">
-              <span className="series-card__game-num">G{game.seriesGameNumber}</span>
-              <span className="series-card__game-score">
-                {TEAMS[game.away.teamId]?.abbreviation ?? game.away.teamId}{' '}
-                {game.away.score ?? '-'} @{' '}
-                {TEAMS[game.home.teamId]?.abbreviation ?? game.home.teamId}{' '}
-                {game.home.score ?? '-'}
-              </span>
-            </li>
-          ))}
-        </ol>
+      {hasGames && (
+        <div className="series-card__games-wrap">
+          <button
+            type="button"
+            className="series-card__games-toggle"
+            aria-expanded={gamesOpen}
+            aria-controls={gamesListId}
+            onClick={() => setGamesOpen((open) => !open)}
+          >
+            {gamesOpen ? 'Hide games' : 'Show games'}
+          </button>
+          <ol
+            id={gamesListId}
+            className="series-card__games"
+            hidden={!gamesOpen}
+          >
+            {series.games.map((game) => (
+              <li key={game.gamePk} className="series-card__game">
+                <span className="series-card__game-num">
+                  G{game.seriesGameNumber}
+                </span>
+                <span className="series-card__game-score">
+                  {TEAMS[game.away.teamId]?.abbreviation ?? game.away.teamId}{' '}
+                  {game.away.score ?? '-'} @{' '}
+                  {TEAMS[game.home.teamId]?.abbreviation ?? game.home.teamId}{' '}
+                  {game.home.score ?? '-'}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
 
-      {onSelect && predictable && (
+      {/*
+        A finished series links to its dedicated detail page (requirement #3).
+        The inline toggle above is kept for a quick peek; the detail page shows
+        the full game-by-game breakdown with teams, scores, winner, and result.
+      */}
+      {isFinal && (
+        <Link
+          className="series-card__detail-link"
+          to={`/season/${season}/series/${encodeURIComponent(series.id)}`}
+        >
+          View series detail
+        </Link>
+      )}
+
+      {onSelect && predictable && !isFinal && (
         <button
           type="button"
           className="series-card__predict"
           onClick={() => onSelect(series.id)}
         >
           {selected ? 'Selected for prediction' : 'Predict winner'}
-        </button>
-      )}
-
-      {onSelect && !predictable && (
-        <button
-          type="button"
-          className="series-card__detail"
-          onClick={() => onSelect(series.id)}
-        >
-          {selected ? 'Viewing details' : 'View details'}
         </button>
       )}
     </article>

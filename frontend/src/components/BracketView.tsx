@@ -7,6 +7,8 @@ import wsMark from '../assets/ws.svg';
 
 interface BracketViewProps {
   bracket: Bracket;
+  /** The season being viewed; used to build series detail-page links. */
+  season: number;
   selectedSeriesId: string | null;
   onSelectSeries: (seriesId: string) => void;
   /** Whether the season is predictable; forwarded to each SeriesCard. */
@@ -15,6 +17,7 @@ interface BracketViewProps {
 
 export function BracketView({
   bracket,
+  season,
   selectedSeriesId,
   onSelectSeries,
   predictable = true,
@@ -44,6 +47,7 @@ export function BracketView({
                 <SeriesCard
                   key={series.id}
                   series={series}
+                  season={season}
                   selected={series.id === selectedSeriesId}
                   onSelect={onSelectSeries}
                   predictable={predictable}

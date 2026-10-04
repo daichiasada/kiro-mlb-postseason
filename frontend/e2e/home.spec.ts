@@ -153,6 +153,39 @@ test.describe('home / bracket', () => {
     });
   });
 
+  test('game-detail lists are collapsed by default on the 2024 bracket', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.getByRole('group', { name: /season/i }).getByRole('button', {
+      name: '2024',
+    }).click();
+
+    // Wait for the 2024 bracket to render before inspecting the cards.
+    await expect(
+      page.getByRole('region', { name: /postseason bracket/i }),
+    ).toBeVisible();
+
+    // Every rendered game list starts hidden (collapsed-by-default), so cards
+    // stay compact and columns line up cleanly (the "gatagata" fix).
+    const lists = page.locator('.series-card__games');
+    await expect(lists.first()).toBeAttached();
+    const count = await lists.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      await expect(lists.nth(i)).toBeHidden();
+    }
+    // Every "Show games" toggle reports the collapsed state.
+    const toggles = page.getByRole('button', { name: /show games/i });
+    await expect(toggles.first()).toHaveAttribute('aria-expanded', 'false');
+
+    // Full-page screenshot of the aligned, collapsed bracket for visual review.
+    await page.screenshot({
+      path: 'test-results/bracket-2024-collapsed.png',
+      fullPage: true,
+    });
+  });
+
   test('does not overflow horizontally at a narrow mobile width', async ({
     page,
   }) => {

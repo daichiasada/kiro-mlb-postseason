@@ -1,17 +1,28 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { SeriesCard } from './SeriesCard';
 import { wildCardSeries } from '../test/fixtures';
+import type { Series } from '@mlb/shared';
+
+/** Renders a SeriesCard inside a router (it uses <Link> for the detail page). */
+function renderCard(props: Partial<React.ComponentProps<typeof SeriesCard>> = {}) {
+  return render(
+    <MemoryRouter>
+      <SeriesCard series={wildCardSeries} season={2024} {...props} />
+    </MemoryRouter>,
+  );
+}
 
 describe('SeriesCard', () => {
   it('renders both team names from the series fixture', () => {
-    render(<SeriesCard series={wildCardSeries} />);
+    renderCard();
     expect(screen.getByText('Detroit Tigers')).toBeInTheDocument();
     expect(screen.getByText('Houston Astros')).toBeInTheDocument();
   });
 
   it('renders the series score and best-of from props', () => {
-    render(<SeriesCard series={wildCardSeries} />);
+    renderCard();
     // high (Astros) 0 wins, low (Tigers) 2 wins
     const metas = screen.getByText(/Best of 3/);
     expect(metas.textContent).toContain('0');
@@ -19,19 +30,57 @@ describe('SeriesCard', () => {
     expect(screen.getByText('Final')).toBeInTheDocument();
   });
 
-  it('renders per-game results', () => {
-    render(<SeriesCard series={wildCardSeries} />);
-    expect(screen.getByText('G1')).toBeInTheDocument();
-    expect(screen.getByText('G2')).toBeInTheDocument();
-    expect(screen.getByText(/DET 3 @ HOU 1/)).toBeInTheDocument();
+  it('keeps the game list collapsed by default and reveals it via the toggle', async () => {
+    renderCard();
+
+    const toggle = screen.getByRole('button', { name: /show games/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    // Collapsed by default: the list the toggle controls is hidden.
+    const listId = toggle.getAttribute('aria-controls')!;
+    const list = document.getElementById(listId)!;
+    expect(list).toHaveAttribute('hidden');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveTextContent(/hide games/i);
+    expect(list).not.toHaveAttribute('hidden');
+    expect(within(list).getByText('G1')).toBeInTheDocument();
+    expect(within(list).getByText(/DET 3 @ HOU 1/)).toBeInTheDocument();
   });
 
-  it('invokes onSelect with the series id when the predict button is clicked', async () => {
-    const onSelect = vi.fn();
-    const { getByRole } = render(
-      <SeriesCard series={wildCardSeries} onSelect={onSelect} />,
+  it('links a finished series to its detail page', () => {
+    renderCard();
+    const link = screen.getByRole('link', { name: /view series detail/i });
+    expect(link).toHaveAttribute(
+      'href',
+      '/season/2024/series/2024-al-wildcard-117-116',
     );
-    getByRole('button').click();
-    expect(onSelect).toHaveBeenCalledWith('2024-al-wildcard-117-116');
+  });
+
+  it('shows a Predict button (not a detail link) for an in-progress predictable series', () => {
+    const inProgress: Series = {
+      ...wildCardSeries,
+      id: '2026-al-wildcard-117-116',
+      status: 'in_progress',
+      high: { teamId: 117, wins: 1 },
+      low: { teamId: 116, wins: 1 },
+    };
+    const onSelect = vi.fn();
+    render(
+      <MemoryRouter>
+        <SeriesCard
+          series={inProgress}
+          season={2026}
+          onSelect={onSelect}
+          predictable
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /predict winner/i }));
+    expect(onSelect).toHaveBeenCalledWith('2026-al-wildcard-117-116');
+    expect(
+      screen.queryByRole('link', { name: /view series detail/i }),
+    ).not.toBeInTheDocument();
   });
 });

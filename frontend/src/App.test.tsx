@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { Bracket } from '@mlb/shared';
 import { App } from './App';
 import { sampleBracket } from './test/fixtures';
@@ -9,6 +10,19 @@ vi.mock('./api', async () => {
   const actual = await vi.importActual<typeof import('./api')>('./api');
   return { ...actual, getBracket: vi.fn(), getPrediction: vi.fn() };
 });
+
+/**
+ * Renders the full router at `/`, which redirects to `/season/2026` (the
+ * default season). The season now lives in the URL, so the App must be driven
+ * through a router in tests.
+ */
+function renderApp() {
+  return render(
+    <MemoryRouter initialEntries={['/']}>
+      <App />
+    </MemoryRouter>,
+  );
+}
 
 const mockedGetBracket = vi.mocked(api.getBracket);
 const mockedGetPrediction = vi.mocked(api.getPrediction);
@@ -97,7 +111,7 @@ describe('App season selector', () => {
 
   it('renders a selector for 2024, 2025 and 2026 and defaults to 2026', async () => {
     mockedGetBracket.mockResolvedValue({ bracket: bracket2026, usedFallback: false });
-    render(<App />);
+    renderApp();
 
     const group = screen.getByRole('group', { name: /season/i });
     expect(within(group).getByRole('button', { name: '2024' })).toBeInTheDocument();
@@ -110,7 +124,7 @@ describe('App season selector', () => {
 
   it('shows the interactive prediction affordance for the predictable 2026 season', async () => {
     mockedGetBracket.mockResolvedValue({ bracket: bracket2026, usedFallback: false });
-    render(<App />);
+    renderApp();
 
     await waitFor(() =>
       expect(
@@ -128,7 +142,7 @@ describe('App season selector', () => {
       .mockResolvedValueOnce({ bracket: bracket2026, usedFallback: false })
       .mockResolvedValueOnce({ bracket: sampleBracket, usedFallback: true });
 
-    render(<App />);
+    renderApp();
     await waitFor(() => expect(mockedGetBracket).toHaveBeenCalledWith(2026));
 
     fireEvent.click(screen.getByRole('button', { name: '2024' }));
@@ -156,7 +170,7 @@ describe('App season selector', () => {
       .mockResolvedValueOnce({ bracket: bracket2026, usedFallback: false })
       .mockResolvedValueOnce({ bracket: sampleBracket, usedFallback: true });
 
-    render(<App />);
+    renderApp();
     await waitFor(() => expect(mockedGetBracket).toHaveBeenCalledWith(2026));
 
     fireEvent.click(screen.getByRole('button', { name: '2024' }));
@@ -182,7 +196,7 @@ describe('App season selector', () => {
       bracket: bracket2026Upcoming,
       usedFallback: false,
     });
-    render(<App />);
+    renderApp();
 
     await waitFor(() =>
       expect(
@@ -200,7 +214,7 @@ describe('App season selector', () => {
       bracket: bracket2026Preview,
       usedFallback: false,
     });
-    render(<App />);
+    renderApp();
 
     await waitFor(() =>
       expect(
