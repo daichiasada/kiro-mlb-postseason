@@ -187,10 +187,20 @@ export class BracketService {
    *     is not resolvable yet (empty/placeholder-only bracket) or has not
    *     started (status 'scheduled'). This degrades gracefully instead of
    *     erroring, so an empty 2026 bracket never produces a 500.
-   *   - `mode: 'prediction'` for a resolvable, started series in the current
-   *     season: the full numeric prediction with a Bedrock narrative.
+   *   - `mode: 'results'` (series-level) for a resolved series whose
+   *     `status === 'final'`, even in the current predictable season: a
+   *     finished series has no prediction, so this also short-circuits BEFORE
+   *     the predict model or Bedrock.
+   *   - `mode: 'prediction'` for a resolvable, started, non-final series in the
+   *     current season: the full numeric prediction with a Bedrock narrative.
+   *     The optional `accuracy` (a sharpness control in [0, 1], default 0.5) is
+   *     threaded to {@link predict}.
    */
-  async getPrediction(seriesId: string, season: number): Promise<PredictionResponse> {
+  async getPrediction(
+    seriesId: string,
+    season: number,
+    accuracy?: number,
+  ): Promise<PredictionResponse> {
     // Results-only seasons short-circuit without touching the predict model or
     // the Bedrock invoker.
     if (isResultsOnly(season)) {
@@ -204,6 +214,20 @@ export class BracketService {
 
     const bracket = await this.getBracket(season);
     const series = resolveSeries(bracket, seriesId);
+
+    // Series-level final gating: a finished series has no prediction, even in
+    // the current predictable season. Return the results/no-prediction contract
+    // WITHOUT running the predict model or invoking Bedrock. This is finer
+    // grained than the season-level short-circuit above (which only fires for a
+    // results-only season).
+    if (series && series.status === 'final') {
+      return {
+        mode: 'results',
+        seriesId,
+        season,
+        message: `This ${season} series is complete; final results are shown instead of a prediction.`,
+      };
+    }
 
     // Predictable season but the series is not yet resolvable (empty or
     // placeholder-only bracket) or has not started: no prediction available yet.
@@ -221,7 +245,7 @@ export class BracketService {
       };
     }
 
-    const result = predict(series, bracket, this.winPct);
+    const result = predict(series, bracket, this.winPct, accuracy);
     const { narrative, model } = await generateNarrative(series, result, this.bedrockInvoker);
 
     return {

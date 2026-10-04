@@ -7,6 +7,8 @@
  *
  *   - favoriteWinProbability is always within the clamped range [0.5, 0.95].
  *   - favoriteTeamId is always one of the two teams in the series.
+ *   - these hold for every accuracy, including values beyond the supported
+ *     [0, 1] range (which the model clamps), and the model stays deterministic.
  *
  * Property-based testing is an IDE-only Kiro University lesson; fast-check's
  * generators (fc.assert / fc.property) drive hundreds of cases per invariant.
@@ -83,6 +85,15 @@ function bracketOf(series: Series): Bracket {
   return { season: 2024, updatedAt: '2024-10-01T00:00:00.000Z', series: [series] };
 }
 
+/**
+ * A random accuracy that samples across the supported [0, 1] range AND slightly
+ * beyond it (down to -0.5 and up to 1.5) to exercise the model's clamping of
+ * out-of-range inputs.
+ */
+function accuracyArb(): fc.Arbitrary<number> {
+  return fc.double({ min: -0.5, max: 1.5, noNaN: true });
+}
+
 describe('predict (property-based)', () => {
   it('always returns a probability within [0.5, 0.95]', () => {
     fc.assert(
@@ -126,6 +137,37 @@ describe('predict (property-based)', () => {
         const b = predict(series, bracketOf(series));
         expect(a).toEqual(b);
       }),
+    );
+  });
+
+  it('holds all invariants for any accuracy, including out-of-range values', () => {
+    fc.assert(
+      fc.property(
+        seriesArb().chain((series) =>
+          accuracyArb().map((accuracy) => ({ series, accuracy })),
+        ),
+        ({ series, accuracy }) => {
+          const result = predict(series, bracketOf(series), {}, accuracy);
+          expect(result.favoriteWinProbability).toBeGreaterThanOrEqual(0.5);
+          expect(result.favoriteWinProbability).toBeLessThanOrEqual(0.95);
+          expect([series.high.teamId, series.low.teamId]).toContain(result.favoriteTeamId);
+        },
+      ),
+    );
+  });
+
+  it('is deterministic for identical (series, accuracy) inputs', () => {
+    fc.assert(
+      fc.property(
+        seriesArb().chain((series) =>
+          accuracyArb().map((accuracy) => ({ series, accuracy })),
+        ),
+        ({ series, accuracy }) => {
+          const a = predict(series, bracketOf(series), {}, accuracy);
+          const b = predict(series, bracketOf(series), {}, accuracy);
+          expect(a).toEqual(b);
+        },
+      ),
     );
   });
 });

@@ -41,3 +41,17 @@ export function parseSeason(value: string | undefined): number | undefined {
   const season = Number(value);
   return Number.isInteger(season) ? season : undefined;
 }
+
+/**
+ * Parses the optional prediction `accuracy` control from a request value
+ * (query string or JSON body, either a string or number). Returns `undefined`
+ * for a missing value so the service/model default applies, and for any
+ * non-numeric input (accuracy is a best-effort tuning knob, not a hard
+ * validation gate like season). A valid number is returned as-is; the model
+ * clamps it into its supported [0, 1] range.
+ */
+export function parseAccuracy(value: string | number | undefined): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  const accuracy = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(accuracy) ? accuracy : undefined;
+}

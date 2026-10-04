@@ -303,6 +303,109 @@ const previewOnly2026Games = [
   },
 ];
 
+/** A FINAL 2026 series: complete even though 2026 is the predictable season. */
+const final2026Bracket: Bracket = {
+  season: 2026,
+  updatedAt: '2026-10-01T00:00:00.000Z',
+  series: [
+    {
+      id: '2026-al-wildcard-117-116',
+      round: 'Wild Card',
+      league: 'AL',
+      high: { teamId: 117, wins: 0 },
+      low: { teamId: 116, wins: 2 },
+      bestOf: 3,
+      status: 'final',
+      games: [],
+    },
+  ],
+};
+
+describe('BracketService.getPrediction (series-level final gating)', () => {
+  it('returns a results/no-prediction response for a FINAL series in the current predictable season', async () => {
+    const store = memoryStore(final2026Bracket);
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    // A finished series yields results, NOT a prediction, even in 2026.
+    expect(response.mode).toBe('results');
+    expect(response.mode).not.toBe('prediction');
+    if (response.mode === 'results') {
+      expect(response.season).toBe(2026);
+      expect(response.seriesId).toBe('2026-al-wildcard-117-116');
+      expect(response.message).toBeTruthy();
+    }
+    // The predict/Bedrock path must never run for a final series.
+    expect(bedrockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('still returns mode:prediction for a started, non-final current-season series', async () => {
+    const store = memoryStore(current2026Bracket);
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    expect(response.mode).toBe('prediction');
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
+  });
+});
+
+describe('BracketService.getPrediction (configurable accuracy)', () => {
+  it('accepts an accuracy argument and influences the returned probability', async () => {
+    // Use a strongly favored in-progress series so the accuracy transform has
+    // headroom to move the probability.
+    const favored2026Bracket: Bracket = {
+      season: 2026,
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      series: [
+        {
+          id: '2026-al-wildcard-117-116',
+          round: 'Wild Card',
+          league: 'AL',
+          high: { teamId: 117, wins: 2 },
+          low: { teamId: 116, wins: 0 },
+          bestOf: 5,
+          status: 'in_progress',
+          games: [],
+        },
+      ],
+    };
+
+    const makeService = () =>
+      new BracketService({
+        store: memoryStore(favored2026Bracket),
+        fetchSchedule: vi.fn(),
+        bedrockInvoker: { invoke: vi.fn().mockResolvedValue('narrative text') },
+      });
+
+    const low = await makeService().getPrediction('2026-al-wildcard-117-116', 2026, 0.1);
+    const high = await makeService().getPrediction('2026-al-wildcard-117-116', 2026, 0.95);
+
+    expect(low.mode).toBe('prediction');
+    expect(high.mode).toBe('prediction');
+    if (low.mode === 'prediction' && high.mode === 'prediction') {
+      // Two different accuracy values yield different probabilities, both valid.
+      expect(high.favoriteWinProbability).not.toBe(low.favoriteWinProbability);
+      expect(high.favoriteWinProbability).toBeGreaterThan(low.favoriteWinProbability);
+      for (const p of [low.favoriteWinProbability, high.favoriteWinProbability]) {
+        expect(p).toBeGreaterThanOrEqual(0.5);
+        expect(p).toBeLessThanOrEqual(0.95);
+      }
+    }
+  });
+});
+
 describe('BracketService preview-only 2026 schedule (real upcoming shape)', () => {
   it('aggregates Preview games into not-yet-started (scheduled) series', async () => {
     const store = memoryStore(undefined);

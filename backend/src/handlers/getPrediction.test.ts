@@ -22,6 +22,22 @@ function getEvent(query: Record<string, string>): APIGatewayProxyEventV2 {
   } as unknown as APIGatewayProxyEventV2;
 }
 
+/** Builds a minimal API Gateway (HTTP API) POST event with a JSON body. */
+function postEvent(body: Record<string, unknown>): APIGatewayProxyEventV2 {
+  return {
+    version: '2.0',
+    routeKey: 'POST /prediction',
+    rawPath: '/prediction',
+    rawQueryString: '',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    requestContext: {
+      http: { method: 'POST', path: '/prediction', protocol: 'HTTP/1.1', sourceIp: '', userAgent: '' },
+    },
+    isBase64Encoded: false,
+  } as unknown as APIGatewayProxyEventV2;
+}
+
 describe('getPrediction handler', () => {
   it('returns a 400 when seriesId is missing', async () => {
     const result = await handler(getEvent({ season: '2024' }), {} as never, () => {});
@@ -55,5 +71,41 @@ describe('getPrediction handler', () => {
     expect(body.season).toBe(2024);
     expect(body.seriesId).toBe('2024-al-wildcard-117-116');
     expect(body.message).toContain('2024');
+  });
+
+  it('accepts an accuracy query param (GET) without error', async () => {
+    // 2024 is results-only, so this exercises accuracy parsing without any
+    // store/Bedrock access or live calls.
+    const result = (await handler(
+      getEvent({ seriesId: '2024-al-wildcard-117-116', season: '2024', accuracy: '0.8' }),
+      {} as never,
+      () => {},
+    )) as { statusCode: number; body: string };
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body) as ResultsOnlyPrediction;
+    expect(body.mode).toBe('results');
+  });
+
+  it('accepts an accuracy field in the POST body without error', async () => {
+    const result = (await handler(
+      postEvent({ seriesId: '2024-al-wildcard-117-116', season: 2024, accuracy: 0.2 }),
+      {} as never,
+      () => {},
+    )) as { statusCode: number; body: string };
+
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body) as ResultsOnlyPrediction;
+    expect(body.mode).toBe('results');
+    expect(body.season).toBe(2024);
+  });
+
+  it('still returns 400 for a missing seriesId even when accuracy is present', async () => {
+    const result = await handler(
+      getEvent({ season: '2024', accuracy: '0.5' }),
+      {} as never,
+      () => {},
+    );
+    expect((result as { statusCode: number }).statusCode).toBe(400);
   });
 });
