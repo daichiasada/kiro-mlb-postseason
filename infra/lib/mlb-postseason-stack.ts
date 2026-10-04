@@ -188,27 +188,27 @@ export class MlbPostseasonStack extends Stack {
     const apiUrl = httpApi.apiEndpoint;
 
     // ---- Deploy the SPA + inject the API URL -----------------------------
-    // 1) The built SPA from frontend/dist (must exist at synth time).
+    // The built SPA (frontend/dist, must exist at synth time) and the
+    // deploy-time /config.js are shipped by a SINGLE BucketDeployment.
+    //
+    // ISSUE-4 (BucketDeployment prune race): a previous design used two
+    // deployments - the SPA one pruned by default while a separate
+    // DeployRuntimeConfig used prune:false to add /config.js. On a redeploy the
+    // SPA deployment's prune step could transiently delete the existing
+    // /config.js before the second deployment rewrote it, so a request landing
+    // in that window would 404 on the runtime config. Combining both sources
+    // into one deployment makes prune internally consistent: /config.js is part
+    // of the same managed object set as the SPA, so it is never pruned away and
+    // is always present after each deploy. `apiUrl` is a deploy-time token and
+    // Source.data resolves it when the asset is rendered.
     new s3deploy.BucketDeployment(this, 'DeploySpa', {
-      sources: [s3deploy.Source.asset(FRONTEND_DIST)],
-      destinationBucket: siteBucket,
-      distribution,
-      distributionPaths: ['/*'],
-    });
-
-    // 2) A deploy-time /config.js writing the real API base URL. prune:false
-    //    so it does not delete the SPA files from the first deployment.
-    new s3deploy.BucketDeployment(this, 'DeployRuntimeConfig', {
       sources: [
-        s3deploy.Source.data(
-          'config.js',
-          `window.__API_BASE_URL__ = "${apiUrl}";`
-        ),
+        s3deploy.Source.asset(FRONTEND_DIST),
+        s3deploy.Source.data('config.js', `window.__API_BASE_URL__ = "${apiUrl}";`),
       ],
       destinationBucket: siteBucket,
       distribution,
-      distributionPaths: ['/config.js'],
-      prune: false,
+      distributionPaths: ['/*'],
     });
 
     // ---- Outputs ----------------------------------------------------------
