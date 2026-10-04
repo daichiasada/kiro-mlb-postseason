@@ -1,0 +1,898 @@
+{
+  "season": 2025,
+  "updatedAt": "2025-11-02T00:00:00.000Z",
+  "series": [
+    {
+      "id": "2025-al-wildcard-114-116",
+      "round": "Wild Card",
+      "league": "AL",
+      "high": {
+        "teamId": 114,
+        "wins": 1
+      },
+      "low": {
+        "teamId": 116,
+        "wins": 2
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813072,
+          "date": "2025-09-30",
+          "away": {
+            "teamId": 116,
+            "score": 2,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 114,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813071,
+          "date": "2025-10-01",
+          "away": {
+            "teamId": 116,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 114,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813073,
+          "date": "2025-10-02",
+          "away": {
+            "teamId": 116,
+            "score": 6,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 114,
+            "score": 3,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        }
+      ]
+    },
+    {
+      "id": "2025-al-wildcard-147-111",
+      "round": "Wild Card",
+      "league": "AL",
+      "high": {
+        "teamId": 147,
+        "wins": 2
+      },
+      "low": {
+        "teamId": 111,
+        "wins": 1
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813074,
+          "date": "2025-09-30",
+          "away": {
+            "teamId": 111,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 147,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813070,
+          "date": "2025-10-01",
+          "away": {
+            "teamId": 111,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 147,
+            "score": 4,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813065,
+          "date": "2025-10-03",
+          "away": {
+            "teamId": 111,
+            "score": 0,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 147,
+            "score": 4,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        }
+      ]
+    },
+    {
+      "id": "2025-nl-wildcard-112-135",
+      "round": "Wild Card",
+      "league": "NL",
+      "high": {
+        "teamId": 112,
+        "wins": 2
+      },
+      "low": {
+        "teamId": 135,
+        "wins": 1
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813066,
+          "date": "2025-09-30",
+          "away": {
+            "teamId": 135,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 112,
+            "score": 3,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813064,
+          "date": "2025-10-01",
+          "away": {
+            "teamId": 135,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 112,
+            "score": 0,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813059,
+          "date": "2025-10-02",
+          "away": {
+            "teamId": 135,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 112,
+            "score": 3,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        }
+      ]
+    },
+    {
+      "id": "2025-nl-wildcard-119-113",
+      "round": "Wild Card",
+      "league": "NL",
+      "high": {
+        "teamId": 119,
+        "wins": 2
+      },
+      "low": {
+        "teamId": 113,
+        "wins": 0
+      },
+      "bestOf": 3,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813069,
+          "date": "2025-10-01",
+          "away": {
+            "teamId": 113,
+            "score": 5,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 10,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813068,
+          "date": "2025-10-02",
+          "away": {
+            "teamId": 113,
+            "score": 4,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 8,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        }
+      ]
+    },
+    {
+      "id": "2025-al-divisionseries-136-116",
+      "round": "Division Series",
+      "league": "AL",
+      "high": {
+        "teamId": 136,
+        "wins": 3
+      },
+      "low": {
+        "teamId": 116,
+        "wins": 2
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813058,
+          "date": "2025-10-05",
+          "away": {
+            "teamId": 116,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 136,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813057,
+          "date": "2025-10-06",
+          "away": {
+            "teamId": 116,
+            "score": 2,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 136,
+            "score": 3,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813056,
+          "date": "2025-10-07",
+          "away": {
+            "teamId": 136,
+            "score": 8,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 116,
+            "score": 4,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 813055,
+          "date": "2025-10-08",
+          "away": {
+            "teamId": 136,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 116,
+            "score": 9,
+            "isWinner": true
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 813054,
+          "date": "2025-10-11",
+          "away": {
+            "teamId": 116,
+            "score": 2,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 136,
+            "score": 3,
+            "isWinner": true
+          },
+          "seriesGameNumber": 5
+        }
+      ]
+    },
+    {
+      "id": "2025-al-divisionseries-141-147",
+      "round": "Division Series",
+      "league": "AL",
+      "high": {
+        "teamId": 141,
+        "wins": 3
+      },
+      "low": {
+        "teamId": 147,
+        "wins": 1
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813063,
+          "date": "2025-10-04",
+          "away": {
+            "teamId": 147,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 141,
+            "score": 10,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813062,
+          "date": "2025-10-05",
+          "away": {
+            "teamId": 147,
+            "score": 7,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 141,
+            "score": 13,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813061,
+          "date": "2025-10-08",
+          "away": {
+            "teamId": 141,
+            "score": 6,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 147,
+            "score": 9,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 813060,
+          "date": "2025-10-08",
+          "away": {
+            "teamId": 141,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 147,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        }
+      ]
+    },
+    {
+      "id": "2025-nl-divisionseries-143-119",
+      "round": "Division Series",
+      "league": "NL",
+      "high": {
+        "teamId": 143,
+        "wins": 1
+      },
+      "low": {
+        "teamId": 119,
+        "wins": 3
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813051,
+          "date": "2025-10-04",
+          "away": {
+            "teamId": 119,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 143,
+            "score": 3,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813052,
+          "date": "2025-10-06",
+          "away": {
+            "teamId": 119,
+            "score": 4,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 143,
+            "score": 3,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813041,
+          "date": "2025-10-09",
+          "away": {
+            "teamId": 143,
+            "score": 8,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 119,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 813042,
+          "date": "2025-10-09",
+          "away": {
+            "teamId": 143,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 2,
+            "isWinner": true
+          },
+          "seriesGameNumber": 4
+        }
+      ]
+    },
+    {
+      "id": "2025-nl-divisionseries-158-112",
+      "round": "Division Series",
+      "league": "NL",
+      "high": {
+        "teamId": 158,
+        "wins": 3
+      },
+      "low": {
+        "teamId": 112,
+        "wins": 2
+      },
+      "bestOf": 5,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813047,
+          "date": "2025-10-04",
+          "away": {
+            "teamId": 112,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 158,
+            "score": 9,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813048,
+          "date": "2025-10-07",
+          "away": {
+            "teamId": 112,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 158,
+            "score": 7,
+            "isWinner": true
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813049,
+          "date": "2025-10-08",
+          "away": {
+            "teamId": 158,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 112,
+            "score": 4,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 813050,
+          "date": "2025-10-10",
+          "away": {
+            "teamId": 158,
+            "score": 0,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 112,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 813046,
+          "date": "2025-10-12",
+          "away": {
+            "teamId": 112,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 158,
+            "score": 3,
+            "isWinner": true
+          },
+          "seriesGameNumber": 5
+        }
+      ]
+    },
+    {
+      "id": "2025-al-championshipseries-141-136",
+      "round": "Championship Series",
+      "league": "AL",
+      "high": {
+        "teamId": 141,
+        "wins": 4
+      },
+      "low": {
+        "teamId": 136,
+        "wins": 3
+      },
+      "bestOf": 7,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813040,
+          "date": "2025-10-13",
+          "away": {
+            "teamId": 136,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 141,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813044,
+          "date": "2025-10-13",
+          "away": {
+            "teamId": 136,
+            "score": 10,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 141,
+            "score": 3,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813043,
+          "date": "2025-10-16",
+          "away": {
+            "teamId": 141,
+            "score": 13,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 136,
+            "score": 4,
+            "isWinner": false
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 813035,
+          "date": "2025-10-17",
+          "away": {
+            "teamId": 141,
+            "score": 8,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 136,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 813039,
+          "date": "2025-10-17",
+          "away": {
+            "teamId": 141,
+            "score": 2,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 136,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 5
+        },
+        {
+          "gamePk": 813038,
+          "date": "2025-10-20",
+          "away": {
+            "teamId": 136,
+            "score": 2,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 141,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 6
+        },
+        {
+          "gamePk": 813037,
+          "date": "2025-10-21",
+          "away": {
+            "teamId": 136,
+            "score": 3,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 141,
+            "score": 4,
+            "isWinner": true
+          },
+          "seriesGameNumber": 7
+        }
+      ]
+    },
+    {
+      "id": "2025-nl-championshipseries-158-119",
+      "round": "Championship Series",
+      "league": "NL",
+      "high": {
+        "teamId": 158,
+        "wins": 0
+      },
+      "low": {
+        "teamId": 119,
+        "wins": 4
+      },
+      "bestOf": 7,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813036,
+          "date": "2025-10-14",
+          "away": {
+            "teamId": 119,
+            "score": 2,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 158,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813034,
+          "date": "2025-10-15",
+          "away": {
+            "teamId": 119,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 158,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813033,
+          "date": "2025-10-16",
+          "away": {
+            "teamId": 158,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 3,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 813031,
+          "date": "2025-10-18",
+          "away": {
+            "teamId": 158,
+            "score": 1,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 5,
+            "isWinner": true
+          },
+          "seriesGameNumber": 4
+        }
+      ]
+    },
+    {
+      "id": "2025-ws-worldseries-141-119",
+      "round": "World Series",
+      "league": "WS",
+      "high": {
+        "teamId": 141,
+        "wins": 3
+      },
+      "low": {
+        "teamId": 119,
+        "wins": 4
+      },
+      "bestOf": 7,
+      "status": "final",
+      "games": [
+        {
+          "gamePk": 813027,
+          "date": "2025-10-25",
+          "away": {
+            "teamId": 119,
+            "score": 4,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 141,
+            "score": 11,
+            "isWinner": true
+          },
+          "seriesGameNumber": 1
+        },
+        {
+          "gamePk": 813026,
+          "date": "2025-10-26",
+          "away": {
+            "teamId": 119,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 141,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 2
+        },
+        {
+          "gamePk": 813032,
+          "date": "2025-10-28",
+          "away": {
+            "teamId": 141,
+            "score": 5,
+            "isWinner": false
+          },
+          "home": {
+            "teamId": 119,
+            "score": 6,
+            "isWinner": true
+          },
+          "seriesGameNumber": 3
+        },
+        {
+          "gamePk": 813023,
+          "date": "2025-10-29",
+          "away": {
+            "teamId": 141,
+            "score": 6,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 119,
+            "score": 2,
+            "isWinner": false
+          },
+          "seriesGameNumber": 4
+        },
+        {
+          "gamePk": 813022,
+          "date": "2025-10-30",
+          "away": {
+            "teamId": 141,
+            "score": 6,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 119,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 5
+        },
+        {
+          "gamePk": 813025,
+          "date": "2025-11-01",
+          "away": {
+            "teamId": 119,
+            "score": 3,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 141,
+            "score": 1,
+            "isWinner": false
+          },
+          "seriesGameNumber": 6
+        },
+        {
+          "gamePk": 813024,
+          "date": "2025-11-02",
+          "away": {
+            "teamId": 119,
+            "score": 5,
+            "isWinner": true
+          },
+          "home": {
+            "teamId": 141,
+            "score": 4,
+            "isWinner": false
+          },
+          "seriesGameNumber": 7
+        }
+      ]
+    }
+  ]
+}

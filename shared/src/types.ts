@@ -86,11 +86,15 @@ export interface Prediction {
 }
 
 /**
- * Teams appearing in the 2024 MLB postseason, keyed by MLB Stats API team id.
- * Ids and names are sourced from https://statsapi.mlb.com/api/v1/schedule/postseason.
+ * Teams appearing in the 2024 and 2025 MLB postseasons, keyed by MLB Stats API
+ * team id. Ids and names are sourced from
+ * https://statsapi.mlb.com/api/v1/schedule/postseason.
  */
 export const TEAMS: Record<number, Team> = {
   110: { id: 110, name: 'Baltimore Orioles', abbreviation: 'BAL', league: 'AL' },
+  111: { id: 111, name: 'Boston Red Sox', abbreviation: 'BOS', league: 'AL' },
+  112: { id: 112, name: 'Chicago Cubs', abbreviation: 'CHC', league: 'NL' },
+  113: { id: 113, name: 'Cincinnati Reds', abbreviation: 'CIN', league: 'NL' },
   114: { id: 114, name: 'Cleveland Guardians', abbreviation: 'CLE', league: 'AL' },
   116: { id: 116, name: 'Detroit Tigers', abbreviation: 'DET', league: 'AL' },
   117: { id: 117, name: 'Houston Astros', abbreviation: 'HOU', league: 'AL' },
@@ -98,6 +102,8 @@ export const TEAMS: Record<number, Team> = {
   119: { id: 119, name: 'Los Angeles Dodgers', abbreviation: 'LAD', league: 'NL' },
   121: { id: 121, name: 'New York Mets', abbreviation: 'NYM', league: 'NL' },
   135: { id: 135, name: 'San Diego Padres', abbreviation: 'SD', league: 'NL' },
+  136: { id: 136, name: 'Seattle Mariners', abbreviation: 'SEA', league: 'AL' },
+  141: { id: 141, name: 'Toronto Blue Jays', abbreviation: 'TOR', league: 'AL' },
   143: { id: 143, name: 'Philadelphia Phillies', abbreviation: 'PHI', league: 'NL' },
   144: { id: 144, name: 'Atlanta Braves', abbreviation: 'ATL', league: 'NL' },
   147: { id: 147, name: 'New York Yankees', abbreviation: 'NYY', league: 'AL' },
