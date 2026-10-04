@@ -15,13 +15,19 @@ final exam.
 
 ## Overview
 
+- **Multiple seasons with a season selector** — the app is year-aware. The current year
+  is **2026** and the selector offers **2024, 2025, and 2026** (default 2026). Past
+  seasons (2024, 2025) are **results-only**; the current season (2026) is the live,
+  in-progress one.
 - **Graphical postseason view** — a bracket from the Wild Card round through the World
   Series, showing each series, both teams, the series score, and status.
-- **Series detail** — per-series, game-by-game results.
+- **Series detail** — per-series, game-by-game results (available for every season).
 - **Standings / summary panel** — participating teams grouped by league with their
   postseason progress.
-- **Win/loss prediction (added feature)** — pick a series and the app shows a favorite,
-  a win probability, and an **AI-generated narrative** explaining the pick.
+- **Win/loss prediction (added feature, current season only)** — for a series in the
+  in-progress season, the app shows a favorite, a win probability, and an **AI-generated
+  narrative** explaining the pick. The prediction feature is offered **only for the
+  current (in-progress) season**; completed seasons simply show their final results.
 
 The numeric win probability is produced by a deterministic model in code (so it is
 explainable and unit-tested); **Amazon Bedrock** (Anthropic Claude) turns it into prose.
@@ -67,7 +73,7 @@ No authentication. Public, read-only. Not a betting product.
 
 | Workspace       | Package         | Purpose                                             |
 | --------------- | --------------- | --------------------------------------------------- |
-| `shared/`       | `@mlb/shared`   | Domain types (`Bracket`, `Series`, `Prediction`), `TEAMS`, and the bundled 2024 seed dataset. |
+| `shared/`       | `@mlb/shared`   | Domain types (`Bracket`, `Series`, `PredictionResponse`), `TEAMS`, the season config (`CURRENT_YEAR`, `SELECTABLE_SEASONS`, `seasonMode`), and the bundled 2024 + 2025 seed datasets. |
 | `backend/`      | `@mlb/backend`  | Lambda handlers, MLB client + aggregation, prediction model, Bedrock narrative. |
 | `frontend/`     | `@mlb/frontend` | React + Vite SPA (bracket, standings, prediction panel) with committed SVG image assets. |
 | `infra/`        | `@mlb/infra`    | AWS CDK app (S3 + CloudFront, HTTP API + Lambda, DynamoDB, Bedrock IAM). |
@@ -81,10 +87,29 @@ No authentication. Public, read-only. Not a betting product.
 2. **MLB Stats API on cache miss.** The Lambda fetches the public MLB Stats API
    (`https://statsapi.mlb.com/api/v1/schedule/postseason?sportId=1&season=YYYY`, no API
    key), aggregates games into series, and writes the result back to the cache.
-3. **Seed fallback.** If the live API is unreachable, the bundled `@mlb/shared` seed
-   dataset (`postseason-2024.json`) is used for the 2024 season, so the app stays
-   deterministic in tests and demos. The frontend also falls back to this seed if the
-   bracket request fails, so the demo renders offline.
+3. **Seed fallback (completed seasons).** If the live API is unreachable, the bundled
+   `@mlb/shared` seed datasets are used so the app stays deterministic in tests and demos.
+   The fallback now covers **both 2024 and 2025**:
+   - `postseason-2024.json` — Dodgers defeated Yankees 4-1.
+   - `postseason-2025.json` — Dodgers defeated Blue Jays 4-3 (real results aggregated from
+     the live MLB Stats API).
+
+   The frontend also falls back to these seeds if the bracket request fails, so the demo
+   renders offline.
+4. **2026 is the live / current season.** The current year (2026) has no bundled seed and
+   is fetched live. The app gracefully handles an empty or not-yet-started 2026 postseason
+   (showing a "has not started yet" message instead of a broken bracket), and aggregation
+   tolerates the placeholder teams the live schedule returns for not-yet-determined rounds.
+
+### Seasons and the prediction feature
+
+The season selector offers 2024, 2025, and 2026 (default 2026). A season strictly before
+the current year is **results-only**: the prediction UI is hidden and the `/prediction`
+endpoint returns a results-only response (`mode: 'results'`) instead of a numeric
+prediction. The current season (2026) is **predictable**, so the prediction feature is
+offered for its in-progress series; `/prediction` returns `mode: 'prediction'` for a
+started series or `mode: 'upcoming'` when a series has not started yet. All variants are
+returned with HTTP 200 and the frontend branches on `mode`.
 
 ## Amazon Bedrock usage
 
@@ -190,7 +215,8 @@ npm run dev -w frontend     # Vite dev server (http://localhost:5173)
 By default the frontend targets `http://localhost:3000` for the API. Options for data:
 
 - **Offline / seed data:** if the bracket request fails, the SPA automatically falls back
-  to the bundled `@mlb/shared` 2024 seed, so the bracket renders without a backend.
+  to the bundled `@mlb/shared` seeds (2024 and 2025), so the completed-season brackets
+  render without a backend.
 - **Point at a deployed API:** build with `VITE_API_BASE_URL=<ApiUrl> npm run build -w frontend`,
   or set `window.__API_BASE_URL__` via `/config.js` (as the deployed site does).
 

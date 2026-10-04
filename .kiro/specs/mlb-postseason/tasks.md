@@ -91,3 +91,61 @@ piece. It is kept consistent with `requirements.md` and `design.md`.
 - [x] Custom agent: `.kiro/agents/mlb-postseason-dev.json`.
 - [x] Judge-facing summary: `DEMONSTRATED_LESSONS.md`.
 - _Requirements: all (meta/documentation)_
+
+## Multi-season support (task-multi-season)
+
+A later task set under `.agents/tasks/task-multi-season/` (features FEAT-001
+through FEAT-004) made the app year-aware: the current year is 2026, 2024/2025
+are results-only, 2026 is the predictable current season, and a season selector
+switches between them. These tasks build on the FEAT-001..007 work above and do
+not change the mapping of those sections.
+
+### M1. Year-aware season config + 2025 seed (task-multi-season FEAT-001)
+
+- [x] Single source of truth for "now" and selectable seasons in `@mlb/shared`.
+      - `shared/src/season.ts` (`CURRENT_YEAR = 2026`,
+        `SELECTABLE_SEASONS = [2026, 2025, 2024]`, `seasonMode`,
+        `isResultsOnly`, `isPredictable`), re-exported from
+        `shared/src/index.ts`.
+- [x] Real aggregated 2025 seed dataset and extended teams.
+      - `shared/src/seed/postseason-2025.json` (Dodgers over Blue Jays 4-3),
+        `shared/src/seed/index.ts` (`getSeedBracket` serves 2024 and 2025),
+        `shared/src/types.ts` (`TEAMS` extended with the 2025 teams).
+- _Requirements: 1, 4_
+
+### M2. Year-aware backend + results-only prediction contract (task-multi-season FEAT-002)
+
+- [x] Default season derived from `CURRENT_YEAR`.
+      - `backend/src/handlers/http.ts` (`DEFAULT_SEASON = CURRENT_YEAR`).
+- [x] `PredictionResponse` discriminated union (prediction | results | upcoming),
+      always HTTP 200; results-only seasons short-circuit before predict/Bedrock;
+      current-season unresolvable/not-started series return `upcoming`.
+      - `shared/src/types.ts` (`PredictionResponse`),
+        `backend/src/service/bracketService.ts`,
+        `backend/src/handlers/getPrediction.ts`.
+- [x] Placeholder-team tolerance in aggregation for the live 2026 schedule.
+      - `backend/src/mlb/aggregate.ts`.
+- _Requirements: 1, 2, 4_
+
+### M3. Season selector + conditional prediction UI (task-multi-season FEAT-003)
+
+- [x] Labeled season selector over `SELECTABLE_SEASONS`, default `CURRENT_YEAR`;
+      switching re-fetches and clears the selected series.
+      - `frontend/src/App.tsx`, `frontend/src/config.ts`.
+- [x] Prediction UI gated by `isPredictable`: hidden for 2024/2025 (results-only
+      "Final results" + "View details"), shown for 2026; graceful
+      "has not started yet" empty state for the current season.
+      - `frontend/src/App.tsx`, `frontend/src/components/PredictionPanel.tsx`,
+        `frontend/src/components/BracketView.tsx`,
+        `frontend/src/components/SeriesCard.tsx`.
+- _Requirements: 1, 2, 5_
+
+### M4. Spec, README, and steering updates (task-multi-season FEAT-004)
+
+- [x] Keep the spec-driven-dev artifacts, README, and steering truthful to the
+      multi-season behavior.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`,
+        `.kiro/steering/product.md`.
+- _Requirements: 1, 2, 4, 5_
