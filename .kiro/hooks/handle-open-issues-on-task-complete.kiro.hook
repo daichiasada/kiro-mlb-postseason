@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Handle open GitHub issues on task completion",
+  "description": "Manually triggered hook to run when a task or conversation is complete. It makes the agent check the repository's open GitHub Issues and, if any exist, work on them following the repo's conventions. Enabled by default so it is readily available at task completion; the hook schema has no automatic 'conversation finished' event, so userTriggered (fired manually by the engineer) is the correct portable trigger.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "**/*.ts",
+      "**/*.tsx",
+      ".kiro/**"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "タスク（一連の会話）が完了しました。このリポジトリ (daichiasada/kiro-mlb-postseason) のオープンな GitHub Issue を確認し、残っていれば対応してください。\n\n1. オープンな Issue を一覧する: この環境では GraphQL ベースの `gh issue` / `gh pr` サブコマンドは失敗するため、REST API を使うこと。例: `gh api repos/daichiasada/kiro-mlb-postseason/issues?state=open`（返り値には Pull Request も含まれるので `pull_request` フィールドを持つものは除外する）。\n2. オープンな Issue が無ければ、その旨を報告して停止する。\n3. オープンな Issue があれば、それらを取り上げて対応する: リポジトリの規約に従い（.kiro/steering を順守、インクリメンタルなコミット、build / test / e2e / synth をグリーンに保つ）、対応している Issue 番号を参照しながら修正を実装する。\n\n---\n\nThe task (a conversation) is complete. Review this repository's (daichiasada/kiro-mlb-postseason) OPEN GitHub Issues and, if any remain, address them.\n\n1. List the OPEN issues: in this environment the GraphQL-backed `gh issue` / `gh pr` subcommands fail, so use the REST API, e.g. `gh api repos/daichiasada/kiro-mlb-postseason/issues?state=open` (the response also includes pull requests, so skip any entry that has a `pull_request` field).\n2. If there are no open issues, report that and stop.\n3. If there are open issues, pick them up and address them: implement the fix per the repo's conventions (follow .kiro/steering, make incremental commits, keep build / tests / e2e / synth green), referencing the issue number being worked."
+  }
+}
