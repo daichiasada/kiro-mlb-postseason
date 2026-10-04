@@ -414,6 +414,9 @@ body {
 }
 
 /* Responsive */
+
+/* Tablet / small laptop: stack the aside under the bracket and let the
+   round columns wrap to two across instead of four. */
 @media (max-width: 860px) {
   .app__main {
     grid-template-columns: 1fr;
@@ -421,7 +424,33 @@ body {
   .bracket__grid {
     grid-template-columns: 1fr 1fr !important;
   }
+}
+
+/* Phone / narrow widths: collapse the bracket to a single column so the
+   series cards never overflow the viewport horizontally. */
+@media (max-width: 560px) {
+  .app {
+    padding: 0.85rem;
+  }
+  .app__header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
   .app__hero {
-    display: none;
+    width: 100%;
+    max-width: 100%;
+  }
+  .bracket__grid {
+    grid-template-columns: 1fr !important;
+  }
+  .standings__row,
+  .series-team {
+    /* Guard against long team names forcing a wider-than-screen row. */
+    min-width: 0;
+  }
+  .standings__team,
+  .series-team__name {
+    overflow-wrap: anywhere;
   }
 }
