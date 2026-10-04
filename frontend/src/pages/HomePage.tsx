@@ -143,6 +143,13 @@ export function HomePage() {
               {t('app.offlineNotice')}
             </p>
           )}
+          {(state.bracket.integrityWarnings?.length ?? 0) > 0 && (
+            <p className="app__notice app__notice--integrity" role="status">
+              {t('integrity.banner', {
+                count: state.bracket.integrityWarnings!.length,
+              })}
+            </p>
+          )}
           <main className="app__main">
             <BracketView
               bracket={state.bracket}

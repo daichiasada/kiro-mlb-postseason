@@ -172,3 +172,65 @@ export async function stubPredictionCapturingAccuracy(
   });
   return captured;
 }
+
+/** A single captured `/prediction` request's localization/model params. */
+export interface CapturedPredictionRequest {
+  lang: string | null;
+  model: string | null;
+}
+
+/**
+ * Routes `**\/prediction*`, recording every request's `lang` AND `model` query
+ * params (in order). The returned array is mutated as requests arrive, so a
+ * test can poll it after toggling the language or selecting a model. Mirrors
+ * {@link stubPredictionCapturingAccuracy} but for the FEAT-004 localization and
+ * model-selection params.
+ */
+export async function stubPredictionCapturingLangModel(
+  page: Page,
+): Promise<CapturedPredictionRequest[]> {
+  const captured: CapturedPredictionRequest[] = [];
+  await page.route('**/prediction*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    captured.push({
+      lang: url.searchParams.get('lang'),
+      model: url.searchParams.get('model'),
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(SAMPLE_PREDICTION),
+    });
+  });
+  return captured;
+}
+
+/**
+ * Routes `**\/bracket*` to the 2026 bracket but with a non-empty
+ * `integrityWarnings` array attached to the response body, simulating the
+ * FEAT-003 backend surfacing a finished matchup that still references a
+ * placeholder/undetermined team. The frontend reads the field verbatim.
+ */
+export async function stubBracket2026WithIntegrityWarnings(
+  page: Page,
+): Promise<void> {
+  await page.route('**/bracket*', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...SAMPLE_2026_BRACKET,
+        integrityWarnings: [
+          {
+            code: 'finished_game_tbd_team',
+            seriesId: SAMPLE_2026_FINAL_SERIES_ID,
+            round: 'Championship Series',
+            league: 'AL',
+            teamId: SAMPLE_2026_UNKNOWN_TEAM_ID,
+            scope: 'series',
+          },
+        ],
+      }),
+    });
+  });
+}

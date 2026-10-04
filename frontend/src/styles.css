@@ -118,6 +118,12 @@ body {
   font-size: 0.9rem;
 }
 
+.app__notice--integrity {
+  background: #fdecea;
+  border-color: #f1b0a8;
+  color: #8a2a1b;
+}
+
 .app__status--upcoming {
   margin: 1.25rem 0 0;
   padding: 1.25rem;
@@ -746,6 +752,34 @@ body {
   font-size: 0.72rem;
   line-height: 1.4;
   color: var(--muted);
+}
+
+/* AI-model selector */
+.prediction__model-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 0.9rem;
+  padding: 0.6rem 0.7rem;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.prediction__model-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.prediction__model-select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--navy);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 /* Responsive */

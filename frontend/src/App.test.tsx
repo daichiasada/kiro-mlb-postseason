@@ -215,6 +215,46 @@ describe('App season selector', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('renders a non-blocking integrity banner when the bracket carries integrityWarnings', async () => {
+    const flagged: Bracket = {
+      ...bracket2026,
+      integrityWarnings: [
+        {
+          code: 'finished_game_tbd_team',
+          seriesId: '2026-al-wildcard-117-116',
+          round: 'Wild Card',
+          league: 'AL',
+          teamId: 5513,
+          scope: 'series',
+        },
+      ],
+    };
+    mockedGetBracket.mockResolvedValue({ bracket: flagged, usedFallback: false });
+    renderApp();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Data integrity: 1 finished matchup/i),
+      ).toBeInTheDocument(),
+    );
+    // The bracket still renders (the banner is non-blocking).
+    expect(
+      screen.getByRole('region', { name: /postseason bracket/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no integrity banner for a clean bracket', async () => {
+    mockedGetBracket.mockResolvedValue({ bracket: bracket2026, usedFallback: false });
+    renderApp();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('region', { name: /postseason bracket/i }),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Data integrity:/i)).not.toBeInTheDocument();
+  });
+
   it('shows the upcoming message for the real 2026 preview-game shape (games present, nothing decided)', async () => {
     mockedGetBracket.mockResolvedValue({
       bracket: bracket2026Preview,

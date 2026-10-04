@@ -4,7 +4,9 @@ import {
   SAMPLE_2026_SERIES_ID,
   SAMPLE_PREDICTION,
   stubBracket2026,
+  stubBracket2026WithIntegrityWarnings,
   stubPredictionCapturingAccuracy,
+  stubPredictionCapturingLangModel,
   stubPredictionError,
   stubPredictionSuccess,
 } from './fixtures';
@@ -154,5 +156,71 @@ test.describe('prediction panel (2026 predictable season)', () => {
     await expect(page.getByRole('progressbar')).toHaveCount(0);
     // No prediction request was ever issued for the final series.
     expect(captured).toHaveLength(0);
+  });
+
+  test('localization + model: default request carries lang=ja; selecting an Amazon model and toggling language re-requests', async ({
+    page,
+  }) => {
+    await stubBracket2026(page);
+    const captured = await stubPredictionCapturingLangModel(page);
+    await page.goto('/');
+
+    const wsCard = page.locator(`[data-series-id="${SAMPLE_2026_SERIES_ID}"]`);
+    await wsCard.locator('.series-card__predict').click();
+
+    const panel = page.getByRole('region', { name: /勝敗予測/ });
+    await expect(panel).toBeVisible();
+
+    // The default request carries the default UI language (ja) and the default
+    // Amazon model (Nova Lite).
+    await expect.poll(() => captured[0]?.lang).toBe('ja');
+    await expect.poll(() => captured[0]?.model).toBe('us.amazon.nova-lite-v1:0');
+
+    // Select a different Amazon model (Nova Pro) from the localized selector.
+    const modelSelect = panel.locator('.prediction__model-select');
+    await expect(modelSelect).toBeVisible();
+    await modelSelect.selectOption('us.amazon.nova-pro-v1:0');
+    await expect
+      .poll(() => captured.at(-1)?.model)
+      .toBe('us.amazon.nova-pro-v1:0');
+
+    // Toggle the language to English; a new request fires carrying lang=en and
+    // the chosen model.
+    await page.getByRole('button', { name: 'English' }).click();
+    await expect.poll(() => captured.at(-1)?.lang).toBe('en');
+    await expect
+      .poll(() => captured.at(-1)?.model)
+      .toBe('us.amazon.nova-pro-v1:0');
+  });
+
+  test('integrity banner: visible when the bracket carries integrityWarnings; absent for a clean bracket', async ({
+    page,
+  }) => {
+    // Clean bracket -> no banner.
+    await stubBracket2026(page);
+    await stubPredictionSuccess(page);
+    await page.goto('/');
+    await expect(
+      page.getByRole('region', { name: /ポストシーズンのトーナメント表/ }),
+    ).toBeVisible();
+    await expect(page.getByText(/データ整合性/)).toHaveCount(0);
+
+    // Flagged bracket -> localized, non-blocking banner appears and the bracket
+    // still renders.
+    await page.unroute('**/bracket*');
+    await stubBracket2026WithIntegrityWarnings(page);
+    await page.reload();
+
+    const banner = page.locator('.app__notice--integrity');
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText(/データ整合性/);
+    await expect(
+      page.getByRole('region', { name: /ポストシーズンのトーナメント表/ }),
+    ).toBeVisible();
+
+    await page.screenshot({
+      path: 'test-results/prediction-integrity-banner.png',
+      fullPage: true,
+    });
   });
 });

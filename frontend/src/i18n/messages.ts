@@ -69,6 +69,8 @@ export type MessageKey =
   | 'prediction.accuracy.value'
   | 'prediction.accuracy.conservative'
   | 'prediction.accuracy.aggressive'
+  | 'prediction.model.selectLabel'
+  | 'integrity.banner'
   | 'detail.breadcrumb'
   | 'detail.back'
   | 'detail.return'
@@ -151,6 +153,9 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.accuracy.value': 'Accuracy: {value}',
     'prediction.accuracy.conservative': 'Conservative',
     'prediction.accuracy.aggressive': 'Confident',
+    'prediction.model.selectLabel': 'AI model',
+    'integrity.banner':
+      'Data integrity: {count} finished matchup(s) still reference an undetermined team.',
     'detail.breadcrumb': 'Breadcrumb',
     'detail.back': '← Back to the {season} bracket',
     'detail.return': 'Return to the {season} bracket',
@@ -235,6 +240,9 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.accuracy.value': '精度: {value}',
     'prediction.accuracy.conservative': '控えめ',
     'prediction.accuracy.aggressive': '強気',
+    'prediction.model.selectLabel': 'AIモデル',
+    'integrity.banner':
+      'データ整合性: 終了した{count}件の対戦が未確定のチームを参照しています。',
     'detail.breadcrumb': 'パンくずリスト',
     'detail.back': '← {season}年のトーナメント表に戻る',
     'detail.return': '{season}年のトーナメント表に戻る',

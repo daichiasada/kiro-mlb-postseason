@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import type { Prediction, PredictionResponse, Series } from '@mlb/shared';
+import { DEFAULT_NARRATIVE_MODEL_ID, NARRATIVE_MODEL_OPTIONS } from '@mlb/shared';
 import { getPrediction } from '../api';
 import {
   ACCURACY_STEP,
@@ -26,7 +27,7 @@ type LoadState =
 const ACCURACY_DEBOUNCE_MS = 300;
 
 export function PredictionPanel({ series, season }: PredictionPanelProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [state, setState] = useState<LoadState>({ status: 'idle' });
   // The model-accuracy control. Defaults to the backend's DEFAULT_ACCURACY so
   // the initial request/behavior is unchanged.
@@ -35,6 +36,9 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
   // `accuracy` so dragging the slider does not fire a request per pixel.
   const [requestedAccuracy, setRequestedAccuracy] =
     useState<number>(DEFAULT_ACCURACY);
+  // The selected Bedrock model id. Defaults to the shared default; a discrete
+  // <select> so changing it re-fetches immediately (no debounce needed).
+  const [model, setModel] = useState<string>(DEFAULT_NARRATIVE_MODEL_ID);
 
   // Debounce the slider -> request accuracy transition.
   useEffect(() => {
@@ -52,7 +56,7 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
     }
     let cancelled = false;
     setState({ status: 'loading' });
-    getPrediction(series.id, season, requestedAccuracy)
+    getPrediction(series.id, season, requestedAccuracy, lang, model)
       .then((response: PredictionResponse) => {
         if (cancelled) return;
         if (response.mode === 'prediction') {
@@ -73,7 +77,9 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [series, season, requestedAccuracy]);
+    // `lang` and `model` are request inputs: toggling the language re-generates
+    // the narrative in the new language, and picking a model re-requests with it.
+  }, [series, season, requestedAccuracy, lang, model]);
 
   // The accuracy control is only meaningful while a series is selected and a
   // numeric prediction is being shown or fetched (not idle/upcoming/results).
@@ -92,11 +98,14 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
       )}
 
       {showAccuracyControl && (
-        <AccuracyControl
-          t={t}
-          value={accuracy}
-          onChange={setAccuracy}
-        />
+        <>
+          <AccuracyControl
+            t={t}
+            value={accuracy}
+            onChange={setAccuracy}
+          />
+          <ModelControl t={t} value={model} onChange={setModel} />
+        </>
       )}
 
       {state.status === 'loading' && (
@@ -171,6 +180,46 @@ function AccuracyControl({
       <p id={helpId} className="prediction__accuracy-help">
         {t('prediction.accuracy.help')}
       </p>
+    </div>
+  );
+}
+
+/**
+ * The accessible, localized AI-model selector. A labeled `<select>` listing the
+ * shared {@link NARRATIVE_MODEL_OPTIONS} (Amazon Nova micro/lite/pro plus the
+ * Anthropic Claude option); choosing one threads the model id onto the next
+ * prediction request. Option display names are the shared, brand labels (shown
+ * as-is in both languages, like club names), while the control label is
+ * localized.
+ */
+function ModelControl({
+  t,
+  value,
+  onChange,
+}: {
+  t: TFn;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const selectId = useId().replace(/:/g, '');
+
+  return (
+    <div className="prediction__model-control">
+      <label className="prediction__model-label" htmlFor={selectId}>
+        {t('prediction.model.selectLabel')}
+      </label>
+      <select
+        id={selectId}
+        className="prediction__model-select"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {NARRATIVE_MODEL_OPTIONS.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -1,4 +1,8 @@
-import type { Bracket, PredictionResponse } from '@mlb/shared';
+import type {
+  Bracket,
+  NarrativeLanguage,
+  PredictionResponse,
+} from '@mlb/shared';
 import { getSeedBracket } from '@mlb/shared';
 import { API_BASE_URL } from './config';
 
@@ -74,15 +78,30 @@ export async function getBracket(season: number): Promise<BracketResult> {
  * `&accuracy=` query param so the backend's `predict()` can sharpen or soften
  * the favorite's probability. The probability always stays within [0.5, 0.95]
  * regardless of accuracy.
+ *
+ * The optional `lang` ('en' | 'ja') is the UI language; when provided it is
+ * appended as `&lang=` so the backend generates the narrative in that language.
+ * The optional `model` is a selectable Bedrock model id (see
+ * `NARRATIVE_MODEL_OPTIONS` in `@mlb/shared`); when provided it is appended as
+ * `&model=`. Both are parsed leniently server-side (never a 400), so an
+ * omitted/unknown value simply falls back to the backend default.
  */
 export async function getPrediction(
   seriesId: string,
   season: number,
   accuracy?: number,
+  lang?: NarrativeLanguage,
+  model?: string,
 ): Promise<PredictionResponse> {
   let query = `?seriesId=${encodeURIComponent(seriesId)}&season=${season}`;
   if (accuracy !== undefined) {
     query += `&accuracy=${encodeURIComponent(accuracy)}`;
+  }
+  if (lang !== undefined) {
+    query += `&lang=${encodeURIComponent(lang)}`;
+  }
+  if (model !== undefined) {
+    query += `&model=${encodeURIComponent(model)}`;
   }
   return requestJson<PredictionResponse>(`/prediction${query}`);
 }

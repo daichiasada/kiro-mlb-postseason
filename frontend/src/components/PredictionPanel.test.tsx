@@ -2,8 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import type { PredictionResponse } from '@mlb/shared';
+import {
+  DEFAULT_NARRATIVE_MODEL_ID,
+  NARRATIVE_MODEL_OPTIONS,
+} from '@mlb/shared';
 import { PredictionPanel } from './PredictionPanel';
-import { I18nProvider } from '../i18n';
+import { I18nProvider, useI18n } from '../i18n';
 import { worldSeries } from '../test/fixtures';
 import * as api from '../api';
 
@@ -55,11 +59,14 @@ describe('PredictionPanel', () => {
 
     const bar = screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuenow', '73');
-    // The panel threads the default model accuracy (0.5) through the request.
+    // The panel threads the default model accuracy (0.5), the active UI
+    // language ('en', pinned by the provider), and the default model id.
     expect(mockedGetPrediction).toHaveBeenCalledWith(
       '2024-ws-worldseries-119-147',
       2024,
       0.5,
+      'en',
+      DEFAULT_NARRATIVE_MODEL_ID,
     );
   });
 
@@ -72,12 +79,14 @@ describe('PredictionPanel', () => {
     await waitFor(() =>
       expect(screen.getByText('Los Angeles Dodgers')).toBeInTheDocument(),
     );
-    // Initial request used the default accuracy (0.5).
+    // Initial request used the default accuracy (0.5), language and model.
     expect(mockedGetPrediction).toHaveBeenNthCalledWith(
       1,
       worldSeries.id,
       2024,
       0.5,
+      'en',
+      DEFAULT_NARRATIVE_MODEL_ID,
     );
 
     const slider = container.querySelector(
@@ -92,6 +101,89 @@ describe('PredictionPanel', () => {
         worldSeries.id,
         2024,
         0.9,
+        'en',
+        DEFAULT_NARRATIVE_MODEL_ID,
+      ),
+    );
+  });
+
+  it('sends the UI language and re-requests when the language changes', async () => {
+    mockedGetPrediction.mockResolvedValue(prediction);
+    // A tiny harness exposing the i18n setLang so the test can toggle the
+    // active language live (the provider's language is state, not a prop, so a
+    // rerender with a different initialLang would not change it).
+    function Harness() {
+      const { setLang } = useI18n();
+      return (
+        <>
+          <button type="button" onClick={() => setLang('en')}>
+            to-english
+          </button>
+          <PredictionPanel series={worldSeries} season={2024} />
+        </>
+      );
+    }
+    render(
+      <I18nProvider initialLang="ja">
+        <Harness />
+      </I18nProvider>,
+    );
+
+    await waitFor(() =>
+      expect(mockedGetPrediction).toHaveBeenLastCalledWith(
+        worldSeries.id,
+        2024,
+        0.5,
+        'ja',
+        DEFAULT_NARRATIVE_MODEL_ID,
+      ),
+    );
+
+    // Switching the language re-fetches the narrative in English.
+    fireEvent.click(screen.getByRole('button', { name: 'to-english' }));
+
+    await waitFor(() =>
+      expect(mockedGetPrediction).toHaveBeenLastCalledWith(
+        worldSeries.id,
+        2024,
+        0.5,
+        'en',
+        DEFAULT_NARRATIVE_MODEL_ID,
+      ),
+    );
+  });
+
+  it('renders the Amazon model options and re-requests with the chosen model', async () => {
+    mockedGetPrediction.mockResolvedValue(prediction);
+    const { container } = renderWithI18n(
+      <PredictionPanel series={worldSeries} season={2024} />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('Los Angeles Dodgers')).toBeInTheDocument(),
+    );
+
+    const select = container.querySelector(
+      '.prediction__model-select',
+    ) as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    // Every shared model option is offered, including the Amazon Nova family.
+    for (const option of NARRATIVE_MODEL_OPTIONS) {
+      expect(
+        screen.getByRole('option', { name: option.label }),
+      ).toBeInTheDocument();
+    }
+    expect(screen.getByRole('option', { name: 'Amazon Nova Micro' })).toBeInTheDocument();
+
+    // Choosing a different Amazon model issues a new request carrying its id.
+    fireEvent.change(select, { target: { value: 'us.amazon.nova-pro-v1:0' } });
+    await waitFor(() =>
+      expect(mockedGetPrediction).toHaveBeenLastCalledWith(
+        worldSeries.id,
+        2024,
+        0.5,
+        'en',
+        'us.amazon.nova-pro-v1:0',
       ),
     );
   });
