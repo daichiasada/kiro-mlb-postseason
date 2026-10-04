@@ -105,6 +105,25 @@ describe('BracketService.getPrediction', () => {
     expect(prediction.generatedAt).toBeTruthy();
   });
 
+  it('resolves a series whose high/low ids are swapped vs the stored bracket (ISSUE-1)', async () => {
+    // The stored series id is 2024-al-wildcard-117-116 (high 117, low 116).
+    // A client holding seed data may have derived the ids in the other order;
+    // the request below swaps high/low and must still resolve the same series
+    // via round + unordered team-pair matching rather than 404ing.
+    const store = memoryStore(sampleBracket);
+    const service = new BracketService({ store, fetchSchedule: vi.fn(), bedrockInvoker: invoker });
+
+    const prediction = await service.getPrediction('2024-al-wildcard-116-117', 2024);
+
+    // The seriesId echoed back is the one requested, but it resolved the stored
+    // series (same favorite/probability as the exact-id lookup would produce).
+    expect(prediction.seriesId).toBe('2024-al-wildcard-116-117');
+    expect(prediction.favoriteTeamId).toBe(116);
+    expect(prediction.favoriteWinProbability).toBeGreaterThanOrEqual(0.5);
+    expect(prediction.favoriteWinProbability).toBeLessThanOrEqual(0.95);
+    expect(prediction.narrative).toBe('narrative text');
+  });
+
   it('throws SeriesNotFoundError for an unknown series', async () => {
     const store = memoryStore(sampleBracket);
     const service = new BracketService({ store, fetchSchedule: vi.fn(), bedrockInvoker: invoker });
@@ -112,5 +131,16 @@ describe('BracketService.getPrediction', () => {
     await expect(service.getPrediction('does-not-exist', 2024)).rejects.toBeInstanceOf(
       SeriesNotFoundError,
     );
+  });
+
+  it('throws SeriesNotFoundError when the team pair does not match any series (ISSUE-1)', async () => {
+    // Well-formed id, correct round slug, but an unknown team pair must not
+    // resolve by accident - the fallback is pair-scoped, not round-wide.
+    const store = memoryStore(sampleBracket);
+    const service = new BracketService({ store, fetchSchedule: vi.fn(), bedrockInvoker: invoker });
+
+    await expect(
+      service.getPrediction('2024-al-wildcard-200-201', 2024),
+    ).rejects.toBeInstanceOf(SeriesNotFoundError);
   });
 });

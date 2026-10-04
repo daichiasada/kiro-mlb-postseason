@@ -32,6 +32,77 @@ export class SeriesNotFoundError extends Error {
   }
 }
 
+/**
+ * Parses a series id of the form `${season}-${league}-${roundslug}-${highId}-${lowId}`
+ * into its parts. Returns `null` for anything that does not match that shape.
+ *
+ * The round slug can itself contain no hyphens (it is lowercased and stripped
+ * of non-alphanumerics in {@link aggregateBracket}), so the id is parsed from
+ * both ends: the last two segments are the team ids, the first is the season,
+ * the second is the league, and whatever is left in the middle is the slug.
+ */
+function parseSeriesId(seriesId: string): {
+  season: string;
+  league: string;
+  roundSlug: string;
+  idA: number;
+  idB: number;
+} | null {
+  const parts = seriesId.split('-');
+  if (parts.length < 5) {
+    return null;
+  }
+  const lowId = Number(parts[parts.length - 1]);
+  const highId = Number(parts[parts.length - 2]);
+  if (!Number.isFinite(lowId) || !Number.isFinite(highId)) {
+    return null;
+  }
+  const season = parts[0]!;
+  const league = parts[1]!;
+  const roundSlug = parts.slice(2, parts.length - 2).join('-');
+  if (!roundSlug) {
+    return null;
+  }
+  return { season, league, roundSlug, idA: highId, idB: lowId };
+}
+
+/** Lowercased round slug derived the same way as in {@link aggregateBracket}. */
+function roundSlugOf(series: Series): string {
+  return series.round.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Resolves a series from the bracket, tolerating a high/low-seed ordering
+ * disagreement across the seed/live boundary (ISSUE-1). An exact id match is
+ * tried first; if it fails, the requested id is parsed and matched by round
+ * slug plus the *unordered* team-id pair, so a request for
+ * `2024-ws-worldseries-147-119` still resolves the stored
+ * `2024-ws-worldseries-119-147` series. Returns `null` only when neither
+ * strategy finds a series.
+ */
+function resolveSeries(bracket: Bracket, seriesId: string): Series | null {
+  const exact = bracket.series.find((s: Series) => s.id === seriesId);
+  if (exact) {
+    return exact;
+  }
+
+  const parsed = parseSeriesId(seriesId);
+  if (!parsed) {
+    return null;
+  }
+
+  const wantPair = [parsed.idA, parsed.idB].sort((x, y) => x - y);
+  const fallback = bracket.series.find((s: Series) => {
+    if (roundSlugOf(s) !== parsed.roundSlug) {
+      return false;
+    }
+    const havePair = [s.high.teamId, s.low.teamId].sort((x, y) => x - y);
+    return havePair[0] === wantPair[0] && havePair[1] === wantPair[1];
+  });
+
+  return fallback ?? null;
+}
+
 export class BracketService {
   private readonly store: BracketStore;
   private readonly fetchSchedule: typeof fetchPostseasonSchedule;
@@ -74,7 +145,7 @@ export class BracketService {
   /** Loads the bracket, finds the series, predicts, and builds a narrative. */
   async getPrediction(seriesId: string, season: number): Promise<Prediction> {
     const bracket = await this.getBracket(season);
-    const series = bracket.series.find((s: Series) => s.id === seriesId);
+    const series = resolveSeries(bracket, seriesId);
     if (!series) {
       throw new SeriesNotFoundError(seriesId);
     }
