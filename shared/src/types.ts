@@ -68,6 +68,14 @@ export interface Bracket {
   season: number;
   updatedAt: string;
   series: Series[];
+  /**
+   * Optional, non-blocking data-integrity warnings about finished contexts
+   * that still reference a placeholder/TBD team (see `integrity.ts`). This is
+   * populated by the bracket HANDLER, not by the pure aggregator or the seed
+   * data, so it is optional and existing consumers that ignore it are
+   * unaffected. See {@link import('./integrity.js').IntegrityWarning}.
+   */
+  integrityWarnings?: import('./integrity.js').IntegrityWarning[];
 }
 
 /** Request payload for the win/loss prediction endpoint. */
