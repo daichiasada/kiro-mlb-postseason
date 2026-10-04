@@ -18,12 +18,14 @@ test.describe('home / bracket', () => {
       page.getByRole('heading', { name: 'MLB Postseason Pulse' }),
     ).toBeVisible();
 
-    // Brand logo and hero are real image assets with meaningful alt text.
-    const brand = page.getByRole('img', { name: /logo/i });
+    // Brand logo and hero are real image assets with localized alt text. The
+    // default UI language is Japanese, so the accessible names are the ja alts
+    // (app.logoAlt / app.heroAlt in i18n/messages.ts).
+    const brand = page.getByRole('img', { name: /ロゴ/ });
     await expect(brand).toBeVisible();
     await expect(brand).toHaveAttribute('src', /\.svg/);
 
-    const hero = page.getByRole('img', { name: /baseball diamond/i });
+    const hero = page.getByRole('img', { name: /野球場/ });
     await expect(hero).toHaveCount(1);
 
     // Every <img> in the document must have non-empty alt text.

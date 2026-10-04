@@ -7,7 +7,19 @@
  *
  * It is a pure function so it can be unit-tested without any network or AWS.
  */
-import { TEAMS, type Bracket, type Series } from '@mlb/shared';
+import {
+  MIN_ACCURACY,
+  MAX_ACCURACY,
+  DEFAULT_ACCURACY,
+  TEAMS,
+  type Bracket,
+  type Series,
+} from '@mlb/shared';
+
+// Re-export the shared accuracy bounds so existing importers of these from the
+// model module keep working; the single source of truth now lives in
+// @mlb/shared (shared/src/accuracy.ts).
+export { MIN_ACCURACY, MAX_ACCURACY, DEFAULT_ACCURACY };
 
 export interface PredictionResult {
   favoriteTeamId: number;
@@ -17,16 +29,6 @@ export interface PredictionResult {
 /** Clamp bounds for the favorite's probability. */
 const MIN_PROB = 0.5;
 const MAX_PROB = 0.95;
-
-/** Supported range and default for the accuracy (sharpness) control. */
-export const MIN_ACCURACY = 0;
-export const MAX_ACCURACY = 1;
-/**
- * Default accuracy. Chosen so the default reproduces the model's historical
- * behavior exactly: the sharpening factor is `2 * accuracy`, which equals 1
- * (an identity transform on the favorite's share) at accuracy 0.5.
- */
-export const DEFAULT_ACCURACY = 0.5;
 
 /**
  * Optional regular-season win percentages keyed by team id. When a team is not

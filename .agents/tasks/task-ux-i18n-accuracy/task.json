@@ -3,5 +3,12 @@
   "task_description": "Implement six follow-up requirements on the deployed year-aware MLB postseason site (branch feat/mlb-postseason-site): (1) fix the uneven 'gatagata' bracket layout alignment; (2) put per-series game detail behind a collapsed-by-default show/hide toggle; (3) show finished (final) series detail on a dedicated detail page via client-side routing; (4) turn prediction OFF at the series level for finished series (backend + frontend) even in the current predictable season; (5) add a JA/EN language switch (i18n) covering all UI strings incl. a localized unknown/preview team-name fallback; (6) make the deterministic prediction model's accuracy configurable from the UI through to predict(). Keep unit + fast-check property + Playwright e2e + cdk synth all green and keep specs/README truthful. Do NOT push/PR/deploy (orchestrator owns that).",
   "status": "in_progress",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "Full ordered build passes. npm test green across all workspaces: shared 14, backend 57 (incl. fast-check property suites sampling accuracy in [-0.5,1.5]), frontend 35, infra 6. Playwright e2e: 18 tests pass (toggle collapsed-by-default + aria flip, detail-page navigation/deep-link/not-found, i18n JA/EN switch + persistence + localized unknown-team fallback, accuracy slider issues a /prediction request carrying the captured accuracy param and updates the probability 70->90%, final 2026 series shows no predict button + detail link + zero prediction requests, 375px no-horizontal-overflow). cdk synth passes (nodejs20.x deprecation WARNINGs are pre-existing baseline noise). Test quality reviewed: model.test.ts pins the default regression value 0.8093 and asserts monotonicity/clamp/collapse; property tests re-assert [0.5,0.95] + favorite-is-a-team + determinism for all accuracy incl. out-of-range; bracketService test asserts final=>mode:results with the Bedrock invoker never called; these would fail if the new code were reverted. No Dockerfile build path for app code (CDK bundles Lambdas with esbuild, no Docker); docker_build skipped. Did not run cdk deploy or any live Bedrock call."
+  }
 }

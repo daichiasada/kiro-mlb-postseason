@@ -74,7 +74,7 @@ export function HomePage() {
     <div className="app">
       <header className="app__header">
         <div className="app__brand">
-          <img src={brand} alt="MLB Postseason Pulse logo" width={52} height={52} />
+          <img src={brand} alt={t('app.logoAlt')} width={52} height={52} />
           <div>
             <h1 className="app__title">{t('app.title')}</h1>
             <p className="app__subtitle">
@@ -88,7 +88,7 @@ export function HomePage() {
           </div>
         </div>
         <LanguageToggle />
-        <img className="app__hero" src={hero} alt="Baseball diamond at dusk" />
+        <img className="app__hero" src={hero} alt={t('app.heroAlt')} />
       </header>
 
       <nav className="app__seasons" aria-label={t('app.season')}>

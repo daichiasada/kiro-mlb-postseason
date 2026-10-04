@@ -22,6 +22,8 @@ export const LANGS: readonly Lang[] = ['ja', 'en'] as const;
  */
 export type MessageKey =
   | 'app.title'
+  | 'app.logoAlt'
+  | 'app.heroAlt'
   | 'app.subtitle.predictions'
   | 'app.subtitle.results'
   | 'app.season'
@@ -94,6 +96,8 @@ export type MessageKey =
 export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
   en: {
     'app.title': 'MLB Postseason Pulse',
+    'app.logoAlt': 'MLB Postseason Pulse logo',
+    'app.heroAlt': 'Baseball diamond at dusk',
     'app.subtitle.predictions':
       '{season} postseason bracket, standings, and AI predictions',
     'app.subtitle.results':
@@ -176,6 +180,8 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
   },
   ja: {
     'app.title': 'MLB Postseason Pulse',
+    'app.logoAlt': 'MLB Postseason Pulse のロゴ',
+    'app.heroAlt': '夕暮れの野球場',
     'app.subtitle.predictions':
       '{season}年ポストシーズンのトーナメント表・順位・AI予測',
     'app.subtitle.results':

@@ -11,7 +11,14 @@
  *      locally running API.
  */
 
-import { CURRENT_YEAR, SELECTABLE_SEASONS } from '@mlb/shared';
+import {
+  CURRENT_YEAR,
+  SELECTABLE_SEASONS,
+  MIN_ACCURACY,
+  MAX_ACCURACY,
+  DEFAULT_ACCURACY,
+  ACCURACY_STEP,
+} from '@mlb/shared';
 
 declare global {
   interface Window {
@@ -52,13 +59,10 @@ export const DEFAULT_SEASON = CURRENT_YEAR;
 export { SELECTABLE_SEASONS };
 
 /**
- * The model-accuracy control bounds and default, mirroring the backend's
- * MIN_ACCURACY / MAX_ACCURACY / DEFAULT_ACCURACY (backend/src/predict/model.ts).
- * The default is deliberately 0.5 so the initial UI behavior is unchanged (the
- * backend's default accuracy is also 0.5, an identity transform). The slider
- * steps in 0.05 increments across [0, 1].
+ * The model-accuracy control bounds, default, and slider step. These are the
+ * single shared contract from `@mlb/shared` (shared/src/accuracy.ts) that the
+ * backend prediction model also consumes, so the slider range can never drift
+ * from the range the model actually accepts. The default is 0.5 (an identity
+ * transform) so the initial UI behavior is unchanged.
  */
-export const MIN_ACCURACY = 0;
-export const MAX_ACCURACY = 1;
-export const DEFAULT_ACCURACY = 0.5;
-export const ACCURACY_STEP = 0.05;
+export { MIN_ACCURACY, MAX_ACCURACY, DEFAULT_ACCURACY, ACCURACY_STEP };

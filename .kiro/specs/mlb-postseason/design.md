@@ -298,8 +298,12 @@ it still responds `400` for a missing `seriesId` or an invalid `season`, and
   is clamped to `[0.5, 0.95]` to produce `p0`.
 - Configurable accuracy (sharpness/temperature). `predict(series, bracket,
   winPct, accuracy = DEFAULT_ACCURACY)` takes a 4th positional argument in the
-  range `[MIN_ACCURACY, MAX_ACCURACY] = [0, 1]` with `DEFAULT_ACCURACY = 0.5`
-  (all exported from `model.ts`). The clamped share `p0` is sharpened around the
+  range `[MIN_ACCURACY, MAX_ACCURACY] = [0, 1]` with `DEFAULT_ACCURACY = 0.5`.
+  These bounds (plus the frontend slider `ACCURACY_STEP = 0.05`) are a shared
+  domain contract defined once in `@mlb/shared` (`shared/src/accuracy.ts`);
+  `model.ts` imports and re-exports them, and the frontend `config.ts` imports
+  them, so the model's accepted range and the UI slider cannot drift apart. The
+  clamped share `p0` is sharpened around the
   conservative floor by a linear factor `f = 2 * accuracy`:
   `p = 0.5 + (p0 - 0.5) * f`, then clamped again to `[0.5, 0.95]` and rounded to
   4 decimals. Semantics:
