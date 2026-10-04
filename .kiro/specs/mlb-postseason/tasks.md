@@ -21,20 +21,20 @@ piece. It is kept consistent with `requirements.md` and `design.md`.
       - `backend/src/mlb/aggregate.ts`, `backend/src/mlb/aggregate.test.ts`
 - _Requirements: 1, 4_
 
-## 3. Prediction model (FEAT-003)
+## 3. Prediction model (FEAT-002)
 
 - [x] Deterministic, explainable win/loss model (pure function).
       - `backend/src/predict/model.ts`, `backend/src/predict/model.test.ts`
 - _Requirements: 2_
 
-## 4. Bedrock narrative with fallback (FEAT-004)
+## 4. Bedrock narrative with fallback (FEAT-002)
 
 - [x] Mockable Bedrock invoker + deterministic fallback narrative.
       - `backend/src/bedrock/narrative.ts`,
         `backend/src/bedrock/narrative.test.ts`
 - _Requirements: 3_
 
-## 5. Service + handlers + store (FEAT-005)
+## 5. Service + handlers + store (FEAT-002)
 
 - [x] BracketService orchestration with the documented resolution order.
       - `backend/src/service/bracketService.ts`,
@@ -47,27 +47,39 @@ piece. It is kept consistent with `requirements.md` and `design.md`.
         `backend/src/handlers/http.ts`
 - _Requirements: 1, 2, 3, 4_
 
-## 6. Frontend SPA + e2e (FEAT-005)
+## 6. Frontend SPA (FEAT-003)
 
 - [x] React/Vite SPA: bracket view, standings panel, prediction panel.
       - `frontend/src/`
 - [x] Runtime API base URL injection via `/config.js`.
+- _Requirements: 1, 2, 5_
+
+## 7. Playwright e2e + UI fix (FEAT-005)
+
 - [x] Playwright e2e specs for the main flows.
       - `frontend/e2e/home.spec.ts`, `frontend/e2e/prediction.spec.ts`,
         `frontend/e2e/fixtures.ts`
-- _Requirements: 1, 2, 5_
+- [x] Narrow-screen bracket overflow fix surfaced by the e2e run (ISSUE-5).
+      - `frontend/src/styles.css`
+- _Requirements: 5_
 
-## 7. Infrastructure as Code (FEAT-006)
+## 8. Infrastructure as Code + README (FEAT-004)
 
 - [x] CDK stack: S3 + CloudFront (OAC), HTTP API + two Lambdas, DynamoDB (TTL),
       Bedrock IAM; one-command deploy + synth.
       - `infra/lib/`, `infra/bin/app.ts`
-- [x] Issue registry and fixes (ISSUE-1 series resolution, ISSUE-2 Bedrock test,
-      ISSUE-3/4 single BucketDeployment + stack assertions).
+- [x] README covering one-command deploy and local development.
+      - `README.md`
+- _Requirements: 1, 5_
+
+## 9. Issue registry and fixes (FEAT-006)
+
+- [x] Issue registry and autonomous fixes (ISSUE-1 series resolution, ISSUE-2
+      Bedrock test, ISSUE-3/4 single BucketDeployment + stack assertions).
       - `ISSUES.md`
 - _Requirements: 1, 5_
 
-## 8. Kiro University lesson artifacts (FEAT-007)
+## 10. Kiro University lesson artifacts (FEAT-007)
 
 - [x] Spec-driven development: this `.kiro/specs/mlb-postseason/` set.
 - [x] Steering docs: `.kiro/steering/*.md` (kiro-university, product, tech,

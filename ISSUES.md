@@ -19,6 +19,9 @@ Status legend:
 | ISSUE-3 | `infra/` has no assertion tests | Medium | v1 semantic review | Fixed |
 | ISSUE-4 | BucketDeployment prune can transiently remove `/config.js` | Medium | v1 semantic review | Fixed |
 | ISSUE-5 | Bracket overflows the viewport horizontally on narrow screens | Low | FEAT-005 Playwright e2e run | Fixed (in FEAT-005) |
+| ISSUE-6 | Stale `kiro-university.md` steering frames shipped lessons as future work | Low | v3 semantic review (`2026-10-04-154930-review.md`) | Fixed |
+| ISSUE-7 | FEAT labels in `tasks.md` disagree with the feature registry | Low | v3 semantic review (`2026-10-04-154930-review.md`) | Fixed |
+| ISSUE-8 | Aggregate property test used the loose `wins <= bestOf` bound | Low | v3 semantic review (`2026-10-04-154930-review.md`) | Fixed |
 
 ---
 
@@ -195,3 +198,93 @@ horizontal overflow.
 - `frontend/e2e/home.spec.ts` - narrow-width overflow assertion.
 
 **Verification.** `npm run test:e2e -w frontend` (narrow-width guard passes).
+
+---
+
+## ISSUE-6 - Stale `kiro-university.md` steering frames shipped lessons as future work
+
+- **Severity:** Low
+- **Source:** v3 semantic review (`2026-10-04-154930-review.md`), issue 1.
+- **Status:** Fixed
+
+**Description.** `.kiro/steering/kiro-university.md` is `inclusion: always`, so it
+is read on every task and by any judge who opens it. It was written early in the
+build and still framed hooks, MCP, powers, custom agents, and property-based
+testing as "potential" / "can be added" future work. Its "How this project
+demonstrates the lessons" section listed only spec/steering, Bedrock, IaC,
+testing, and docs, omitting the now-shipped hooks, MCP config, packaged power,
+custom agent, and property tests. This undersold the completed submission
+relative to the authoritative `DEMONSTRATED_LESSONS.md`.
+
+**Resolution.** Rewrote the "How this project demonstrates the lessons" section
+in past/present tense and enumerated all seven required lessons plus the two
+bonuses, each with a short pointer to the real artifact path (aligned with
+`DEMONSTRATED_LESSONS.md`): `.kiro/specs/`, `.kiro/steering/`, `.kiro/hooks/`,
+the backend property tests, `powers/mlb-postseason/`, `.kiro/settings/mcp.json`,
+`.kiro/agents/mlb-postseason-dev.json`, and `docs/kiro-web-cloud.md`. The
+existing factual challenge-shape and scoring content is unchanged.
+
+**Resolving files.**
+
+- `.kiro/steering/kiro-university.md` - rewritten lessons section.
+
+**Verification.** The file no longer calls the shipped lessons "potential" and
+every path it references exists in the repo.
+
+---
+
+## ISSUE-7 - FEAT labels in `tasks.md` disagree with the feature registry
+
+- **Severity:** Low
+- **Source:** v3 semantic review (`2026-10-04-154930-review.md`), issue 2.
+- **Status:** Fixed
+
+**Description.** `.kiro/specs/mlb-postseason/tasks.md` had two sections both
+labeled FEAT-005 and attributed the CDK infrastructure to FEAT-006, which
+disagreed with the real feature registry under
+`.agents/tasks/task-mlb-postseason-site/features/` (FEAT-001 scaffold + steering,
+FEAT-002 backend, FEAT-003 frontend, FEAT-004 CDK infra + README, FEAT-005
+Playwright e2e + UI fix, FEAT-006 ISSUES.md + issue resolutions, FEAT-007 lesson
+artifacts). The mismatch was cosmetic but reduced internal consistency.
+
+**Resolution.** Relabeled the `tasks.md` sections so the FEAT numbers match the
+registry: backend sections (MLB data layer, prediction model, Bedrock narrative,
+service/handlers/store) are FEAT-002; the frontend SPA is FEAT-003; the
+Playwright e2e + narrow-screen UI fix is FEAT-005; the CDK stack + README is
+FEAT-004; the issue registry is FEAT-006; and the lesson artifacts remain
+FEAT-007.
+
+**Resolving files.**
+
+- `.kiro/specs/mlb-postseason/tasks.md` - relabeled sections.
+
+**Verification.** Each section's FEAT number now matches the feature registry.
+
+---
+
+## ISSUE-8 - Aggregate property test used the loose `wins <= bestOf` bound
+
+- **Severity:** Low
+- **Source:** v3 semantic review (`2026-10-04-154930-review.md`), issue 3.
+- **Status:** Fixed
+
+**Description.** `backend/src/mlb/aggregate.property.test.ts` asserted each
+series' `high.wins`/`low.wins` satisfy `wins <= bestOf`. The tighter real
+contract is the clinch bound `wins <= Math.ceil(bestOf / 2)` - a team stops
+playing once it clinches, so it can never win more than the clinch count. The
+loose assertion would not catch an over-count between clinch + 1 and bestOf.
+
+**Resolution.** Tightened the assertion to `wins <= Math.ceil(bestOf / 2)` and
+reworked the generator so the invariant is both tight and true: instead of
+flipping each game's winner independently (which could let one team win up to
+`gamesInSeries` games), the generator now draws win counts directly, capping the
+winner at the clinch count and the loser at `clinch - 1`, then emits games with
+explicit winners. The property still holds and passes.
+
+**Resolving files.**
+
+- `backend/src/mlb/aggregate.property.test.ts` - tightened assertion + capped
+  generator.
+
+**Verification.** `npm test -w @mlb/backend` (the tightened property suite
+passes).

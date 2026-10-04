@@ -5,7 +5,9 @@
  * valid raw-game arrays (the shape the MLB Stats API returns) and assert the
  * structural invariants of every produced series:
  *
- *   - high.wins and low.wins never exceed bestOf.
+ *   - high.wins and low.wins never exceed the clinch count ceil(bestOf / 2),
+ *     which is the real upper bound on a series (a team stops playing once it
+ *     clinches), tighter than the loose `wins <= bestOf` bound.
  *   - status is one of 'scheduled' | 'in_progress' | 'final'.
  *   - league is one of 'AL' | 'NL' | 'WS'.
  *   - round is one of the four canonical RoundName values.
@@ -42,44 +44,51 @@ const VALID_LEAGUES: SeriesLeague[] = ['AL', 'NL', 'WS'];
 const VALID_STATUSES: SeriesStatus[] = ['scheduled', 'in_progress', 'final'];
 
 /**
- * Generates a single valid raw game. The away/home ids are drawn from a passed
- * distinct pair so games aggregate into coherent two-team series.
+ * Builds a single valid raw game from an explicit winner. The away/home ids are
+ * the passed distinct pair so games aggregate into one coherent series; the
+ * home team of game 1 becomes the high seed in {@link aggregateBracket}.
  */
-function gameArb(
+function makeGame(
   seriesDescription: string,
   gamesInSeries: number,
+  seriesGameNumber: number,
   awayId: number,
   homeId: number,
-): fc.Arbitrary<RawGame> {
-  return fc
-    .record({
-      gamePk: fc.integer({ min: 1, max: 1_000_000 }),
-      seriesGameNumber: fc.integer({ min: 1, max: gamesInSeries }),
-      awayWin: fc.boolean(),
-    })
-    .map(({ gamePk, seriesGameNumber, awayWin }) => ({
-      gamePk,
-      gameDate: '2024-10-05T18:00:00Z',
-      seriesDescription,
-      seriesGameNumber,
-      gamesInSeries,
-      status: { abstractGameState: 'Final' },
-      teams: {
-        away: {
-          team: { id: awayId, name: `away-${awayId}` },
-          score: awayWin ? 4 : 2,
-          isWinner: awayWin,
-        },
-        home: {
-          team: { id: homeId, name: `home-${homeId}` },
-          score: awayWin ? 2 : 4,
-          isWinner: !awayWin,
-        },
+  gamePk: number,
+  awayWin: boolean,
+): RawGame {
+  return {
+    gamePk,
+    gameDate: '2024-10-05T18:00:00Z',
+    seriesDescription,
+    seriesGameNumber,
+    gamesInSeries,
+    status: { abstractGameState: 'Final' },
+    teams: {
+      away: {
+        team: { id: awayId, name: `away-${awayId}` },
+        score: awayWin ? 4 : 2,
+        isWinner: awayWin,
       },
-    }));
+      home: {
+        team: { id: homeId, name: `home-${homeId}` },
+        score: awayWin ? 2 : 4,
+        isWinner: !awayWin,
+      },
+    },
+  };
 }
 
-/** Generates one series worth of games (a distinct team pair + description). */
+/**
+ * Generates one series worth of games (a distinct team pair + description).
+ *
+ * A real postseason series stops the moment one team reaches the clinch count
+ * `ceil(bestOf / 2)`, so no team can ever win MORE than clinch games. To keep
+ * the generated data faithful to that contract (and let the test assert the
+ * tight `wins <= clinch` bound), win counts are generated directly and capped
+ * at clinch: at most one team may reach clinch, and the loser's wins stay in
+ * `[0, clinch - 1]`. Games are then emitted with explicit winners.
+ */
 function seriesGamesArb(): fc.Arbitrary<RawGame[]> {
   return fc
     .record({
@@ -88,26 +97,51 @@ function seriesGamesArb(): fc.Arbitrary<RawGame[]> {
       pair: fc
         .uniqueArray(fc.constantFrom(...TEAM_IDS), { minLength: 2, maxLength: 2 })
         .map(([a, b]) => [a!, b!] as const),
+      clinched: fc.boolean(),
+      basePk: fc.integer({ min: 1, max: 900_000 }),
     })
-    .chain(({ description, gamesInSeries, pair }) => {
+    .chain(({ description, gamesInSeries, pair, clinched, basePk }) => {
       const [awayId, homeId] = pair;
-      // A real series never plays more games than its best-of length, so the
-      // generated game count is bounded by gamesInSeries. This keeps the data
-      // realistic and lets the aggregator's win counts stay within bestOf.
-      return fc.integer({ min: 0, max: gamesInSeries }).chain((count) => {
-        if (count === 0) {
-          return fc.constant<RawGame[]>([]);
-        }
-        return fc.array(gameArb(description, gamesInSeries, awayId, homeId), {
-          minLength: count,
-          maxLength: count,
+      const clinch = Math.ceil(gamesInSeries / 2);
+      // Away team is the home team of every generated game except game 1, where
+      // we keep away/home as the pair so homeId is the game-1 high seed. We cap
+      // each team's wins at clinch (winner) / clinch - 1 (loser).
+      const winnerWinsArb = clinched
+        ? fc.constant(clinch)
+        : fc.integer({ min: 0, max: clinch - 1 });
+      return fc
+        .record({
+          awayIsWinner: fc.boolean(),
+          winnerWins: winnerWinsArb,
+          loserWins: fc.integer({ min: 0, max: clinch - 1 }),
+        })
+        .map(({ awayIsWinner, winnerWins, loserWins }) => {
+          const awayWins = awayIsWinner ? winnerWins : loserWins;
+          const homeWins = awayIsWinner ? loserWins : winnerWins;
+          const games: RawGame[] = [];
+          let gameNumber = 1;
+          let pk = basePk;
+          for (let i = 0; i < awayWins; i += 1) {
+            games.push(
+              makeGame(description, gamesInSeries, gameNumber, awayId, homeId, pk, true),
+            );
+            gameNumber += 1;
+            pk += 1;
+          }
+          for (let i = 0; i < homeWins; i += 1) {
+            games.push(
+              makeGame(description, gamesInSeries, gameNumber, awayId, homeId, pk, false),
+            );
+            gameNumber += 1;
+            pk += 1;
+          }
+          return games;
         });
-      });
     });
 }
 
 describe('aggregateBracket (property-based)', () => {
-  it('produces series whose win counts never exceed bestOf and whose round/league/status are valid', () => {
+  it('produces series whose win counts never exceed the clinch count and whose round/league/status are valid', () => {
     fc.assert(
       fc.property(
         fc.array(seriesGamesArb(), { minLength: 1, maxLength: 4 }).map((nested) =>
@@ -118,8 +152,11 @@ describe('aggregateBracket (property-based)', () => {
           expect(bracket.season).toBe(2024);
 
           for (const series of bracket.series) {
-            expect(series.high.wins).toBeLessThanOrEqual(series.bestOf);
-            expect(series.low.wins).toBeLessThanOrEqual(series.bestOf);
+            // The tight, real contract: a team stops once it clinches, so no
+            // team can win more than ceil(bestOf / 2) games.
+            const clinch = Math.ceil(series.bestOf / 2);
+            expect(series.high.wins).toBeLessThanOrEqual(clinch);
+            expect(series.low.wins).toBeLessThanOrEqual(clinch);
             expect(series.high.wins).toBeGreaterThanOrEqual(0);
             expect(series.low.wins).toBeGreaterThanOrEqual(0);
             expect(VALID_STATUSES).toContain(series.status);
