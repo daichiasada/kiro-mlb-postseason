@@ -13,6 +13,16 @@ cdk.context.json
 # Frontend build
 frontend/dist/
 
+# Playwright E2E output + browser binaries (do NOT commit browser binaries)
+test-results/
+frontend/test-results/
+playwright-report/
+frontend/playwright-report/
+.playwright/
+frontend/.playwright/
+playwright/.cache/
+frontend/playwright/.cache/
+
 # Coverage
 coverage/
 
