@@ -1,9 +1,26 @@
 {
   "task_id": "task-multi-season",
   "task_description": "Make the already-deployed MLB postseason site year-aware for a 'now' of 2026. Seasons 2024 and 2025 are results-only (show the completed bracket/final results; prediction feature hidden/disabled). Season 2026 fetches the latest live MLB Stats API data and keeps the prediction feature working, degrading gracefully to an empty/upcoming state when there are no in-progress series. Add a frontend season selector (2024/2025/2026). Add a real aggregated 2025 seed dataset and extend the TEAMS map. Drive results-only vs predictable from a single CURRENT_YEAR season-config in @mlb/shared, not scattered literals or per-series hacks. Update specs/README/steering to match. Keep unit + fast-check property + Playwright e2e + cdk synth all green. Work on branch feat/mlb-postseason-site with incremental commits; orchestrator owns push/PR/GitHub.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
   "blocked_reason": null,
+  "review_loop": {
+    "rounds": 2,
+    "verdicts": ["NEEDS_CHANGES (v1)", "APPROVED (v2)"],
+    "review_files": [
+      ".agents/tasks/task-multi-season/2026-10-04-164637-review.md",
+      ".agents/tasks/task-multi-season/2026-10-04-165620-review.md"
+    ],
+    "summary": "v1 flagged a confirmed blocking issue: the real 2026 statsapi payload records 'Preview' games, which aggregateBracket classified as in_progress 0-0 rather than scheduled, so the documented upcoming/empty path never triggered for the live data shape. Fixed at the root (aggregateBracket classifies games-but-no-decided-winner as 'scheduled', with matching backend/frontend guards) plus tests that feed the real preview shape (fail pre-fix, pass post-fix). v2 APPROVED with one informational, non-blocking note."
+  },
+  "commits_for_orchestrator_to_push": [
+    "c3f83f1 feat(shared): add year-aware season config, 2025 teams, and real 2025 seed",
+    "de14ad4 feat(backend): year-aware default season and results-only prediction contract",
+    "d7a2863 feat(frontend): season selector with results-only gating for 2024/2025 and prediction for 2026",
+    "017e1c1 docs(multi-season): document year-aware seasons, results-only vs predictable, and prediction contract",
+    "a87ee5e fix(multi-season): treat preview-only series as not-started so 2026 upcoming path triggers"
+  ],
+  "publish_note": "All work is on branch feat/mlb-postseason-site as the local commits above (pre-task base: 92c9f36). The orchestrator owns push/PR #1 and updating GitHub Issue #10. No cdk deploy or live Bedrock calls were made this session (per instructions).",
   "verification": {
     "build": "pass",
     "tests": "pass",
