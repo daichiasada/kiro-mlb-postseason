@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Run backend unit tests on save",
+  "description": "When any backend or shared TypeScript source changes, run the backend unit and property-based tests (Vitest) and report failures. Keeps the prediction model, MLB aggregation, and service logic green while editing.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/**/*.ts",
+      "shared/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A backend or shared source file was saved. Run `npm test -w @mlb/backend` and report any failing tests, including the fast-check property tests. If a property test fails, show the shrunk counterexample so the invariant can be fixed."
+  }
+}

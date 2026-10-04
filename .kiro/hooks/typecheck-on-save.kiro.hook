@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Typecheck on TypeScript save",
+  "description": "Runs the strict TypeScript typecheck across all workspaces whenever any .ts or .tsx file is saved, so type regressions in the monorepo (shared, backend, frontend, infra) surface immediately.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.ts",
+      "**/*.tsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A TypeScript file was saved. Run `npm run typecheck` from the repo root and report any type errors by workspace. Do not change code unless I ask; just summarize the errors."
+  }
+}
