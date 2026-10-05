@@ -17,8 +17,8 @@ API Gateway (HTTP API, CORS)
   |-- GET/POST /prediction -> Lambda getPrediction (Node 20)
           |
           v
-   BracketService  --->  DynamoDB cache (pk BRACKET#<season>, ttl)
-          |          --->  MLB Stats API (statsapi.mlb.com)
+   BracketService  --->  DynamoDB cache (pk BRACKET#<season> + STANDINGS#<season>, ttl)
+          |          --->  MLB Stats API (statsapi.mlb.com: schedule + standings)
           |          --->  Amazon Bedrock (selectable Amazon Nova / Anthropic Claude)
           |          --->  bundled 2024 + 2025 seeds (shared/src/seed)
 ```
@@ -53,7 +53,14 @@ the frontend can branch on `mode`:
 
 - `(Prediction & { mode: 'prediction' })` - a full numeric prediction (favorite,
   `favoriteWinProbability`, Bedrock `narrative`, `model`, `generatedAt`) for a
-  resolvable, started series in the current (predictable) season.
+  resolvable, started series in the current (predictable) season. It also carries
+  an additive optional `metrics: PredictionMetrics` object
+  (`{ favorite: TeamMetric, underdog: TeamMetric }`, where
+  `TeamMetric = { teamId, winPct: number | null }`) describing the
+  regular-season win pct used for each team, so the UI can explain the basis;
+  `winPct` is `null` when the neutral fallback was used for that team. The field
+  is optional and additive, so the `results`/`upcoming` variants and older
+  consumers are unaffected.
 - `ResultsOnlyPrediction` = `{ mode: 'results', seriesId, season, message }` -
   returned for a results-only season (`season < CURRENT_YEAR`). The service
   short-circuits this case BEFORE loading the bracket, running `predict()`, or
@@ -195,6 +202,18 @@ favorite/probability/narrative update while the existing loading/error states ar
 preserved. The control is shown only while a series is selected and a numeric
 prediction is being fetched or displayed (not in the idle/upcoming states).
 
+### Prediction basis (metrics used)
+
+When a `mode: 'prediction'` response carries the additive `metrics` object
+(Issue #15), the `PredictionPanel` renders a small, accessible "Prediction basis"
+block (`prediction.metrics.*` i18n keys, localized EN/JA) showing each team's
+regular-season win pct formatted as a percentage (e.g. `60.5%`), labeled with the
+localized team name. When a team's `winPct` is `null` (the neutral fallback was
+used), the block shows a localized "not available" string instead of `NaN`. The
+block is guarded behind `prediction.metrics` being defined, so a response without
+`metrics` renders the existing prediction UI unchanged. This makes the win-pct
+basis explainable in the UI (Issue #15 acceptance criterion 3).
+
 ## API and Lambdas
 
 Two Node 20 Lambdas behind an API Gateway HTTP API with CORS:
@@ -250,10 +269,31 @@ undefined the model default (`0.5`) applies:
    `scheduled` OR has no decided game (no game with a real winner and no
    recorded win) - this catches the real preview-game shape, where the
    aggregator classifies a games-but-no-results series as `scheduled`.
-6. Otherwise `predict(series, bracket, winPct, accuracy)` to compute the
-   favorite and probability (honoring the accuracy control), then
-   `generateNarrative(series, result, invoker)` for the prose (deterministic
-   fallback on any Bedrock error), returning `{ mode: 'prediction', ... }`.
+6. Otherwise resolve the regular-season win-pct map with `resolveWinPct(season)`
+   (see "Standings win pct" below), call
+   `predict(series, bracket, winPct, accuracy)` to compute the favorite and
+   probability (honoring the accuracy control and the real win-pct strength
+   signal), then `generateNarrative(series, result, invoker)` for the prose
+   (deterministic fallback on any Bedrock error), and attach the additive
+   `metrics` object (favorite + underdog win pct) built with
+   `teamMetric(winPct, teamId)`, returning `{ mode: 'prediction', ... }`.
+
+### resolveWinPct(season) - standings resolution order
+
+`resolveWinPct` is a private helper that produces the per-team win-pct map fed
+into `predict()`. It is wrapped so ANY failure resolves to a neutral map and it
+NEVER throws, keeping a prediction always returnable:
+
+1. If a non-empty `winPct` map was injected via `BracketServiceDeps` (a test
+   seam / back-compat field), return it.
+2. Otherwise read the DynamoDB standings cache
+   (`store.getCachedStandings(season)`). On a hit, return it.
+3. Otherwise `fetchStandings(season)` -> `winPctFromStandings(response)` ->
+   `store.putCachedStandings(season, winPct)` (write-back) -> return the fresh
+   map.
+4. On ANY error in steps 2-3 (network, non-200, parse), return `{}` (the neutral
+   fallback), so `predict()` treats every team as 0.5 and the request still
+   yields a `mode: 'prediction'` response.
 
 The handler (`getPrediction.ts`) parses `accuracy` from BOTH the GET query
 (`?accuracy=`) and the POST body (via `http.ts` `parseAccuracy`, which returns
@@ -292,8 +332,12 @@ it still responds `400` for a missing `seriesId` or an invalid `season`, and
 `backend/src/predict/model.ts` is a pure, deterministic heuristic:
 
 - Blends a series-progress signal (`wins / clinch`, weight 0.7) with a
-  regular-season strength signal (`winPct`, defaulting to neutral 0.5, weight
-  0.3), plus a small home-field edge (0.02) to the high seed.
+  regular-season strength signal (`winPct`, weight 0.3; a team absent from the
+  map defaults to neutral 0.5), plus a small home-field edge (0.02) to the high
+  seed. As of Issue #15 the service supplies a real `winPct` map derived from the
+  MLB standings (see "Standings win pct"); when that map is empty (the neutral
+  fallback) both teams revert to 0.5 and the model reproduces its prior
+  progress-only behavior.
 - The favorite is the higher-scoring team; its raw share of the combined score
   is clamped to `[0.5, 0.95]` to produce `p0`.
 - Configurable accuracy (sharpness/temperature). `predict(series, bracket,
@@ -320,6 +364,30 @@ it still responds `400` for a missing `seriesId` or an invalid `season`, and
   range): `favoriteWinProbability` in `[0.5, 0.95]`; favorite is one of the two
   series teams and is unaffected by accuracy; monotonic non-decreasing in
   accuracy for a given favored series; deterministic for identical inputs.
+
+## Standings win pct - fetchStandings + winPctFromStandings
+
+The regular-season strength signal consumed by `predict()` comes from the MLB
+Stats API standings, aggregated by a pure function and cached per season:
+
+- `backend/src/mlb/client.ts` `fetchStandings(season)` hits
+  `https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=YYYY`
+  (both leagues) over global `fetch`, with no API key, and throws `MlbApiError`
+  on a non-ok response - the same style as `fetchPostseasonSchedule`. It narrows
+  the response to the subset the aggregator needs
+  (`records[].teamRecords[].{ team.id, winningPercentage, ... }`).
+- `backend/src/predict/standings.ts` `winPctFromStandings(response)` is a PURE,
+  side-effect-free aggregation: it iterates `records[].teamRecords[]`, parses each
+  `winningPercentage` string (e.g. `.580` or `0.580`) via `Number()` into a
+  finite value in `[0, 1]`, maps `team.id -> pct`, skips any entry with a missing
+  id or an unparseable/out-of-range value, and returns `{}` for an
+  empty/absent/early-season response. It NEVER throws, so it is unit-testable with
+  the MLB API mocked (`backend/src/predict/standings.test.ts`). A sibling helper
+  `teamMetric(winPct, teamId)` returns `{ teamId, winPct: winPct[teamId] ?? null }`
+  so the service builds the response `metrics` consistently.
+- Only the regular-season win-pct signal is wired. No Pythagorean
+  (run-differential) or last-10 signal is implemented, even though the raw
+  standings payload carries `runDifferential`.
 
 ## Bedrock narrative - generateNarrative (localized + model-selectable)
 
@@ -409,7 +477,12 @@ free):
 
 `backend/src/store/dynamo.ts` - `DynamoBracketStore` reads/writes the aggregated
 bracket JSON in DynamoDB keyed by season (`BRACKET#<season>`), with a TTL so the
-cache refreshes.
+cache refreshes. The same store also caches the regular-season win-pct map keyed
+by `STANDINGS#<season>` via `getCachedStandings` / `putCachedStandings`, using
+the same default TTL (~15 min) as the bracket cache. Both key families share the
+single `pk` partition key, so NO infra schema change was needed to add the
+standings cache. All methods are no-ops / return `undefined` when `TABLE_NAME` is
+unset, so the service runs locally and in tests without AWS.
 
 ## Seed fallback
 

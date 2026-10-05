@@ -101,6 +101,24 @@ offered for its in-progress series; `/prediction` returns `mode: 'prediction'` f
 started series or `mode: 'upcoming'` when a series has not started yet. All variants are
 returned with HTTP 200 and the frontend branches on `mode`.
 
+### Regular-season win pct drives the prediction
+
+The prediction blends series progress with each team's **real regular-season win
+pct**. On a prediction, the backend fetches the MLB Stats API standings
+(`https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=YYYY`),
+aggregates them into a per-team win-pct map with a pure, unit-tested function,
+and feeds that map into the model. The map is **cached per season in DynamoDB**
+under `pk = STANDINGS#<season>` with the same ~15 min TTL as the bracket cache
+(no infra change, since the table uses a single partition key). If the standings
+fetch, parse, or aggregation fails for any reason, the model falls back to a
+**neutral 0.5** for the affected teams and **still returns a prediction**, so a
+standings outage never turns a prediction into an error. The `mode: 'prediction'`
+response also carries an additive `metrics` object (each team's win pct), and the
+prediction panel shows a localized **"Prediction basis"** block with each team's
+regular-season win pct (or "Not available" when unknown), so the basis is
+explainable. Only the win-pct signal is wired today; there is no Pythagorean
+(run-differential) or last-10 signal.
+
 ### Finished series: prediction turned OFF
 
 Even within the current, predictable season, a series that has already finished

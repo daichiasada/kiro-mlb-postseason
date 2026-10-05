@@ -297,3 +297,64 @@ threaded UI -> api -> handler -> service -> narrative.
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`,
         `.kiro/steering/product.md`, `.kiro/steering/tech.md`.
 - _Requirements: 3, 12_
+
+## Regular-season win pct into predictions (task-issue-15-regular-season-winpct)
+
+GitHub Issue #15 under `.agents/tasks/task-issue-15-regular-season-winpct/`
+(features FEAT-001 through FEAT-003): feed the real regular-season win pct into
+the prediction model. Fetch the MLB Stats API standings, aggregate them to a
+per-team win-pct map with a PURE function, cache the map per season in DynamoDB
+(`STANDINGS#<season>`, same TTL as the bracket cache, no infra change), wire it
+into `BracketService.getPrediction` -> `predict()`, fall back to neutral 0.5 on
+ANY failure while always returning a prediction, and surface the metrics used in
+the `PredictionPanel` (localized EN/JA). Only the win-pct signal is wired; no
+Pythagorean/last-10 signal was added.
+
+### S1. Backend: standings fetch, pure aggregation, cache, wiring (task-issue-15 FEAT-001)
+
+- [x] Additive `Prediction.metrics` contract: `PredictionMetrics`
+      (`{ favorite, underdog }`) and `TeamMetric` (`{ teamId, winPct: number |
+      null }`), optional so the `results`/`upcoming` variants are unchanged.
+      - `shared/src/types.ts`, `shared/src/index.ts` (barrel).
+- [x] MLB standings client fetch and the PURE win-pct aggregation + metric
+      helper (parses `.580`/`0.580`, skips missing id / unparseable, `{}` for
+      early-season, never throws), unit-tested with the MLB API mocked.
+      - `backend/src/mlb/client.ts` (`fetchStandings`, `RawStandingsResponse`),
+        `backend/src/predict/standings.ts`
+        (`winPctFromStandings`, `teamMetric`),
+        `backend/src/predict/standings.test.ts`.
+- [x] Per-season standings cache (`STANDINGS#<season>`, same TTL as the bracket
+      cache, single-pk table so no infra change) and the
+      `resolveWinPct` resolution order (injected map -> cache hit -> live
+      fetch+aggregate+write-back -> neutral `{}` on any failure); feed `winPct`
+      into `predict()` and attach the `metrics` object to the `mode:
+      'prediction'` response.
+      - `backend/src/store/dynamo.ts`
+        (`getCachedStandings`/`putCachedStandings`),
+        `backend/src/service/bracketService.ts`,
+        `backend/src/service/bracketService.test.ts`.
+- _Requirements: 2, 13_
+
+### S2. Frontend: explainable "prediction basis" in the panel (task-issue-15 FEAT-002)
+
+- [x] Localized `prediction.metrics.*` strings (EN/JA) and a guarded
+      "Prediction basis" block in the prediction panel showing each team's
+      regular-season win pct (or a localized "not available" when `null`),
+      backward compatible for responses without `metrics`.
+      - `frontend/src/i18n/messages.ts`,
+        `frontend/src/components/PredictionPanel.tsx`,
+        `frontend/src/styles.css`,
+        `frontend/src/components/PredictionPanel.test.tsx`,
+        `frontend/e2e/prediction.spec.ts`, `frontend/e2e/fixtures.ts`.
+- _Requirements: 10, 13_
+
+### S3. Spec + README truthfulness (task-issue-15 FEAT-003)
+
+- [x] Keep the spec-driven-dev artifacts and both READMEs truthful to the
+      standings-driven win pct, the `STANDINGS#<season>` cache, the neutral
+      fallback, and the explainable-metrics UI, without overstating (no
+      Pythagorean/last-10 signal is claimed).
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
+- _Requirements: 2, 13_

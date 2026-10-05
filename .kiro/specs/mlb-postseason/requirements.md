@@ -216,6 +216,55 @@ unreachable.
    `TEAMS` map without throwing, and the frontend SHALL render such teams via a
    `Team <id>` fallback name.
 
+## Requirement 13 - Regular-season win pct feeds the prediction (standings)
+
+**User story:** As a fan, I want the prediction to reflect how good each team was
+during the regular season, so that the favorite and probability are grounded in
+real results and the basis is explainable rather than opaque.
+
+The prediction model already blends a per-team strength signal (`winPct`) with
+series progress, but that signal was neutral (every team at 0.5) because nothing
+supplied it. GitHub Issue #15 closes that wiring gap: the backend now fetches the
+real regular-season standings from the MLB Stats API, aggregates them into a
+per-team win-pct map with a PURE function, caches that map per season in
+DynamoDB (`pk = STANDINGS#<season>`, the same TTL as the bracket cache, no infra
+change because the table is single-partition-key), feeds it into `predict()`, and
+surfaces the metrics it used on the `mode: 'prediction'` response so the UI can
+explain the basis. Only the regular-season win-pct signal is wired; no
+Pythagorean (run-differential) or last-10 signal is implemented.
+
+### Acceptance criteria
+
+1. WHEN a numeric prediction is computed for a started current-season series THEN
+   the system SHALL resolve a regular-season win-pct map for that season and pass
+   it into `predict()`, so the strength signal reflects real standings rather
+   than a flat 0.5.
+2. WHEN the win-pct map is resolved THEN the resolution order SHALL be: an
+   injected non-empty map (test seam) first, else a DynamoDB cache hit
+   (`STANDINGS#<season>`), else a live standings fetch that is aggregated and
+   written back to the cache.
+3. IF the standings fetch, parse, or aggregation fails for ANY reason (network,
+   non-200, malformed/early-season JSON) THEN the system SHALL fall back to a
+   neutral map (every team treated as 0.5) and SHALL STILL return a
+   `mode: 'prediction'` response; it SHALL NEVER throw or turn a prediction into
+   an error (Issue #15 acceptance criterion 1).
+4. WHEN the standings JSON is aggregated THEN the aggregation
+   (`winPctFromStandings`) SHALL be a PURE, side-effect-free function that parses
+   each `teamRecords[].winningPercentage` string (e.g. `.580` or `0.580`) into a
+   finite number in `[0, 1]`, skips entries with a missing team id or an
+   unparseable value, and returns `{}` for an empty/early-season response, so it
+   is unit-testable with the MLB API mocked (Issue #15 acceptance criterion 2).
+5. WHEN a `mode: 'prediction'` response is produced THEN it SHALL carry an
+   additive `metrics` object `{ favorite: TeamMetric, underdog: TeamMetric }`
+   where `TeamMetric = { teamId, winPct: number | null }` (`null` means the
+   neutral fallback was used for that team), and the `results`/`upcoming`
+   variants and existing `Prediction` fields SHALL be unchanged (backward
+   compatible).
+6. WHEN the prediction panel shows a numeric prediction THEN it SHALL display the
+   metrics used (each team's regular-season win pct, or a localized "not
+   available" when the value is `null`) so the basis is explainable, localized in
+   both EN and JA (Issue #15 acceptance criterion 3).
+
 ## Requirement 5 - One-command deploy (Infrastructure as Code)
 
 **User story:** As a developer, I want to provision and deploy the entire stack
