@@ -1,0 +1,22 @@
+{
+  "task_id": "task-issue-22-dark-mode-a11y",
+  "task_description": "Implement GitHub Issue #22 ([UX] dark mode + accessibility): (a) dark mode following prefers-color-scheme with a manual System/Light/Dark toggle persisted to localStorage 'mlb.theme'; (b) auto-pick WCAG-AA text color (black/white) on team-color badges via a pure contrast helper, verified across ALL team colors; (c) bracket keyboard navigation (arrow keys between series, Enter to open detail) with screen-reader labels; verified by an @axe-core/playwright a11y check reporting no serious/critical violations in BOTH light and dark, and by confirming connectors/logos stay legible in both themes. Frontend-only change plus spec/README (incl. README.ja.md) updates. Branch feat/mlb-postseason-site; incremental commits; no push/PR/deploy.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "review": {
+    "verdict": "APPROVED",
+    "version": "v1",
+    "file": ".agents/tasks/task-issue-22-dark-mode-a11y/2026-10-05-085314-review.md",
+    "note": "APPROVED with no blocking defects. Four non-blocking items raised; all addressed in follow-up commits bc67839 (docs: card-activation model + stale ./theme.tsx docstring fix) and 8606cd0 (test: index.html bootstrap sync guard)."
+  },
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "e2e": "pass",
+    "synth": "pass",
+    "summary": "npm run build GREEN (ordered shared->backend->frontend->infra). Unit tests GREEN per workspace: frontend 85, backend 92, infra 8, shared passes. e2e GREEN 34/34 incl. 7 @axe-core/playwright scans (home/detail/accuracy in BOTH light and dark, zero serious/critical) + 3 keyboard-nav tests + a dark-mode screenshot. npm run synth GREEN (no AWS calls). Docker: no Dockerfile (CDK bundles via esbuild), so docker_build not applicable. Test quality verified: the all-team-colors AA contrast test iterates every team primary+secondary and DEFAULT_COLOR through the real readableTextColor/contrastRatio and asserts >=4.5:1 (would fail if the helper chose wrong); the axe e2e runs real WCAG 2.1 A/AA scans in both themes and already forced a real dark-mode heading-contrast fix. CAVEAT: shared/src/integrity.property.test.ts (Issue #13, fast-check) is intermittently flaky (~1 in 3 runs) due to a TEST-side bug (its arbitrary can generate duplicate series ids so series.find resolves the wrong duplicate). PRE-EXISTING and UNRELATED to Issue #22: all four #22 commits touched only frontend/, README.md, README.ja.md, specs, and package-lock.json; no shared/ source was modified."
+  }
+}
