@@ -12,6 +12,11 @@
 :root {
   --navy: #1b3a6b;
   --navy-dark: #0b2748;
+  /* Navy used as FOREGROUND text on surfaces (headings, links, game numbers).
+     Kept as a distinct variable from --navy (which also fills backgrounds) so
+     the dark palette can brighten the text role to clear WCAG AA without
+     lightening the navy fills/gradients. In light mode it equals --navy. */
+  --heading: #1b3a6b;
   --red: #c8102e;
   --gold: #8a6400;
   --ink: #0f172a;
@@ -79,6 +84,9 @@
 [data-theme='dark'] {
   --navy: #2b4f85;
   --navy-dark: #13294b;
+  /* Brightened navy for text on dark surfaces so headings/links/game numbers
+     clear WCAG AA (>=4.5:1) against every dark surface (>=5.9:1 here). */
+  --heading: #8fb4f2;
   --red: #ff6b7d;
   --gold: #e3b341;
   --ink: #e6edf5;
@@ -428,7 +436,7 @@ body {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--navy);
+  color: var(--heading);
   text-align: center;
 }
 
@@ -580,7 +588,7 @@ body {
 
 .series-card__game-num {
   font-weight: 700;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .series-card__predict {
@@ -658,7 +666,7 @@ body {
 
 .detail__back {
   display: inline-block;
-  color: var(--navy);
+  color: var(--heading);
   font-weight: 600;
   text-decoration: none;
   font-size: 0.9rem;
@@ -686,7 +694,7 @@ body {
 .detail__title {
   margin: 0;
   font-size: 1.5rem;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .detail__result {
@@ -736,7 +744,7 @@ body {
 .detail__games-title {
   margin: 1rem 0 0.6rem;
   font-size: 1rem;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .detail__games {
@@ -762,7 +770,7 @@ body {
 
 .detail__game-num {
   font-weight: 700;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .detail__game-side {
@@ -801,7 +809,7 @@ body {
 .prediction__title {
   margin: 0 0 0.8rem;
   font-size: 1.1rem;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .standings__league + .standings__league {
@@ -890,7 +898,7 @@ body {
 
 .prediction__prob-value {
   font-weight: 700;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .prediction__bar {
@@ -984,13 +992,13 @@ body {
 .prediction__accuracy-label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .prediction__accuracy-value {
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .prediction__accuracy-slider {
@@ -1028,7 +1036,7 @@ body {
 .prediction__model-label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--heading);
 }
 
 .prediction__model-select {
