@@ -110,7 +110,13 @@ function bracketArb(): fc.Arbitrary<Bracket> {
     .map(({ series }) => ({
       season: 2026,
       updatedAt: '2026-10-05T18:00:00Z',
-      series,
+      // Series ids must be unique within a bracket: the invariant assertions
+      // resolve a warning back to its series via `series.find(s => s.id ===
+      // warning.seriesId)`, so a duplicate id would match the wrong series and
+      // fail spuriously. The per-series arbitrary cannot guarantee this (two
+      // series can draw the same `idSuffix`), so remap ids by array index here
+      // where the whole array is in scope. The rest of each series is intact.
+      series: series.map((s, index) => ({ ...s, id: `2026-series-${index}` })),
     }));
 }
 
