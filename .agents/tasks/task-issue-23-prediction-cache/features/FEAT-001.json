@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Confirm the baseline is green before changing anything. Install dependencies if needed, then run the full build, the unit tests, and cdk synth to establish that shared/backend/frontend/infra all pass on the current feat/mlb-postseason-site branch. This de-risks later features by proving the starting point is clean.",
+  "status": "completed",
+  "findings_detail": "Baseline verified green on feat/mlb-postseason-site: npm run build exit 0 (shared->backend->frontend->infra); npm test exit 0 (shared 37, backend 111, frontend 194, infra 9 tests all pass); npm run synth exit 0 (template emitted, only nodejs20.x deprecation warnings - pre-existing, non-blocking). No source files modified.",
+  "steps": [
+    "Ensure the Node toolchain is on PATH for every command: prefix with PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" (fallback /root/.nvm/versions/node/v22.23.3/bin). Confirm with `which node npm`.",
+    "From repo root /projects/sandbox/kiro-mlb-postseason run `npm run build` and confirm shared -> backend -> frontend -> infra all compile.",
+    "Run `npm test` and record the passing baseline count.",
+    "Run `npm run synth` and confirm cdk synth succeeds offline (no AWS calls).",
+    "Do NOT run `npm run test:e2e` here (deferred to final verification). Do NOT commit anything in this feature; it is read-only verification."
+  ],
+  "acceptance_criteria": [
+    "`npm run build` exits 0 across all four workspaces",
+    "`npm test` exits 0 with all suites passing",
+    "`npm run synth` exits 0 and emits a CloudFormation template under cdk.out",
+    "No source files were modified by this feature"
+  ],
+  "verification": [
+    "npm run build (exit 0)",
+    "npm test (exit 0)",
+    "npm run synth (exit 0)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -1,0 +1,7 @@
+{
+  "task_id": "task-issue-23-prediction-cache",
+  "task_description": "Implement GitHub Issue #23: cache the /prediction result (including the Bedrock narrative) in DynamoDB keyed by seriesId + series situation (win counts) + language + model + accuracy so repeat same-situation requests do NOT call Bedrock and a game-result update invalidates the cache; add API Gateway throttling with a CDK assertion test; and emit CloudWatch metrics for cache hit rate and Bedrock call count (EMF preferred to avoid new IAM). Backend + infra + docs. Incremental commits on feat/mlb-postseason-site; no push/PR/deploy (orchestrator owns those).",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

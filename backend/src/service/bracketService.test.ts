@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getSeedBracket, type Bracket, type GameDetailResponse } from '@mlb/shared';
+import {
+  getSeedBracket,
+  type Bracket,
+  type GameDetailResponse,
+  type PredictionResponse,
+} from '@mlb/shared';
 import { BracketService } from './bracketService.js';
 import {
   GAME_DETAIL_FINAL_TTL_SECONDS,
@@ -34,6 +39,7 @@ function memoryStore(
   let stored = initial;
   let storedStandings = initialStandings;
   let storedGameDetail = initialGameDetail;
+  const predictions = new Map<string, PredictionResponse>();
   return {
     getCachedBracket: vi.fn(async () => stored),
     putCachedBracket: vi.fn(async (b: Bracket) => {
@@ -46,6 +52,10 @@ function memoryStore(
     getCachedGameDetail: vi.fn(async () => storedGameDetail),
     putCachedGameDetail: vi.fn(async (detail: GameDetailResponse) => {
       storedGameDetail = detail;
+    }),
+    getCachedPrediction: vi.fn(async (cacheKey: string) => predictions.get(cacheKey)),
+    putCachedPrediction: vi.fn(async (cacheKey: string, response: PredictionResponse) => {
+      predictions.set(cacheKey, response);
     }),
   };
 }
@@ -721,6 +731,86 @@ describe('BracketService.getPrediction (regular-season win pct wiring)', () => {
     expect(fetchStandings).not.toHaveBeenCalled();
     expect(store.getCachedStandings).toHaveBeenCalledWith(2026);
     expect(store.putCachedStandings).not.toHaveBeenCalled();
+  });
+});
+
+describe('BracketService.getPrediction (prediction cache, Issue #23)', () => {
+  it('criterion 1: a 2nd request for the same situation is served from cache with ZERO extra Bedrock calls', async () => {
+    const store = memoryStore(current2026Bracket, { 116: 0.58, 117: 0.52 });
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const first = await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
+
+    expect(first.mode).toBe('prediction');
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
+    expect(store.putCachedPrediction).toHaveBeenCalledOnce();
+
+    const second = await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
+
+    // The second call is served entirely from cache: no additional Bedrock
+    // invoke and no additional write-back.
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
+    expect(store.putCachedPrediction).toHaveBeenCalledOnce();
+    expect(second).toEqual(first);
+  });
+
+  it('criterion 1: an undefined accuracy maps to the same key as explicit 0.5 (served from cache)', async () => {
+    const store = memoryStore(current2026Bracket, { 116: 0.58, 117: 0.52 });
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    await service.getPrediction('2026-al-wildcard-117-116', 2026, undefined, 'en');
+    await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
+
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
+  });
+
+  it('criterion 2: a changed win count yields a different key => a fresh Bedrock call', async () => {
+    // Mutable bracket so a game result update changes high.wins between calls.
+    const bracket: Bracket = {
+      season: 2026,
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      series: [
+        {
+          id: '2026-al-wildcard-117-116',
+          round: 'Wild Card',
+          league: 'AL',
+          high: { teamId: 117, wins: 1 },
+          low: { teamId: 116, wins: 1 },
+          bestOf: 5,
+          status: 'in_progress',
+          games: [],
+        },
+      ],
+    };
+    const store = memoryStore(bracket, { 116: 0.58, 117: 0.52 });
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
+    expect(bedrockInvoke).toHaveBeenCalledOnce();
+
+    // Simulate a game result update: the high seed wins another game.
+    bracket.series[0]!.high.wins = 2;
+
+    await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
+
+    // The win-count change produced a different cache key, so a fresh Bedrock
+    // call was made (the cache was effectively invalidated).
+    expect(bedrockInvoke).toHaveBeenCalledTimes(2);
   });
 });
 

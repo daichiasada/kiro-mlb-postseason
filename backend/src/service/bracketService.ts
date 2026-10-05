@@ -10,6 +10,7 @@ import {
   isResultsOnly,
   resolveModelId,
   DEFAULT_NARRATIVE_LANGUAGE,
+  DEFAULT_ACCURACY,
   type Bracket,
   type GameDetailResponse,
   type NarrativeLanguage,
@@ -43,6 +44,8 @@ import {
   GAME_DETAIL_LIVE_TTL_SECONDS,
   type BracketStore,
 } from '../store/dynamo.js';
+import { predictionCacheKey } from './predictionCacheKey.js';
+import { emitCacheMetric } from '../metrics/emf.js';
 
 export interface BracketServiceDeps {
   store?: BracketStore;
@@ -323,12 +326,41 @@ export class BracketService {
       };
     }
 
-    const winPct = await this.resolveWinPct(season);
-    const result = predict(series, bracket, winPct, accuracy);
     // Resolve the requested model against the shared allowlist (unknown/missing
-    // falls back to the default) and default the language server-side.
+    // falls back to the default), default the language server-side, and resolve
+    // the accuracy to the model default used by predict() so the cache key is
+    // stable (an undefined accuracy and an explicit 0.5 map to the same key).
     const resolvedModel = resolveModelId(model);
     const resolvedLanguage = language ?? DEFAULT_NARRATIVE_LANGUAGE;
+    const resolvedAccuracy = accuracy ?? DEFAULT_ACCURACY;
+
+    // Build the cache key from the resolved values and the current series
+    // situation. A game result update (a change in high.wins/low.wins) yields a
+    // different key, which effectively invalidates the cache (criterion 2).
+    const cacheKey = predictionCacheKey({
+      seriesId,
+      highWins: series.high.wins,
+      lowWins: series.low.wins,
+      language: resolvedLanguage,
+      modelId: resolvedModel,
+      accuracy: resolvedAccuracy,
+    });
+
+    // Cache hit: serve the cached prediction WITHOUT running predict() or
+    // invoking Bedrock (criterion 1). No Bedrock InvokeModel attempt is made.
+    const cached = await this.store.getCachedPrediction(cacheKey);
+    if (cached) {
+      emitCacheMetric({ cacheResult: 'hit', bedrockInvocations: 0, seriesId });
+      return cached;
+    }
+
+    // Cache miss: run the billable path. generateNarrative is the single
+    // Bedrock InvokeModel attempt (it falls back deterministically on error but
+    // still counts as one attempt).
+    emitCacheMetric({ cacheResult: 'miss', bedrockInvocations: 1, seriesId });
+
+    const winPct = await this.resolveWinPct(season);
+    const result = predict(series, bracket, winPct, accuracy);
     const { narrative, model: usedModel } = await generateNarrative(
       series,
       result,
@@ -343,7 +375,7 @@ export class BracketService {
         ? series.low.teamId
         : series.high.teamId;
 
-    return {
+    const response: PredictionResponse = {
       mode: 'prediction',
       seriesId,
       favoriteTeamId: result.favoriteTeamId,
@@ -356,6 +388,9 @@ export class BracketService {
         underdog: teamMetric(winPct, underdogId),
       },
     };
+
+    await this.store.putCachedPrediction(cacheKey, response);
+    return response;
   }
 
   /**

@@ -12,7 +12,7 @@ import {
   GetCommand,
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
-import type { Bracket, GameDetailResponse } from '@mlb/shared';
+import type { Bracket, GameDetailResponse, PredictionResponse } from '@mlb/shared';
 import type { WinPctMap } from '../predict/model.js';
 
 /** Default cache lifetime for a cached bracket item. */
@@ -30,6 +30,15 @@ export const GAME_DETAIL_FINAL_TTL_SECONDS = 60 * 60 * 24 * 7; // 1 week
  */
 export const GAME_DETAIL_LIVE_TTL_SECONDS = 60; // 1 minute
 
+/**
+ * Backstop cache lifetime for a cached prediction. The cache key already
+ * encodes the series situation (high.wins-low.wins), so a game result update
+ * yields a different key and invalidates the cache naturally; this TTL only
+ * guards against a situation that lingers unchanged for a long time, matching
+ * the live/bracket refresh cadence (15 minutes).
+ */
+export const PREDICTION_TTL_SECONDS = 60 * 15; // 15 minutes
+
 export interface BracketStore {
   getCachedBracket(season: number): Promise<Bracket | undefined>;
   putCachedBracket(bracket: Bracket, ttlSeconds?: number): Promise<void>;
@@ -37,6 +46,12 @@ export interface BracketStore {
   putCachedStandings(season: number, winPct: WinPctMap, ttlSeconds?: number): Promise<void>;
   getCachedGameDetail(gamePk: number): Promise<GameDetailResponse | undefined>;
   putCachedGameDetail(detail: GameDetailResponse, ttlSeconds: number): Promise<void>;
+  getCachedPrediction(cacheKey: string): Promise<PredictionResponse | undefined>;
+  putCachedPrediction(
+    cacheKey: string,
+    response: PredictionResponse,
+    ttlSeconds?: number,
+  ): Promise<void>;
 }
 
 function partitionKey(season: number): string {
@@ -49,6 +64,15 @@ function standingsPartitionKey(season: number): string {
 
 function gamePartitionKey(gamePk: number): string {
   return `GAME#${gamePk}`;
+}
+
+/**
+ * Partition key for a cached prediction. The cache key is already the full
+ * `PREDICTION#...` string (see predictionCacheKey), so this is an identity
+ * helper kept for symmetry with the other key builders.
+ */
+function predictionPartitionKey(cacheKey: string): string {
+  return cacheKey;
 }
 
 /** DynamoDB-backed implementation of {@link BracketStore}. */
@@ -150,6 +174,41 @@ export class DynamoBracketStore implements BracketStore {
           pk: gamePartitionKey(detail.gamePk),
           gamePk: detail.gamePk,
           detail,
+          ttl,
+        },
+      }),
+    );
+  }
+
+  async getCachedPrediction(cacheKey: string): Promise<PredictionResponse | undefined> {
+    if (!this.tableName) return undefined;
+    const result = await this.doc.send(
+      new GetCommand({
+        TableName: this.tableName,
+        Key: { pk: predictionPartitionKey(cacheKey) },
+      }),
+    );
+    const item = result.Item;
+    if (!item || !item.prediction) return undefined;
+    return item.prediction as PredictionResponse;
+  }
+
+  async putCachedPrediction(
+    cacheKey: string,
+    response: PredictionResponse,
+    ttlSeconds: number = PREDICTION_TTL_SECONDS,
+  ): Promise<void> {
+    if (!this.tableName) return;
+    // Only cache the billable mode:'prediction' responses; the results/upcoming
+    // short-circuits never reach the cache and must not be stored.
+    if (response.mode !== 'prediction') return;
+    const ttl = Math.floor(Date.now() / 1000) + ttlSeconds;
+    await this.doc.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          pk: predictionPartitionKey(cacheKey),
+          prediction: response,
           ttl,
         },
       }),
