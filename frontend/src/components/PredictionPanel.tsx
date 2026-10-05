@@ -5,7 +5,11 @@ import type {
   PredictionResponse,
   Series,
 } from '@mlb/shared';
-import { DEFAULT_NARRATIVE_MODEL_ID, NARRATIVE_MODEL_OPTIONS } from '@mlb/shared';
+import {
+  DEFAULT_NARRATIVE_MODEL_ID,
+  NARRATIVE_MODEL_OPTIONS,
+  SHARE_DISCLAIMER,
+} from '@mlb/shared';
 import { getPrediction } from '../api';
 import {
   ACCURACY_STEP,
@@ -13,8 +17,9 @@ import {
   MAX_ACCURACY,
   MIN_ACCURACY,
 } from '../config';
-import { teamName, useI18n, type TFn } from '../i18n';
+import { roundName, teamName, useI18n, type TFn } from '../i18n';
 import { TeamBadge } from './TeamBadge';
+import { ShareButton } from './ShareButton';
 
 interface PredictionPanelProps {
   series: Series | null;
@@ -132,7 +137,12 @@ export function PredictionPanel({ series, season }: PredictionPanelProps) {
       )}
 
       {state.status === 'success' && (
-        <PredictionResult t={t} prediction={state.prediction} series={series} />
+        <PredictionResult
+          t={t}
+          prediction={state.prediction}
+          series={series}
+          season={season}
+        />
       )}
     </section>
   );
@@ -233,11 +243,14 @@ function PredictionResult({
   t,
   prediction,
   series,
+  season,
 }: {
   t: TFn;
   prediction: Prediction;
   series: Series | null;
+  season: number;
 }) {
+  const { lang } = useI18n();
   const percent = Math.round(prediction.favoriteWinProbability * 1000) / 10;
   const favoriteName = teamName(t, prediction.favoriteTeamId);
   const underdogId =
@@ -286,6 +299,24 @@ function PredictionResult({
 
       {prediction.metrics && (
         <PredictionMetricsBlock t={t} metrics={prediction.metrics} />
+      )}
+
+      {/*
+        The disclaimer MUST be visible near the prediction output so a shared or
+        on-screen prediction is never presented as betting advice (criterion 3).
+      */}
+      <p className="prediction__disclaimer">{t('share.disclaimer')}</p>
+
+      {series && (
+        <ShareButton
+          season={season}
+          seriesId={series.id}
+          title={`${teamName(t, series.high.teamId)} ${t('detail.vs')} ${teamName(
+            t,
+            series.low.teamId,
+          )} - ${roundName(t, series.round)}`}
+          disclaimer={SHARE_DISCLAIMER[lang]}
+        />
       )}
     </div>
   );

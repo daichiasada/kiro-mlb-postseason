@@ -1626,3 +1626,53 @@ body {
   color: var(--muted);
   text-align: center;
 }
+
+/* Share control (Web Share + copy-link fallback), Issue #21. */
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+}
+
+.share__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.share__button:hover {
+  background: var(--surface-3);
+}
+
+.share__copied {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.share__url {
+  flex: 1 1 14rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+/* The disclaimer shown near the prediction output (criterion 3). */
+.prediction__disclaimer {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}

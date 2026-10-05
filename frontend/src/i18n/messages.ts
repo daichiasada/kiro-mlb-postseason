@@ -96,6 +96,10 @@ export type MessageKey =
   | 'prediction.metrics.unknown'
   | 'prediction.metrics.team'
   | 'integrity.banner'
+  | 'share.button'
+  | 'share.copied'
+  | 'share.ariaLabel'
+  | 'share.disclaimer'
   | 'refresh.lastUpdated'
   | 'refresh.button'
   | 'refresh.updating'
@@ -293,6 +297,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.metrics.team': '{team}: {pct}',
     'integrity.banner':
       'Data integrity: {count} finished matchup(s) still reference an undetermined team.',
+    'share.button': 'Share',
+    'share.copied': 'Link copied',
+    'share.ariaLabel': 'Share this series',
+    'share.disclaimer': 'Predictions are reference values, not betting advice.',
     'refresh.lastUpdated': 'Last updated: {relative}',
     'refresh.button': 'Refresh',
     'refresh.updating': 'Updating…',
@@ -503,6 +511,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.metrics.team': '{team}: {pct}',
     'integrity.banner':
       'データ整合性: 終了した{count}件の対戦が未確定のチームを参照しています。',
+    'share.button': '共有',
+    'share.copied': 'リンクをコピーしました',
+    'share.ariaLabel': 'このシリーズを共有',
+    'share.disclaimer': '予測は参考値であり、賭けの助言ではありません。',
     'refresh.lastUpdated': '最終更新: {relative}',
     'refresh.button': '更新',
     'refresh.updating': '更新中…',

@@ -25,6 +25,8 @@ import { formatStartTime, resolveTimeZone } from '../gameTime';
 import { TeamBadge } from '../components/TeamBadge';
 import { LanguageToggle } from '../components/LanguageToggle';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { ShareButton } from '../components/ShareButton';
+import { SHARE_DISCLAIMER } from '@mlb/shared';
 
 type LoadState =
   | { status: 'loading' }
@@ -164,6 +166,15 @@ function SeriesDetail({
           {teamName(t, series.high.teamId)} {t('detail.vs')}{' '}
           {teamName(t, series.low.teamId)}
         </h1>
+        <ShareButton
+          season={season}
+          seriesId={series.id}
+          title={`${teamName(t, series.high.teamId)} ${t('detail.vs')} ${teamName(
+            t,
+            series.low.teamId,
+          )} - ${roundName(t, series.round)}`}
+          disclaimer={SHARE_DISCLAIMER[lang]}
+        />
         <p className="detail__result">
           {winnerId !== null ? (
             <>

@@ -1,14 +1,18 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import {
   DEFAULT_LANG,
+  I18nProvider,
   LANG_STORAGE_KEY,
   createTranslator,
   interpolate,
+  readLangFromQuery,
   readStoredLang,
   roundName,
   statusLabel,
   teamAbbr,
   teamName,
+  useI18n,
 } from './index';
 import { MESSAGES } from './messages';
 
@@ -127,5 +131,111 @@ describe('language persistence', () => {
   it('ignores an invalid stored value', () => {
     localStorage.setItem(LANG_STORAGE_KEY, 'fr');
     expect(readStoredLang()).toBeNull();
+  });
+});
+
+/**
+ * A tiny probe that renders the active language's localized app title string so
+ * a test can assert which language the provider hydrated into.
+ */
+function LangProbe() {
+  const { lang, t } = useI18n();
+  return (
+    <>
+      <span data-testid="lang">{lang}</span>
+      <span data-testid="loading">{t('app.loading', { season: 2026 })}</span>
+    </>
+  );
+}
+
+describe('?lang= query param on load', () => {
+  const originalSearch = window.location.search;
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    // Restore the jsdom URL between tests so one case cannot leak into another.
+    window.history.replaceState(null, '', `/${originalSearch}`);
+  });
+
+  function setSearch(search: string): void {
+    window.history.replaceState(null, '', `/${search}`);
+  }
+
+  it('reads a valid lang from the query string', () => {
+    setSearch('?lang=en');
+    expect(readLangFromQuery()).toBe('en');
+    setSearch('?lang=ja');
+    expect(readLangFromQuery()).toBe('ja');
+  });
+
+  it('returns null for a missing or invalid lang query', () => {
+    setSearch('');
+    expect(readLangFromQuery()).toBeNull();
+    setSearch('?lang=fr');
+    expect(readLangFromQuery()).toBeNull();
+  });
+
+  it('opens in English when ?lang=en is present', () => {
+    setSearch('?lang=en');
+    render(
+      <I18nProvider>
+        <LangProbe />
+      </I18nProvider>,
+    );
+    expect(screen.getByTestId('lang')).toHaveTextContent('en');
+    expect(screen.getByTestId('loading')).toHaveTextContent(
+      'Loading the 2026 postseason…',
+    );
+    // The query language is persisted so later (query-less) navigation keeps it.
+    expect(readStoredLang()).toBe('en');
+  });
+
+  it('opens in Japanese when ?lang=ja is present', () => {
+    setSearch('?lang=ja');
+    render(
+      <I18nProvider>
+        <LangProbe />
+      </I18nProvider>,
+    );
+    expect(screen.getByTestId('lang')).toHaveTextContent('ja');
+    expect(screen.getByTestId('loading')).toHaveTextContent(
+      '2026年のポストシーズンを読み込み中…',
+    );
+    expect(readStoredLang()).toBe('ja');
+  });
+
+  it('takes precedence over a persisted language', () => {
+    localStorage.setItem(LANG_STORAGE_KEY, 'ja');
+    setSearch('?lang=en');
+    render(
+      <I18nProvider>
+        <LangProbe />
+      </I18nProvider>,
+    );
+    expect(screen.getByTestId('lang')).toHaveTextContent('en');
+  });
+
+  it('falls back to the stored language for an invalid ?lang= value', () => {
+    localStorage.setItem(LANG_STORAGE_KEY, 'en');
+    setSearch('?lang=fr');
+    render(
+      <I18nProvider>
+        <LangProbe />
+      </I18nProvider>,
+    );
+    expect(screen.getByTestId('lang')).toHaveTextContent('en');
+  });
+
+  it('falls back to the default language when ?lang= is invalid and nothing is stored', () => {
+    setSearch('?lang=fr');
+    render(
+      <I18nProvider>
+        <LangProbe />
+      </I18nProvider>,
+    );
+    expect(screen.getByTestId('lang')).toHaveTextContent(DEFAULT_LANG);
   });
 });

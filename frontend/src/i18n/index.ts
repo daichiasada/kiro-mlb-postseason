@@ -72,6 +72,25 @@ export function readStoredLang(): Lang | null {
   }
 }
 
+/**
+ * Reads the `lang` query param from the current URL (window.location.search),
+ * guarding access so the module is safe under SSR / jsdom where `window` or
+ * `location` may be absent. Returns a valid {@link Lang} or null when the param
+ * is missing or not a supported language. This lets a shared permalink such as
+ * `/season/2024/series/al-wc-1?lang=ja` open the SPA in the shared language.
+ */
+export function readLangFromQuery(): Lang | null {
+  try {
+    if (typeof window === 'undefined' || typeof window.location === 'undefined') {
+      return null;
+    }
+    const raw = new URLSearchParams(window.location.search).get('lang');
+    return isLang(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Persists the chosen language, swallowing any storage errors. */
 function storeLang(lang: Lang): void {
   try {
@@ -137,9 +156,19 @@ export function I18nProvider({
   /** Overrides the hydrated/default language (used in tests). */
   initialLang?: Lang;
 }) {
-  const [lang, setLangState] = useState<Lang>(
-    () => initialLang ?? readStoredLang() ?? DEFAULT_LANG,
-  );
+  const [lang, setLangState] = useState<Lang>(() => {
+    // An explicit prop wins (used in tests). Otherwise a `?lang=` query param
+    // takes precedence over the persisted value so a shared language-tagged
+    // permalink opens in that language; it is persisted so later navigation
+    // (which drops the query) keeps the chosen language.
+    if (initialLang) return initialLang;
+    const fromQuery = readLangFromQuery();
+    if (fromQuery) {
+      storeLang(fromQuery);
+      return fromQuery;
+    }
+    return readStoredLang() ?? DEFAULT_LANG;
+  });
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
