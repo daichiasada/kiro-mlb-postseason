@@ -442,3 +442,60 @@ accuracy` as `p = 0.5 + (p0 - 0.5) * f`, then clamped again to `[0.5, 0.95]`.
    favorite/probability/narrative, keeping the existing loading/error states.
    The slider SHALL default to `0.5` so the initial behavior is unchanged, and
    SHALL have an accessible, localized label with a visible current value.
+
+## Requirement 14 - Auto-refresh an in-progress bracket (last updated + manual refresh)
+
+**User story:** As a fan following a live postseason, I want the bracket to keep
+itself up to date while a series is in progress, to see when it was last updated,
+and to be able to refresh it myself, so that I am not stuck reading stale scores
+and I do not have to reload the whole page.
+
+GitHub Issue #17. The behavior is a FRONTEND-ONLY UX change confined to the
+`@mlb/frontend` workspace. It polls ONLY for the current, in-progress season,
+shows a localized relative-time "last updated" line, offers a manual refresh
+button, pauses while the tab is hidden, keeps refreshes flicker-free, and
+handles a failed refresh without destroying the data already on screen. The
+implementation lives in `frontend/src/relativeTime.ts` (pure localized
+relative-time formatter), `frontend/src/useAutoRefresh.ts` (the polling hook and
+the `AUTO_REFRESH_INTERVAL_MS` constant), and `frontend/src/pages/HomePage.tsx`
+(state wiring and rendering).
+
+### Acceptance criteria
+
+1. WHEN the selected season is predictable (`isPredictable(season)`, i.e.
+   `season === CURRENT_YEAR`) AND the loaded bracket currently has at least one
+   `in_progress` series THEN the system SHALL poll `getBracket(season)` in the
+   background on a fixed interval; WHEN either condition is false (a
+   results-only season such as 2024/2025, or a predictable season whose series
+   are all `scheduled`/`final`) THEN the system SHALL NOT start the polling
+   interval.
+2. WHEN polling is enabled THEN the interval SHALL be the documented named
+   constant `AUTO_REFRESH_INTERVAL_MS = 60000` (60s), chosen to keep an
+   in-progress series reasonably current while staying well under the backend's
+   ~15 minute bracket cache TTL so polling never out-paces the data that can
+   actually change.
+3. WHEN the tab becomes hidden (`document.hidden` via the Page Visibility API)
+   THEN the system SHALL pause polling, and WHEN it becomes visible again THEN
+   the system SHALL fire an immediate refetch and resume the interval.
+4. WHEN a bracket is loaded and started THEN the system SHALL display a
+   localized "last updated" line derived from `Bracket.updatedAt`, formatted as
+   a relative time (EN "Last updated: {relative}", JA "最終更新: {relative}")
+   that advances over time without a manual reload; the relative text SHALL be
+   produced by the pure `formatRelativeTime(fromIso, now, lang)` using
+   `Intl.RelativeTimeFormat`, clamping a future/zero diff to "now".
+5. WHEN a bracket is loaded and started THEN the system SHALL render a manual
+   refresh button (EN "Refresh", JA "更新") that triggers an immediate
+   background refetch, is disabled and shows an "updating" affordance
+   (EN "Updating…", JA "更新中…", `aria-busy`) while the refresh is in flight.
+6. WHEN a background refresh (automatic or manual) runs THEN it SHALL be
+   flicker-free: it SHALL NOT drop the view back to the full-screen loading
+   state (the bracket region stays mounted, so scroll position is preserved) and
+   SHALL NOT reset the selected series id.
+7. IF a background refresh fails THEN the system SHALL keep the previously
+   loaded bracket and surface the error unobtrusively via a small inline notice
+   (EN "Could not refresh - showing the last loaded data.", JA
+   "更新できませんでした。直前のデータを表示しています。"), NOT the full-screen
+   error path; a subsequent successful refresh SHALL clear the notice.
+8. WHEN a background refresh resolves AFTER the user has switched seasons THEN
+   the system SHALL ignore the stale result (guarded by the requested season),
+   so a late refresh never overwrites the newly selected season's bracket.

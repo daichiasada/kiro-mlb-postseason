@@ -101,6 +101,32 @@ offered for its in-progress series; `/prediction` returns `mode: 'prediction'` f
 started series or `mode: 'upcoming'` when a series has not started yet. All variants are
 returned with HTTP 200 and the frontend branches on `mode`.
 
+### Live auto-refresh for the in-progress season
+
+While the current, in-progress season has a live series, the bracket keeps
+itself up to date in the background without a page reload. The app shows a
+localized **"last updated"** relative time (e.g. "Last updated: 2 minutes ago" /
+"最終更新: 2分前") derived from the bracket's `updatedAt`, and a manual
+**Refresh** button you can press at any time (disabled with an "Updating…"
+affordance while a refresh is in flight). Auto-refresh is deliberately scoped:
+
+- It **polls only for the current, in-progress season** — specifically a
+  predictable season (`CURRENT_YEAR`) whose bracket has at least one
+  `in_progress` series. Results-only seasons (2024, 2025) and predictable
+  seasons with no live series never poll; they still show the last-updated line
+  and the manual Refresh button, but no automatic background fetch runs.
+- The interval is a documented **60s** (`AUTO_REFRESH_INTERVAL_MS`), well under
+  the backend's ~15 min bracket cache TTL so polling never out-paces the data.
+- It **pauses when the tab is hidden** (Page Visibility API) and, when you
+  return to the tab, refetches immediately and resumes.
+- Refreshes are **flicker-free**: the bracket stays mounted (your scroll
+  position and selected series are preserved) and never flashes the full loading
+  screen. If a refresh fails, the previously loaded data stays on screen with a
+  small, unobtrusive notice instead of a full error page.
+
+The feature is frontend-only, in `frontend/src/relativeTime.ts`,
+`frontend/src/useAutoRefresh.ts`, and `frontend/src/pages/HomePage.tsx`.
+
 ### Regular-season win pct drives the prediction
 
 The prediction blends series progress with each team's **real regular-season win

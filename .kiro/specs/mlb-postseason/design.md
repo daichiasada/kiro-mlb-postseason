@@ -214,6 +214,67 @@ block is guarded behind `prediction.metrics` being defined, so a response withou
 `metrics` renders the existing prediction UI unchanged. This makes the win-pct
 basis explainable in the UI (Issue #15 acceptance criterion 3).
 
+### Auto-refresh an in-progress bracket (Issue #17)
+
+While a season is live, `HomePage` keeps the bracket current in the background
+without a page reload. The feature is a frontend-only UX change split across
+three small modules:
+
+- `frontend/src/relativeTime.ts` - a PURE, side-effect-free
+  `formatRelativeTime(fromIso, now, lang)` that renders a localized relative
+  time via `Intl.RelativeTimeFormat(lang === 'ja' ? 'ja' : 'en', { numeric:
+  'auto' })`, bucketed into seconds / minutes / hours / days, clamping an
+  invalid or future diff to "now" / "今". Being pure, it is unit-tested across
+  EN and JA (`relativeTime.test.ts`).
+- `frontend/src/useAutoRefresh.ts` - exports the documented interval constant
+  `AUTO_REFRESH_INTERVAL_MS = 60_000` and the hook `useAutoRefresh({ enabled,
+  intervalMs, onRefresh })`. The 60s cadence is deliberate: it keeps a watcher
+  reasonably current while staying well under the backend's ~15 min bracket
+  cache TTL (so polling never out-paces the data that can change and never
+  hammers the API). When `enabled` the hook runs `setInterval(onRefresh,
+  intervalMs)`; it clears the interval on unmount and whenever `enabled` flips
+  false. It subscribes to the document `visibilitychange` event (Page Visibility
+  API): it pauses (clears the timer) when `document.hidden`, and on becoming
+  visible again it fires an immediate `onRefresh` and restarts the timer. The
+  callback is held in a ref so a changing `onRefresh` identity does not reset
+  the running timer, and the hook guards `typeof document` so it is safe under
+  jsdom/SSR.
+- `frontend/src/pages/HomePage.tsx` - wires it together. Alongside the existing
+  `BracketState` discriminated union (`loading | error | ready`) used for the
+  FIRST load, it holds `isRefreshing`, `refreshError`, and a `now` clock. A
+  `refresh()` callback re-fetches via `getBracket` WITHOUT swapping the status
+  back to `loading`; on success it replaces the bracket + `usedFallback`, clears
+  `refreshError`, and bumps `now`; on failure it keeps the existing bracket and
+  sets a localized inline `refreshError`. A `seasonRef` captures the requested
+  season so a refresh that resolves AFTER the user switched seasons is ignored
+  (stale guard). The polling predicate is `pollingEnabled = isPredictable(season)
+  && state.status === 'ready' && state.bracket.series.some(s => s.status ===
+  'in_progress')`, passed as `enabled` to `useAutoRefresh` with
+  `intervalMs = AUTO_REFRESH_INTERVAL_MS`. This guarantees results-only seasons
+  and predictable seasons with no live series never poll (Issue #17 criterion 1).
+
+Rendering (only when `state.status === 'ready' && bracketStarted`): a refresh
+bar (`.app__refresh`) shows the localized "last updated" line
+(`t('refresh.lastUpdated', { relative: formatRelativeTime(bracket.updatedAt,
+now, lang) })`, whose relative text advances via a lightweight 1-minute
+`setInterval` that bumps `now`) and a manual refresh button
+(`.app__refresh-button`, `t('refresh.button')`) that calls `refresh()`, is
+disabled with `aria-busy` and shows `t('refresh.updating')` while in flight. A
+failed refresh renders a subtle inline notice (`.app__notice--refresh`,
+`t('refresh.error')`) that keeps the bracket on screen rather than the
+full-screen `.app__status--error` path, and the next successful refresh clears
+it. Because the background path never sets `status: 'loading'` and never resets
+`selectedSeriesId`, refreshes are flicker-free: the bracket stays mounted
+(scroll preserved) and the selected series survives (Issue #17 criterion 2). The
+i18n keys `refresh.lastUpdated` / `refresh.button` / `refresh.updating` /
+`refresh.error` exist in both the EN and JA tables. The SeriesDetailPage is for
+FINISHED series only and is intentionally out of scope for polling. Coverage:
+`useAutoRefresh.test.tsx` (fake timers, visibility pause/resume), a HomePage
+test (flicker-free + selected-series persistence + unobtrusive failure), and the
+`frontend/e2e/refresh.spec.ts` Playwright spec (the in-progress 2026 bracket
+shows the last-updated line + manual button and a manual refresh re-fetches
+without a full loading screen; a results-only 2024 season does not auto-poll).
+
 ## API and Lambdas
 
 Two Node 20 Lambdas behind an API Gateway HTTP API with CORS:
