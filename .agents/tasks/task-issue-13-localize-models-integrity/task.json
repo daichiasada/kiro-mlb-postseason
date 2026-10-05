@@ -1,9 +1,14 @@
 {
   "task_id": "task-issue-13-localize-models-integrity",
   "task_description": "Implement GitHub Issue #13 on the deployed MLB postseason repo: (1) localize the AI-generated prediction narrative to the current UI language (EN/JA); (2) make the Bedrock model selectable instead of hardcoded Haiku; (3) offer Amazon-family models (Amazon Nova; Titan has no text-gen model in us-east-1) via a per-provider request/response adapter while keeping Claude available and the deterministic fallback intact; (4) add a data-integrity check that detects finished games/series still referencing an undetermined/TBD/placeholder team and surfaces non-blocking warnings. Thread language+model through api->handler->service->narrative. Update infra IAM confirmation, specs, and README/README.ja.md. Local incremental commits on feat/mlb-postseason-site; no push/PR/deploy.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
   "blocked_reason": null,
+  "review": {
+    "verdict": "APPROVED",
+    "passes": 2,
+    "detail": "v1 NEEDS_CHANGES (Amazon Nova InvokeModel body omitted required schemaVersion 'messages-v1'; strategy selector catch-all; test did not pin schemaVersion). Fixed in commit 594605e (provider-driven adapter selection + schemaVersion + test contract). v2 APPROVED with 0 remaining issues."
+  },
   "verification": {
     "build": "pass",
     "tests": "pass",
