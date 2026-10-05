@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
 import type { Bracket } from '@mlb/shared';
 import { buildRoundColumns } from '../bracketLayout';
 import { roundName, useI18n } from '../i18n';
+import { useFavorites } from '../FavoritesContext';
 import { SeriesCard } from './SeriesCard';
 import alMark from '../assets/al.svg';
 import nlMark from '../assets/nl.svg';
@@ -15,6 +16,13 @@ interface BracketViewProps {
   onSelectSeries: (seriesId: string) => void;
   /** Whether the season is predictable; forwarded to each SeriesCard. */
   predictable?: boolean;
+  /**
+   * When true, only series that include at least one favorite team are shown.
+   * The filter is applied AFTER buildRoundColumns so the roving-tabindex grid
+   * and its active-cell clamp operate over the (possibly shrunken) filtered
+   * grid, exactly as they do when the season switch changes the grid shape.
+   */
+  favoritesOnly?: boolean;
 }
 
 /** A [column][row] grid position of a focusable series card. */
@@ -29,9 +37,25 @@ export function BracketView({
   selectedSeriesId,
   onSelectSeries,
   predictable = true,
+  favoritesOnly = false,
 }: BracketViewProps) {
   const { t } = useI18n();
-  const columns = buildRoundColumns(bracket);
+  const { isFavorite } = useFavorites();
+  // Build the deterministic round/league columns first, THEN (optionally)
+  // filter each column to series that include a favorite team. Filtering after
+  // buildRoundColumns keeps the column/round structure identical to the
+  // unfiltered view and lets the roving-tabindex clamp below treat a filtered
+  // grid exactly like a season-switch-shrunken grid.
+  const columns = buildRoundColumns(bracket)
+    .map((column) => ({
+      ...column,
+      series: favoritesOnly
+        ? column.series.filter(
+            (s) => isFavorite(s.high.teamId) || isFavorite(s.low.teamId),
+          )
+        : column.series,
+    }))
+    .filter((column) => column.series.length > 0);
   const alLabel = t('bracket.legend.al');
   const wsLabel = t('bracket.legend.ws');
   const nlLabel = t('bracket.legend.nl');
@@ -131,6 +155,11 @@ export function BracketView({
         </span>
       </div>
 
+      {favoritesOnly && columns.length === 0 ? (
+        <p className="bracket__filter-empty" role="status">
+          {t('favorites.filter.empty')}
+        </p>
+      ) : (
       <div
         className="bracket__grid"
         role="group"
@@ -148,6 +177,7 @@ export function BracketView({
                     key={series.id}
                     series={series}
                     season={season}
+                    bracket={bracket}
                     selected={series.id === selectedSeriesId}
                     onSelect={onSelectSeries}
                     predictable={predictable}
@@ -165,6 +195,7 @@ export function BracketView({
           </div>
         ))}
       </div>
+      )}
     </section>
   );
 }

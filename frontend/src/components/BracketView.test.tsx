@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { Bracket } from '@mlb/shared';
 import { BracketView } from './BracketView';
 import { I18nProvider } from '../i18n';
+import { FavoritesProvider } from '../FavoritesContext';
 
 // Spy on react-router's useNavigate so Enter-on-a-final-card navigation can be
 // asserted without a real history change.
@@ -60,13 +61,15 @@ function renderBracket(onSelectSeries = vi.fn()) {
   render(
     <MemoryRouter>
       <I18nProvider initialLang="en">
-        <BracketView
-          bracket={bracket}
-          season={2026}
-          selectedSeriesId={null}
-          onSelectSeries={onSelectSeries}
-          predictable
-        />
+        <FavoritesProvider initialFavorites={[]}>
+          <BracketView
+            bracket={bracket}
+            season={2026}
+            selectedSeriesId={null}
+            onSelectSeries={onSelectSeries}
+            predictable
+          />
+        </FavoritesProvider>
       </I18nProvider>
     </MemoryRouter>,
   );

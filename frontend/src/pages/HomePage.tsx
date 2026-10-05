@@ -8,6 +8,7 @@ import { hasStartedContent, parseSeasonParam } from '../seasonRoute';
 import { BracketView } from '../components/BracketView';
 import { UpcomingGames } from '../components/UpcomingGames';
 import { StandingsPanel } from '../components/StandingsPanel';
+import { FavoritesPin } from '../components/FavoritesPin';
 import { PredictionPanel } from '../components/PredictionPanel';
 import { LanguageToggle } from '../components/LanguageToggle';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -45,6 +46,10 @@ export function HomePage() {
 
   const [state, setState] = useState<BracketState>({ status: 'loading' });
   const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
+  // "Show only my teams" filter. Kept at the page level so it survives season
+  // switches (changing the season navigates but does not remount this state),
+  // letting the empty state appear if the new season has no favorite series.
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   // Bumped on each successful refresh and on a lightweight timer so the
@@ -224,6 +229,18 @@ export function HomePage() {
       {state.status === 'ready' && bracketStarted && (
         <>
           <div className="app__refresh" data-testid="refresh-bar">
+            <button
+              type="button"
+              className={
+                'app__favorites-filter' +
+                (favoritesOnly ? ' app__favorites-filter--on' : '')
+              }
+              aria-pressed={favoritesOnly}
+              data-testid="favorites-filter"
+              onClick={() => setFavoritesOnly((on) => !on)}
+            >
+              {t('favorites.filter.label')}
+            </button>
             <span className="app__refresh-updated" role="status">
               {t('refresh.lastUpdated', {
                 relative: formatRelativeTime(state.bracket.updatedAt, now, lang),
@@ -239,6 +256,7 @@ export function HomePage() {
               {isRefreshing ? t('refresh.updating') : t('refresh.button')}
             </button>
           </div>
+          <FavoritesPin bracket={state.bracket} />
           {refreshError && (
             <p className="app__notice app__notice--refresh" role="status">
               {refreshError}
@@ -271,6 +289,7 @@ export function HomePage() {
               selectedSeriesId={selectedSeriesId}
               onSelectSeries={setSelectedSeriesId}
               predictable={predictable}
+              favoritesOnly={favoritesOnly}
             />
             <aside className="app__aside">
               {predictable ? (

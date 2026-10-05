@@ -3,6 +3,7 @@ import type { Bracket, League, RoundName } from '@mlb/shared';
 import { ROUND_ORDER, clinchWins } from '../bracketLayout';
 import { roundName, teamName, useI18n, type TFn } from '../i18n';
 import { TeamBadge } from './TeamBadge';
+import { FavoriteToggle } from './FavoriteToggle';
 
 interface StandingsPanelProps {
   bracket: Bracket;
@@ -97,6 +98,7 @@ export function StandingsPanel({ bracket }: StandingsPanelProps) {
                   <span className="standings__progress">
                     {progressLabel(t, entry)}
                   </span>
+                  <FavoriteToggle teamId={entry.teamId} />
                 </li>
               ))}
             </ul>

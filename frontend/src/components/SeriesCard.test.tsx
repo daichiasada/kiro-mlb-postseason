@@ -3,7 +3,8 @@ import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SeriesCard } from './SeriesCard';
 import { I18nProvider } from '../i18n';
-import { wildCardSeries } from '../test/fixtures';
+import { FavoritesProvider } from '../FavoritesContext';
+import { sampleBracket, wildCardSeries } from '../test/fixtures';
 import type { Series } from '@mlb/shared';
 
 /**
@@ -11,11 +12,16 @@ import type { Series } from '@mlb/shared';
  * so these assertions read natural English strings). The card uses <Link> for
  * the detail page and useI18n() for its labels.
  */
-function renderCard(props: Partial<React.ComponentProps<typeof SeriesCard>> = {}) {
+function renderCard(
+  props: Partial<React.ComponentProps<typeof SeriesCard>> = {},
+  initialFavorites: number[] = [],
+) {
   return render(
     <MemoryRouter>
       <I18nProvider initialLang="en">
-        <SeriesCard series={wildCardSeries} season={2024} {...props} />
+        <FavoritesProvider initialFavorites={initialFavorites}>
+          <SeriesCard series={wildCardSeries} season={2024} {...props} />
+        </FavoritesProvider>
       </I18nProvider>
     </MemoryRouter>,
   );
@@ -124,12 +130,14 @@ describe('SeriesCard', () => {
     render(
       <MemoryRouter>
         <I18nProvider initialLang="en">
-          <SeriesCard
-            series={inProgress}
-            season={2026}
-            onSelect={onSelect}
-            predictable
-          />
+          <FavoritesProvider initialFavorites={[]}>
+            <SeriesCard
+              series={inProgress}
+              season={2026}
+              onSelect={onSelect}
+              predictable
+            />
+          </FavoritesProvider>
         </I18nProvider>
       </MemoryRouter>,
     );
@@ -138,5 +146,51 @@ describe('SeriesCard', () => {
     expect(
       screen.queryByRole('link', { name: /view series detail/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows the non-color favorite highlight (class + star marker + aria text) when a team in the series is favorited', () => {
+    // wildCardSeries is Astros (117) vs Tigers (116). Favorite the Astros.
+    renderCard({}, [117]);
+    const card = document.querySelector('.series-card')!;
+    expect(card).toHaveClass('series-card--favorite');
+    // The marker icon is present and announces a localized label to AT.
+    const marker = screen.getByTestId('favorite-marker');
+    expect(marker).toBeInTheDocument();
+    expect(within(marker).getByText("Favorite team's series")).toBeInTheDocument();
+  });
+
+  it('does not highlight a series when neither team is favorited', () => {
+    renderCard({}, []);
+    expect(document.querySelector('.series-card')).not.toHaveClass(
+      'series-card--favorite',
+    );
+    expect(screen.queryByTestId('favorite-marker')).not.toBeInTheDocument();
+  });
+
+  it('shows a localized Eliminated badge for a favorited team that lost a final series', () => {
+    // In sampleBracket, Astros (117) lost the final Wild Card series to Tigers.
+    renderCard({ series: wildCardSeries, bracket: sampleBracket }, [117]);
+    expect(screen.getByText('Eliminated')).toBeInTheDocument();
+  });
+
+  it('exposes a localized star toggle whose aria-pressed reflects favorite state', () => {
+    renderCard({}, [117]);
+    // Astros (117) is favorited => its toggle offers "Remove ... from favorites".
+    const removeBtn = screen.getByRole('button', {
+      name: /remove houston astros from favorites/i,
+    });
+    expect(removeBtn).toHaveAttribute('aria-pressed', 'true');
+    // Tigers (116) is not favorited => "Add ... to favorites".
+    const addBtn = screen.getByRole('button', {
+      name: /add detroit tigers to favorites/i,
+    });
+    expect(addBtn).toHaveAttribute('aria-pressed', 'false');
+    // Toggling adds the Tigers (the label flips to "Remove").
+    fireEvent.click(addBtn);
+    expect(
+      screen.getByRole('button', {
+        name: /remove detroit tigers from favorites/i,
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 });

@@ -5,6 +5,7 @@ import type { Bracket } from '@mlb/shared';
 import { App } from './App';
 import { I18nProvider } from './i18n';
 import { ThemeProvider } from './ThemeContext';
+import { FavoritesProvider } from './FavoritesContext';
 import { sampleBracket } from './test/fixtures';
 import * as api from './api';
 
@@ -26,7 +27,9 @@ function renderApp() {
     <MemoryRouter initialEntries={['/']}>
       <ThemeProvider initialPreference="light">
         <I18nProvider initialLang="en">
-          <App />
+          <FavoritesProvider initialFavorites={[]}>
+            <App />
+          </FavoritesProvider>
         </I18nProvider>
       </ThemeProvider>
     </MemoryRouter>,

@@ -1,8 +1,10 @@
 import { useId, useState, type KeyboardEvent, type Ref } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import type { Series, SeriesTeam } from '@mlb/shared';
+import type { Bracket, Series, SeriesTeam } from '@mlb/shared';
 import { TeamBadge } from './TeamBadge';
-import { clinchWins, seriesLeaderId } from '../bracketLayout';
+import { FavoriteToggle } from './FavoriteToggle';
+import { useFavorites } from '../FavoritesContext';
+import { clinchWins, isTeamEliminated, seriesLeaderId } from '../bracketLayout';
 import {
   roundName,
   statusLabel,
@@ -35,6 +37,14 @@ interface SeriesCardProps {
    * used standalone (e.g. in isolation tests) so it stays reachable.
    */
   tabIndex?: number;
+  /**
+   * The full bracket this series belongs to. Optional; when provided it is used
+   * to decide whether a favorite team in this series has been eliminated (lost
+   * a FINAL series elsewhere in the bracket), so the card can show a localized
+   * "Eliminated" treatment. When omitted (e.g. isolation tests), the card falls
+   * back to this series alone.
+   */
+  bracket?: Bracket;
   /** Ref to the card <article> so the bracket can move focus programmatically. */
   cardRef?: Ref<HTMLElement>;
   /**
@@ -50,11 +60,14 @@ function TeamRow({
   team,
   isLeader,
   isWinner,
+  eliminated,
 }: {
   t: TFn;
   team: SeriesTeam;
   isLeader: boolean;
   isWinner: boolean;
+  /** True when this team (a favorite) has been eliminated from the bracket. */
+  eliminated: boolean;
 }) {
   const classes = ['series-team'];
   if (isWinner) classes.push('series-team--winner');
@@ -64,7 +77,13 @@ function TeamRow({
     <div className={classes.join(' ')}>
       <TeamBadge teamId={team.teamId} size={32} />
       <span className="series-team__name">{teamName(t, team.teamId)}</span>
+      {eliminated && (
+        <span className="series-team__eliminated" data-team-id={team.teamId}>
+          {t('favorites.eliminated')}
+        </span>
+      )}
       <span className="series-team__wins">{team.wins}</span>
+      <FavoriteToggle teamId={team.teamId} />
     </div>
   );
 }
@@ -163,10 +182,12 @@ export function SeriesCard({
   onSelect,
   predictable = true,
   tabIndex = 0,
+  bracket,
   cardRef,
   onCardKeyDown,
 }: SeriesCardProps) {
   const { t, lang } = useI18n();
+  const { isFavorite } = useFavorites();
   const navigate = useNavigate();
   const timeZone = resolveTimeZone();
   const matchup = `${teamName(t, series.high.teamId)} ${t('series.vsLabel')} ${teamName(t, series.low.teamId)}`;
@@ -174,6 +195,26 @@ export function SeriesCard({
   const needed = clinchWins(series.bestOf);
   const isFinal = series.status === 'final';
   const hasGames = series.games.length > 0;
+
+  // Favorite highlight (Issue #18): a series is highlighted when either of its
+  // teams is a favorite. The visual cue is NOT color-only - a star icon marker
+  // in the header plus a distinct border/outline (see styles.css) - and a
+  // visually-hidden label announces it to screen readers via favorites.marker.
+  const highIsFavorite = isFavorite(series.high.teamId);
+  const lowIsFavorite = isFavorite(series.low.teamId);
+  const isFavoriteSeries = highIsFavorite || lowIsFavorite;
+  // Elimination is derived over the whole bracket when available (a team is
+  // eliminated by losing a FINAL series anywhere), falling back to this single
+  // series in isolation. Only surfaced for a favorited team.
+  const eliminationScope: Bracket = bracket ?? {
+    season,
+    updatedAt: '',
+    series: [series],
+  };
+  const highEliminated =
+    highIsFavorite && isTeamEliminated(eliminationScope, series.high.teamId);
+  const lowEliminated =
+    lowIsFavorite && isTeamEliminated(eliminationScope, series.low.teamId);
 
   const detailPath = `/season/${season}/series/${encodeURIComponent(series.id)}`;
   // The card can be activated for prediction only when the mouse affordance
@@ -240,6 +281,7 @@ export function SeriesCard({
 
   const classes = ['series-card'];
   if (selected) classes.push('series-card--selected');
+  if (isFavoriteSeries) classes.push('series-card--favorite');
 
   return (
     <article
@@ -259,6 +301,30 @@ export function SeriesCard({
     >
       <header className="series-card__header">
         <span className="series-card__round">{roundName(t, series.round)}</span>
+        {isFavoriteSeries && (
+          <span className="series-card__favorite-marker" data-testid="favorite-marker">
+            {/* Non-color cue: a star ICON (shape) alongside the border/outline
+                treatment on the card. The accessible text is visually hidden
+                but announced to assistive tech. */}
+            <svg
+              className="series-card__favorite-icon"
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M12 2.5l2.9 5.88 6.49.94-4.7 4.58 1.11 6.46L12 17.9l-5.8 3.05 1.11-6.46-4.7-4.58 6.49-.94L12 2.5z"
+                fill="currentColor"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="sr-only">{t('favorites.marker')}</span>
+          </span>
+        )}
         <span className="series-card__status" data-status={series.status}>
           {statusLabel(t, series.status)}
         </span>
@@ -270,12 +336,14 @@ export function SeriesCard({
           team={series.high}
           isLeader={leaderId === series.high.teamId}
           isWinner={isFinal && series.high.wins >= needed}
+          eliminated={highEliminated}
         />
         <TeamRow
           t={t}
           team={series.low}
           isLeader={leaderId === series.low.teamId}
           isWinner={isFinal && series.low.wins >= needed}
+          eliminated={lowEliminated}
         />
       </div>
 

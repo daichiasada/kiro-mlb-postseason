@@ -11,6 +11,7 @@ import type { Bracket } from '@mlb/shared';
 import { HomePage } from './HomePage';
 import { I18nProvider } from '../i18n';
 import { ThemeProvider } from '../ThemeContext';
+import { FavoritesProvider } from '../FavoritesContext';
 import * as api from '../api';
 
 vi.mock('../api', async () => {
@@ -27,7 +28,9 @@ function renderHome() {
     <MemoryRouter initialEntries={['/season/2026']}>
       <ThemeProvider initialPreference="light">
         <I18nProvider initialLang="en">
-          <HomePage />
+          <FavoritesProvider initialFavorites={[]}>
+            <HomePage />
+          </FavoritesProvider>
         </I18nProvider>
       </ThemeProvider>
     </MemoryRouter>,

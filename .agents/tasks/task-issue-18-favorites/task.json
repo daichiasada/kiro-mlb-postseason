@@ -1,0 +1,7 @@
+{
+  "task_id": "task-issue-18-favorites",
+  "task_description": "Implement GitHub Issue #18: let fans mark MLB teams as favorites (persisted to localStorage, multiple allowed), highlight a favorite team's path through the bracket with a non-color-only cue plus a pinned header status, switch to an 'Eliminated'/'敗退' indication when a favorite loses a final series, and add a filter to show only favorite teams' series. Frontend-only (plus graded spec/README docs). EN/JA throughout and accessible. Branch feat/mlb-postseason-site; incremental commits; no push/PR/deploy (orchestrator owns publishing).",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}
