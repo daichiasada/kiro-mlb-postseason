@@ -688,3 +688,84 @@ generated client-side.
    with UTC `DTSTART`/`DTEND`, RFC5545 text escaping, and a default 180-minute
    duration) and delivered via an in-browser Blob download, with NO network
    request, NO new backend endpoint, and NO infrastructure change.
+
+## Requirement 17 - Favorite teams: registration, highlight, header pin, and filter (Issue #18)
+
+**User story:** As a fan who follows one or more teams, I want to mark them as
+favorites, see their series stand out in the bracket, get an at-a-glance status
+of each favorite in the header, and optionally hide every other team's series,
+so that I can track just my teams without hunting through the whole bracket.
+
+GitHub Issue #18. This is a FRONTEND-ONLY UX change confined to the
+`@mlb/frontend` workspace plus the docs/spec artifacts; there is no backend or
+infrastructure change. It follows the established "persisted localized control"
+precedent (i18n language `mlb.lang`, theme `mlb.theme`): a PURE, guarded
+localStorage store (`frontend/src/favorites.ts`, key `mlb.favorites`, a JSON
+array of team ids), a React glue (`frontend/src/FavoritesContext.tsx`
+`FavoritesProvider` + `useFavorites()`) mounted in `main.tsx`, PURE bracket
+helpers (`findTeamSeries`/`isTeamEliminated`/`favoriteSummary` in
+`frontend/src/bracketLayout.ts`), an accessible star toggle
+(`frontend/src/components/FavoriteToggle.tsx`), a non-color-only series
+highlight on `SeriesCard`, a header pin (`frontend/src/components/FavoritesPin.tsx`),
+and a favorites-only filter on `HomePage`/`BracketView`. All new strings are
+EN/JA. Multiple favorites are allowed.
+
+### Acceptance criteria
+
+1. WHEN the SPA loads THEN the system SHALL hydrate the set of favorite team ids
+   from `localStorage` under the key `mlb.favorites` (a JSON array of team ids,
+   MULTIPLE allowed), and WHEN the stored value is missing, not an array, or
+   contains corrupt entries (non-integer, duplicate) THEN the guarded parse
+   SHALL drop the bad entries and NEVER throw, returning a clean de-duplicated
+   integer array. WHEN the user favorites or unfavorites a team THEN the change
+   SHALL be persisted back to `mlb.favorites` so it survives a reload; all
+   `localStorage` access SHALL be guarded so a missing/throwing store does not
+   break rendering.
+2. WHEN a team row renders on a `SeriesCard` or in the `StandingsPanel` THEN the
+   system SHALL show a keyboard-accessible star toggle (a native `<button>`)
+   whose state is carried by a NON-color cue (a filled star icon when favorited
+   vs an OUTLINE star icon when not, i.e. a shape difference), with
+   `aria-pressed` reflecting the favorited state and a localized `aria-label`
+   (EN `Add {team} to favorites` / `Remove {team} from favorites`, JA
+   `{team}をお気に入りに追加` / `{team}をお気に入りから外す`).
+3. WHEN a series includes at least one favorite team THEN the system SHALL
+   highlight that series WITHOUT relying on color alone (Issue #18 criterion 1):
+   it SHALL add a distinct BORDER/OUTLINE treatment (a thick dashed outline that
+   is perceivable in grayscale), render a star ICON marker in the card header,
+   AND expose a visually-hidden/aria label announcing it is a favorite team's
+   series (EN `Favorite team's series`, JA `お気に入りチームのシリーズ`), so the
+   cue is perceivable without color and the AA contrast of both the light and
+   the dark theme is preserved.
+4. WHEN a favorite team has been eliminated (it lost a `final` series,
+   `isTeamEliminated`) THEN the system SHALL switch that team from an active
+   status to a localized `Eliminated` / `敗退` indication (Issue #18
+   criterion 2) in BOTH the header pin and the bracket highlight, rather than
+   showing a leading/trailing record for it.
+5. WHEN there is at least one favorite in the selected season's bracket THEN the
+   system SHALL render a header pin region (labeled `favorites.header.title`, EN
+   `Your teams`, JA `あなたのチーム`) showing each in-bracket favorite's
+   current/next series status: eliminated (`敗退`), champion (`優勝`), an
+   in-progress leading/trailing/tied `{wins}-{losses}` record, or the next
+   scheduled game's local start time (reusing `frontend/src/gameTime.ts`
+   `formatStartTime`/`resolveTimeZone`). WHEN there are no favorites, OR none of
+   the favorites appears in the selected season's bracket (`inBracket === false`),
+   THEN the pin SHALL render NOTHING (no empty box); an unknown favorite id
+   SHALL NOT throw (it resolves to a localized placeholder name).
+6. WHEN the user turns on the localized favorites filter toggle
+   (`favorites.filter.label`, EN `Show only my teams`, JA
+   `お気に入りのチームだけ表示`, an `aria-pressed` button) THEN the bracket SHALL
+   show ONLY series that include at least one favorite team; WHEN the filter is
+   ON and no favorite has a series in the current bracket THEN the system SHALL
+   render a friendly localized empty state (`favorites.filter.empty`, EN
+   `None of your favorite teams have a series in this bracket.`, JA
+   `お気に入りのチームのシリーズはこのトーナメント表にありません。`) INSTEAD of
+   an empty grid. The filter SHALL coexist with the season selector: switching
+   seasons SHALL keep the toggle state, and the empty state SHALL appear if the
+   newly selected season has no favorite series.
+7. WHEN the favorites filter is applied to the bracket THEN the roving-tabindex
+   keyboard model from Issue #22 SHALL remain intact (the active-cell clamp
+   already handles a shrunken grid, mirroring a season switch), and the Issue
+   #22 SeriesCard keyboard model and the Issue #17 refresh bar / Issue #20
+   UpcomingGames UI SHALL be unregressed.
+8. WHEN any favorites UI string is shown THEN it SHALL exist in BOTH the EN and
+   JA message tables (Issue #18 criterion 3).

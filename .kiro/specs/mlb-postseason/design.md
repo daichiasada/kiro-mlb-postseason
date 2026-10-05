@@ -896,3 +896,144 @@ The `.ics` is generated and downloaded entirely in the browser from code and
 data that already ship in the SPA bundle, so there is NO new Lambda, route, IAM,
 or DynamoDB access and the CDK/deploy story is unchanged - the same client-side
 rationale as the Model accuracy page.
+
+## Favorite teams: registration, highlight, header pin, and filter (Issue #18)
+
+A frontend-only UX layer that lets a fan mark one or more teams as favorites,
+makes their series stand out in the bracket without relying on color, summarizes
+each favorite's status in a header pin, and optionally filters the bracket down
+to just the favorites' series. It is split into a pure, testable core and thin
+React/CSS glue, mirroring the i18n and theme precedents. There is NO backend or
+infrastructure change.
+
+### Pure favorites store (`frontend/src/favorites.ts`)
+
+Framework-free and unit-tested (`favorites.test.ts`), mirroring `theme.ts`:
+
+- `FAVORITES_STORAGE_KEY = 'mlb.favorites'` - the `localStorage` key, holding a
+  JSON array of team ids. MULTIPLE favorites are allowed.
+- `readStoredFavorites(): number[]` - guarded read. It guards
+  `typeof localStorage` and wraps `JSON.parse` in try/catch, so a missing store,
+  non-JSON string, or non-array value yields `[]` and never throws. It keeps
+  ONLY finite non-negative integer ids, dropping NaN/strings/floats and
+  de-duplicating while preserving first-seen order.
+- `storeFavorites(ids): void` - guarded write (`JSON.stringify`, swallow write
+  errors).
+- Pure immutable array helpers `addFavorite`/`removeFavorite`/`toggleFavorite`/
+  `isFavorite` that return new arrays (no mutation, no duplicates; `toggle` adds
+  when absent and removes when present).
+
+### React glue (`frontend/src/FavoritesContext.tsx`)
+
+`FavoritesProvider` hydrates from `readStoredFavorites()` (with an optional
+`initialFavorites` prop for tests), exposes
+`{ favorites, isFavorite, toggle, add, remove }` via the `useFavorites()` hook,
+and persists every change through `storeFavorites`. `useFavorites()` throws when
+used outside the provider (matching `useTheme`). It is mounted in `main.tsx`
+inside `I18nProvider` (so favorites UI can translate), alongside the existing
+`ThemeProvider`/`I18nProvider`; `App.tsx` behavior is otherwise unchanged.
+
+### Pure bracket helpers (`frontend/src/bracketLayout.ts`)
+
+Added alongside `buildRoundColumns`/`seriesLeaderId`/`clinchWins`, reusing
+`clinchWins` and `ROUND_ORDER`, and unit-tested over fixture brackets covering an
+eliminated team, an active team, and a not-in-bracket team:
+
+- `findTeamSeries(bracket, teamId): Series[]` - every series the team appears in
+  (as `high` or `low`), ordered by `ROUND_ORDER` then the bracket's existing
+  series order. Pure.
+- `isTeamEliminated(bracket, teamId): boolean` - true iff the team appears in at
+  least one `final` series it LOST (its wins `< clinchWins(bestOf)`); false if it
+  never lost a final (still active or champion). Consistent with
+  `computeStandings()` in `StandingsPanel.tsx`.
+- `favoriteSummary(bracket, teamId): FavoriteSummary` - the per-team standing the
+  header pin renders. The exported `FavoriteSummary` interface carries
+  `{ teamId, inBracket, eliminated, isChampion, currentSeries, furthestRound,
+  record? }`; `currentSeries` is the team's in-progress series, else its next
+  scheduled series, else null. A team not in the bracket yields
+  `inBracket: false`, and the UI renders nothing for it.
+
+### Accessible star toggle (`frontend/src/components/FavoriteToggle.tsx`)
+
+A native `<button type="button">` that reads `useFavorites()`, toggles the team
+on click, and carries its state in a NON-color cue: an inline-SVG star that is
+FILLED when favorited and an OUTLINE star when not (the shape, not the color,
+communicates the state). It sets `aria-pressed` to the favorited state and a
+localized `aria-label` via `t('favorites.add' | 'favorites.remove', { team })`.
+It is placed on every `SeriesCard` team row and every `StandingsPanel` row so a
+team can be favorited from either surface. Because the toggle is a real button
+inside the `SeriesCard` `<article>`, the Issue #22 roving-tabindex handler (which
+bails out when `event.target !== event.currentTarget`) leaves its native
+Enter/Space/click behavior intact and the card does not double-activate; no
+card-body `onClick` was added.
+
+### Non-color-only series highlight (`frontend/src/components/SeriesCard.tsx`)
+
+`SeriesCard` computes `isFavoriteSeries` (either team on the card is favorited)
+and, when true, adds the `series-card--favorite` class and renders a star-icon
+marker (`data-testid="favorite-marker"`) in the header carrying a
+visually-hidden `favorites.marker` label so a screen reader announces it is a
+favorite team's series. The highlight is perceivable in grayscale: `styles.css`
+`.series-card--favorite` applies a THICK DASHED outline driven by a theme-aware
+`--favorite-outline` custom property (a dark gold in light, a bright gold in
+dark) layered on top of the existing border, so the selected/winner styling and
+the AA contrast of both themes are preserved. When a favorite in that series has
+been eliminated (`isTeamEliminated` over the passed-in bracket - `SeriesCard`
+gained an optional `bracket` prop that falls back to the single series in
+isolation), that team's row shows a localized `favorites.eliminated`
+(`Eliminated` / `敗退`) badge instead of an active treatment.
+
+### Header pin (`frontend/src/components/FavoritesPin.tsx`)
+
+A compact `<section className="favorites-pin">` (labeled by
+`favorites.header.title`, EN `Your teams` / JA `あなたのチーム`,
+`data-testid="favorites-pin"`) mounted on `HomePage` after the refresh bar. For
+each favorite with `inBracket === true` (computed via `favoriteSummary`) it shows
+the `TeamBadge` + localized team name and a status line:
+
+- eliminated -> `favorites.eliminated` (`敗退`),
+- champion -> `favorites.champion` (`優勝`),
+- in-progress -> a leading/trailing/tied `{wins}-{losses}` record
+  (`favorites.header.status.leading|trailing|tied|inProgress`),
+- scheduled -> the next game's local start time via
+  `gameTime.formatStartTime`/`resolveTimeZone`
+  (`favorites.header.status.nextGame`), else `favorites.header.status.scheduled`
+  ("starts soon").
+
+The pin renders NOTHING when there are no favorites or none of them is in the
+selected season's bracket (so the header stays clean), and an unknown favorite id
+does not throw (the i18n `teamName` yields a localized placeholder).
+
+### Favorites-only filter (`HomePage.tsx` + `BracketView.tsx`)
+
+`HomePage` holds a page-level `favoritesOnly` toggle - an `aria-pressed` button
+(`.app__favorites-filter`, `data-testid="favorites-filter"`, localized
+`favorites.filter.label`) in the refresh bar - whose state SURVIVES season
+switches, and passes `favoritesOnly` into `BracketView`. `BracketView` filters
+each column AFTER `buildRoundColumns` down to series that include at least one
+favorite, drops now-empty columns, and keeps the roving-tabindex active-cell
+clamp intact (it treats a filtered grid like a season-switch-shrunken grid, so
+the Issue #22 keyboard model is unregressed). When the filter is ON and no
+favorite has a series in the current bracket, it renders a localized empty state
+(`.bracket__filter-empty`, `role="status"`, `favorites.filter.empty`) instead of
+an empty grid. The filter coexists with the season selector: switching seasons
+keeps the toggle on and shows the empty state if the new season has no favorite
+series.
+
+### i18n keys
+
+All new strings live in BOTH the EN and JA tables of
+`frontend/src/i18n/messages.ts` (enforced by the `MessageKey` union):
+`favorites.add`/`favorites.remove` (the toggle `aria-label`, with `{team}`
+interpolated), `favorites.marker`, `favorites.badge`, `favorites.eliminated`
+(`Eliminated` / `敗退`), `favorites.champion` (`Champion` / `優勝`),
+`favorites.header.title`, the `favorites.header.status.*` phrases
+(`leading`/`trailing`/`tied`/`inProgress`/`scheduled`/`nextGame`, reusing
+`{round}`/`{wins}`/`{losses}`/`{time}`), `favorites.filter.label`, and
+`favorites.filter.empty`.
+
+### No new endpoint / no infra change
+
+Favorites are stored only in the browser's `localStorage` and all derivation is
+pure frontend code over the already-fetched bracket, so there is NO new Lambda,
+route, IAM, or DynamoDB access and the CDK/deploy story is unchanged.

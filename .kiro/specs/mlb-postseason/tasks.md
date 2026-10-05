@@ -523,3 +523,70 @@ house style. No new backend endpoint and no infra/IAM change.
         `.kiro/specs/mlb-postseason/design.md`,
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
 - _Requirements: 16_
+
+## Favorite teams: highlight, header pin, and filter (task-issue-18-favorites)
+
+GitHub Issue #18 under `.agents/tasks/task-issue-18-favorites/` (features
+FEAT-001 through FEAT-003): a frontend-only "favorite teams" feature. A pure,
+guarded `localStorage` store (`mlb.favorites`, multiple ids), a
+`FavoritesContext`/`useFavorites()` glue mounted in `main.tsx`, pure bracket
+helpers, an accessible star toggle, a non-color-only series highlight, a header
+pin, and a favorites-only filter with an empty state. All strings EN/JA. No
+backend or infra change.
+
+### F1. Favorites foundation: store, context, bracket helpers, i18n (task-issue-18 FEAT-001)
+
+- [x] Pure guarded `localStorage` favorites store (key `mlb.favorites`, JSON int
+      array, multiple allowed, corrupt values dropped, never throws) with pure
+      `add`/`remove`/`toggle`/`isFavorite` helpers, mirroring `theme.ts`.
+      - `frontend/src/favorites.ts`, `frontend/src/favorites.test.ts`.
+- [x] `FavoritesProvider` + `useFavorites()` glue (hydrate, persist every change,
+      throw outside the provider) mounted in `main.tsx` inside `I18nProvider`.
+      - `frontend/src/FavoritesContext.tsx`,
+        `frontend/src/FavoritesContext.test.tsx`, `frontend/src/main.tsx`.
+- [x] Pure bracket helpers `findTeamSeries`/`isTeamEliminated`/`favoriteSummary`
+      (+ exported `FavoriteSummary`) consistent with `computeStandings`, and all
+      EN/JA `favorites.*` strings in the `MessageKey` union + both dictionaries
+      (incl. `favorites.eliminated` `Eliminated`/`敗退`), with a dictionary
+      parity test.
+      - `frontend/src/bracketLayout.ts`, `frontend/src/bracketLayout.test.ts`,
+        `frontend/src/i18n/messages.ts`, `frontend/src/i18n/index.test.ts`.
+- _Requirements: 17_
+
+### F2. Favorites UI: star toggle, highlight, header pin, filter (task-issue-18 FEAT-002)
+
+- [x] Accessible star toggle (`FavoriteToggle`, native button, filled vs OUTLINE
+      SVG star = shape not color, `aria-pressed`, localized `aria-label`) on
+      `SeriesCard` team rows and `StandingsPanel` rows, preserving the Issue #22
+      roving-tabindex keyboard model.
+      - `frontend/src/components/FavoriteToggle.tsx`,
+        `frontend/src/components/SeriesCard.tsx`,
+        `frontend/src/components/StandingsPanel.tsx`,
+        `frontend/src/components/FavoriteToggle.test.tsx`.
+- [x] Non-color-only series highlight (`series-card--favorite` thick dashed
+      theme-aware outline + star marker + visually-hidden `favorites.marker`
+      label) and a localized `Eliminated`/`敗退` badge for an eliminated
+      favorite; the header pin (`FavoritesPin`, renders nothing when no in-bracket
+      favorite); the page-level favorites-only filter (survives season switches)
+      with a localized empty state, filtering columns after `buildRoundColumns`
+      while keeping the active-cell clamp intact.
+      - `frontend/src/components/SeriesCard.tsx`,
+        `frontend/src/components/FavoritesPin.tsx`,
+        `frontend/src/pages/HomePage.tsx`,
+        `frontend/src/components/BracketView.tsx`, `frontend/src/styles.css`,
+        `frontend/src/components/SeriesCard.test.tsx`,
+        `frontend/src/pages/HomePage.favorites.test.tsx`,
+        `frontend/e2e/favorites.spec.ts`, `frontend/e2e/fixtures.ts`.
+- _Requirements: 17_
+
+### F3. Spec + README truthfulness (task-issue-18 FEAT-003)
+
+- [x] Keep the spec-driven-dev artifacts and both READMEs truthful to the
+      favorites store (`mlb.favorites`, multiple allowed, guarded parse), the
+      non-color-only highlight (icon + border + a11y label), the
+      `Eliminated`/`敗退` indication, the header pin, and the favorites-only
+      filter + empty state, in EN and JA.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
+- _Requirements: 17_

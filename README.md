@@ -42,6 +42,12 @@ language (EN / JA)**.
   automatic team-badge text color, full **keyboard navigation** of the bracket, and
   **screen-reader labels** — verified by an automated **axe** check across light and dark.
 
+- **Favorite teams** — mark one or more teams as favorites (persisted to `localStorage`);
+  their series are highlighted in the bracket with a **non-color** cue (a star icon plus a
+  distinct border and a screen-reader label), a header pin summarizes each favorite's
+  status (switching to **Eliminated / 敗退** once a team loses a final), and a filter can
+  show only your teams. EN / JA.
+
 No authentication. Public, read-only. Not a betting product.
 
 ---
@@ -336,6 +342,40 @@ so a game late in the UTC day is never displayed on the wrong local day.
   omit the affordance. The display logic lives in dependency-free, unit-tested helpers
   (`frontend/src/gameTime.ts`, `frontend/src/upcomingGames.ts`, `frontend/src/ics.ts`) that
   take an injected clock/timezone/locale so they are deterministic in tests.
+
+### Favorite teams
+
+Mark the teams you follow and the app helps you track just them. This is a
+frontend-only feature; there is no backend or infrastructure change.
+
+- **Favorite from anywhere, persisted.** Each team row (on a series card and in the
+  standings panel) has a **star toggle** — a native button whose state is carried by its
+  **shape** (a filled star when favorited, an outline star when not, so it does not rely on
+  color), with `aria-pressed` and a localized `aria-label`. Your favorites (you can have
+  **more than one**) are saved to `localStorage` under the key **`mlb.favorites`** and
+  restored on reload; the parse is guarded, so a corrupt stored value is ignored rather
+  than breaking the app.
+- **Non-color-only highlight.** A series that includes a favorite team is highlighted
+  **without relying on color**: a **star icon** marker in the card header, a distinct
+  **thick dashed border** (perceivable in grayscale and AA-contrast in both the light and
+  the dark theme), and a visually-hidden label (**"Favorite team's series" / "お気に入り
+  チームのシリーズ"**) so a screen reader announces it.
+- **Eliminated indication.** When a favorite loses a final series it switches from an
+  active status to a localized **Eliminated / 敗退** indication, in both the bracket
+  highlight and the header pin.
+- **Header pin.** A "Your teams / あなたのチーム" pin summarizes each in-bracket favorite's
+  status — eliminated, champion, an in-progress leading/trailing/tied record, or the next
+  game's local start time. It renders nothing when you have no favorites or none of them is
+  in the selected season's bracket.
+- **Favorites-only filter.** A **"Show only my teams" / "お気に入りのチームだけ表示"**
+  toggle hides every other series; when it is on and none of your teams has a series in the
+  current bracket, a friendly localized empty state is shown instead of an empty grid. The
+  toggle coexists with the season selector (it survives a season switch).
+- **EN / JA.** Every favorites string is localized. The logic lives in a pure, guarded
+  store (`frontend/src/favorites.ts`), a `FavoritesContext`/`useFavorites()` glue, pure
+  bracket helpers (`findTeamSeries`/`isTeamEliminated`/`favoriteSummary` in
+  `frontend/src/bracketLayout.ts`), the `FavoriteToggle` and `FavoritesPin` components, and
+  the bracket highlight/filter.
 
 ## Amazon Bedrock usage
 
