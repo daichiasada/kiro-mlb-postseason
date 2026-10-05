@@ -49,9 +49,10 @@ function resolveOrigin(): string {
 export function ShareButton({ season, seriesId, title, disclaimer }: ShareButtonProps) {
   const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
-  // Set only when both Web Share and clipboard are unavailable, so the URL can
-  // be shown for manual copy as a last-resort graceful degradation.
-  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
+  // Set only when both Web Share and clipboard are unavailable, so the full
+  // share payload (title + disclaimer + URL) can be shown for manual copy as a
+  // last-resort graceful degradation.
+  const [fallbackText, setFallbackText] = useState<string | null>(null);
 
   const url = buildSeriesPermalink({
     origin: resolveOrigin(),
@@ -62,8 +63,12 @@ export function ShareButton({ season, seriesId, title, disclaimer }: ShareButton
 
   const handleShare = useCallback(async () => {
     setCopied(false);
-    setFallbackUrl(null);
+    setFallbackText(null);
     const text = `${title} - ${disclaimer}`;
+    // The copy / manual-copy fallbacks share the SAME payload as the Web Share
+    // `text` so a user who copies the link does not lose the disclaimer: title,
+    // disclaimer, then the permalink on its own line.
+    const copyPayload = `${text}\n${url}`;
 
     // 1) Web Share API (mobile + some desktop browsers).
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
@@ -75,14 +80,14 @@ export function ShareButton({ season, seriesId, title, disclaimer }: ShareButton
       }
     }
 
-    // 2) Clipboard fallback.
+    // 2) Clipboard fallback: copy title + disclaimer + URL, not a bare link.
     if (
       typeof navigator !== 'undefined' &&
       navigator.clipboard &&
       typeof navigator.clipboard.writeText === 'function'
     ) {
       try {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(copyPayload);
         setCopied(true);
         return;
       } catch {
@@ -90,8 +95,8 @@ export function ShareButton({ season, seriesId, title, disclaimer }: ShareButton
       }
     }
 
-    // 3) Last resort: surface the URL for manual copy.
-    setFallbackUrl(url);
+    // 3) Last resort: surface the full payload (incl. disclaimer) for manual copy.
+    setFallbackText(copyPayload);
   }, [title, disclaimer, url]);
 
   return (
@@ -111,12 +116,15 @@ export function ShareButton({ season, seriesId, title, disclaimer }: ShareButton
           {t('share.copied')}
         </span>
       )}
-      {fallbackUrl !== null && (
-        <input
+      {fallbackText !== null && (
+        // A <textarea> (not <input>) so the multi-line payload - title,
+        // disclaimer, and URL - is preserved verbatim for manual copy; an
+        // <input> would strip the newlines.
+        <textarea
           className="share__url"
-          type="text"
           readOnly
-          value={fallbackUrl}
+          rows={3}
+          value={fallbackText}
           aria-label={t('share.ariaLabel')}
           onFocus={(event) => event.currentTarget.select()}
         />

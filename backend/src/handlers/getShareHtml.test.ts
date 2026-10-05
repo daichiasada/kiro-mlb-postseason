@@ -113,6 +113,32 @@ describe('getShareHtml handler', () => {
     expect(putCachedOgImage).toHaveBeenCalledTimes(1);
   });
 
+  it('uses the x-site-origin custom header (public site origin) ahead of the stripped execute-api Host in production', async () => {
+    // Reproduces the production path: SITE_ORIGIN is unset and the CloudFront
+    // /share* behavior uses ALL_VIEWER_EXCEPT_HOST_HEADER, so API Gateway hands
+    // the handler its own execute-api Host while CloudFront injects the public
+    // site origin as x-site-origin. Every absolute URL must use the public
+    // site origin, NOT the API domain.
+    const result = await invoke(
+      { seriesId: series.id, season: '2024', lang: 'en' },
+      {
+        host: 'abc123.execute-api.us-east-1.amazonaws.com',
+        'x-forwarded-proto': 'https',
+        'x-site-origin': 'https://d111abcdef8.cloudfront.net',
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    const body = result.body;
+    // og:url / canonical and the SPA redirect use the public site origin.
+    expect(body).toContain('https://d111abcdef8.cloudfront.net/season/2024/series/');
+    // og:image traverses the public /og* CloudFront behavior (site origin),
+    // not API Gateway directly.
+    expect(body).toContain('https://d111abcdef8.cloudfront.net/og?');
+    // The execute-api Host must NOT leak into any emitted URL.
+    expect(body).not.toContain('execute-api');
+  });
+
   it('derives the origin from forwarded headers when SITE_ORIGIN is unset', async () => {
     const result = await invoke(
       { seriesId: series.id, season: '2024' },

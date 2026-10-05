@@ -1000,9 +1000,14 @@ and the human Share text) - criteria 1, 2, and 5 below.
    cached under `SHARE#<seriesId>#<highWins>-<lowWins>#<lang>` (reusing the same
    store getter/putter as `/og`). A missing `seriesId` SHALL return HTTP 400 and
    an unknown series HTTP 404. The absolute canonical / OG-image / SPA URLs SHALL
-   use a public origin derived from the forwarded request headers
-   (`X-Forwarded-Proto` + `Host`) with a `SITE_ORIGIN` env override and a
-   localhost fallback.
+   use the PUBLIC site origin: the handler SHALL read an `x-site-origin` request
+   header (set by a viewer-request CloudFront Function that copies the viewer
+   Host before `ALL_VIEWER_EXCEPT_HOST_HEADER` strips it) AHEAD of the raw
+   `Host` header, then fall back to the forwarded request headers
+   (`X-Forwarded-Proto` + `Host`) and a localhost default, with a `SITE_ORIGIN`
+   env override honored first. In production this guarantees og:url, canonical,
+   og:image, and the redirect target point at the CloudFront site origin, not
+   the execute-api host.
 3. The two new Lambdas (`GetOgImageFn`, `GetShareHtmlFn`) SHALL carry ONLY the
    `TABLE_NAME` environment variable (NO `BEDROCK_MODEL_ID`) and SHALL be granted
    DynamoDB read/write but NO `bedrock:InvokeModel` policy.

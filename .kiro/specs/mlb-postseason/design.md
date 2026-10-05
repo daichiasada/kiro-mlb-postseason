@@ -1373,10 +1373,17 @@ the key so a result change invalidates naturally; `getCachedOgImage`/
 `SHARE#` prefix keeps the HTML from colliding with the SVG). `/og` returns
 `image/svg+xml`; `/share` returns `text/html`; both set
 `Access-Control-Allow-Origin: *` and a `Cache-Control` header via the new
-`rawResponse` helper in `http.ts`. The `/share` absolute URLs use a public
-origin derived from the forwarded request headers (`X-Forwarded-Proto` + `Host`)
-with a `SITE_ORIGIN` env override and a localhost fallback. Neither Lambda
-touches Bedrock.
+`rawResponse` helper in `http.ts`. The `/share` absolute URLs
+(canonical/og:url/og:image/the SPA redirect) must use the PUBLIC site origin,
+not the execute-api host. Because the `/share*`/`/og*` CloudFront behaviors use
+`ALL_VIEWER_EXCEPT_HOST_HEADER` (Host stripped), the share handler reads an
+`x-site-origin` request header - populated by a viewer-request CloudFront
+Function that copies the viewer Host before it is stripped - AHEAD of the raw
+`Host` header, then falls back to `X-Forwarded-Proto` + `Host` for local/direct
+runs and a localhost default. A `SITE_ORIGIN` env is honored first if ever set
+out-of-band. Resolving to the site origin also keeps the og:image URL on the
+cached `/og*` CloudFront behavior rather than hitting API Gateway directly.
+Neither Lambda touches Bedrock.
 
 ### Infra (`infra/lib/mlb-postseason-stack.ts`)
 
@@ -1393,8 +1400,14 @@ error responses are unchanged. Because the new CloudFront behaviors make the
 distribution depend on the HTTP API, the HTTP API CORS allow-origin is set to
 `*` (every handler already emits `*`) to avoid a CloudFront<->API cyclic
 dependency, and `SITE_ORIGIN` is intentionally NOT injected from the stack onto
-the share Lambda (which would close a CloudFront<->Lambda cycle); the handler
-derives the origin from request headers instead.
+the share Lambda (which would close a CloudFront<->Lambda cycle). The public
+site origin instead reaches the share Lambda via a viewer-request CloudFront
+Function (`ShareSiteOriginFn`) associated with the `/og*`/`/share*` behaviors
+that copies the viewer `Host` into an `x-site-origin` request header before the
+origin request policy strips `Host`; the function references nothing else, so
+synth stays acyclic. The handler reads `x-site-origin` first, so og:url,
+canonical, og:image, and the redirect all land on the public distribution
+origin (which also keeps og:image on the cached `/og*` behavior).
 
 ### Frontend share control and `?lang=` permalink (`frontend/src/components/ShareButton.tsx`)
 
@@ -1406,9 +1419,11 @@ the URL carries `?lang=en|ja` and opens in the same language for the recipient.
 On click it degrades through three tiers, each feature-detected so the component
 is inert under jsdom: (1) the Web Share API (`navigator.share` with
 `{ title, text, url }`, where `text` appends the localized `SHARE_DISCLAIMER`);
-(2) a clipboard copy (`navigator.clipboard.writeText(url)`) that shows a
-localized "Link copied" `role="status"` confirmation; (3) a read-only input
-holding the URL for manual copy. The i18n layer consumes the query on load:
+(2) a clipboard copy that shows a localized "Link copied" `role="status"`
+confirmation; (3) a read-only `<textarea>` holding the payload for manual copy.
+The clipboard and manual-copy fallbacks copy the SAME payload as the Web Share
+`text` (title + localized `SHARE_DISCLAIMER` + URL), so a user who shares via
+copy never loses the "reference values, not betting advice" disclaimer. The i18n layer consumes the query on load:
 `readLangFromQuery()` returns a valid `Lang` or `null`, and `I18nProvider` lets a
 valid `?lang=` take precedence over the persisted value and then persists it, so
 later in-app navigation (which drops the query) keeps the shared language. No new

@@ -72,9 +72,13 @@ describe('ShareButton', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Share this series' }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    const copiedUrl = writeText.mock.calls[0][0] as string;
-    expect(copiedUrl).toContain(SERIES_ID);
-    expect(copiedUrl).toContain('lang=en');
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toContain(SERIES_ID);
+    expect(copied).toContain('lang=en');
+    // The copied payload carries the title and the disclaimer, not just the URL,
+    // so sharing via copy does not drop the "reference values" framing.
+    expect(copied).toContain(TITLE);
+    expect(copied).toContain(SHARE_DISCLAIMER.en);
     // The localized "Link copied" confirmation appears.
     expect(await screen.findByText('Link copied')).toBeInTheDocument();
   });
@@ -91,8 +95,9 @@ describe('ShareButton', () => {
     fireEvent.click(screen.getByRole('button', { name: 'このシリーズを共有' }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    const copiedUrl = writeText.mock.calls[0][0] as string;
-    expect(copiedUrl).toContain('lang=ja');
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toContain('lang=ja');
+    expect(copied).toContain(SHARE_DISCLAIMER.ja);
     expect(await screen.findByText('リンクをコピーしました')).toBeInTheDocument();
   });
 
@@ -133,10 +138,14 @@ describe('ShareButton', () => {
     renderShare('en');
     fireEvent.click(screen.getByRole('button', { name: 'Share this series' }));
 
-    const input = (await screen.findByDisplayValue(
+    const field = (await screen.findByDisplayValue(
       /al-wc-1/,
-    )) as HTMLInputElement;
-    expect(input.value).toContain('lang=en');
-    expect(input).toHaveAttribute('readonly');
+    )) as HTMLTextAreaElement;
+    expect(field.value).toContain('lang=en');
+    // The manual-copy field carries the full payload (title + disclaimer + URL),
+    // so a last-resort copy still includes the disclaimer.
+    expect(field.value).toContain(TITLE);
+    expect(field.value).toContain(SHARE_DISCLAIMER.en);
+    expect(field).toHaveAttribute('readonly');
   });
 });

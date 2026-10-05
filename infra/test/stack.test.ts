@@ -178,6 +178,40 @@ describe('MlbPostseasonStack', () => {
     });
   });
 
+  it('defines a viewer-request CloudFront Function that forwards the public site host as x-site-origin', () => {
+    // Issue #21 fix: the /share* and /og* behaviors use
+    // ALL_VIEWER_EXCEPT_HOST_HEADER, which strips the viewer Host, so the share
+    // Lambda would otherwise read API Gateway's execute-api host and bake the
+    // API domain into og:url/canonical/og:image. A viewer-request CloudFront
+    // Function copies the viewer Host into an `x-site-origin` request header
+    // BEFORE Host is stripped (acyclic: the function references nothing else),
+    // which the handler reads ahead of Host. Assert the function exists and its
+    // code sets x-site-origin from the viewer host.
+    template.hasResourceProperties('AWS::CloudFront::Function', {
+      FunctionConfig: Match.objectLike({ Runtime: Match.anyValue() }),
+      FunctionCode: Match.stringLikeRegexp("x-site-origin"),
+    });
+  });
+
+  it('associates the x-site-origin viewer-request function with the /share* and /og* behaviors', () => {
+    // The share/OG cache behaviors must carry a VIEWER-REQUEST FunctionAssociation
+    // so the x-site-origin header is populated before the request reaches the API.
+    for (const pattern of ['/share', '/og']) {
+      template.hasResourceProperties('AWS::CloudFront::Distribution', {
+        DistributionConfig: Match.objectLike({
+          CacheBehaviors: Match.arrayWith([
+            Match.objectLike({
+              PathPattern: pattern,
+              FunctionAssociations: Match.arrayWith([
+                Match.objectLike({ EventType: 'viewer-request' }),
+              ]),
+            }),
+          ]),
+        }),
+      });
+    }
+  });
+
   it('configures a second CloudFront origin (the HTTP API) for the share/OG behaviors', () => {
     // The share/OG behaviors point at an HttpOrigin (the execute-api domain),
     // so the distribution now carries more than the single S3 origin.

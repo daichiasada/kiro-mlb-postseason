@@ -834,10 +834,13 @@ shell.
       rebuild; miss builds via `buildOgImageSvg`, stores, returns), with the
       localized disclaimer in the body. `GET /share` handler: 400 / 404 the same
       way, else `text/html` with the per-series meta tags and the SPA redirect;
-      the public origin for the absolute canonical/OG-image/SPA URLs is derived
-      from the forwarded request headers (X-Forwarded-Proto + Host) with a
-      `SITE_ORIGIN` env override and a localhost fallback. Both never call
-      Bedrock. Handler tests mock the service + store.
+      the public origin for the absolute canonical/OG-image/SPA URLs is read
+      from the `x-site-origin` request header (set by a viewer-request
+      CloudFront Function) AHEAD of the raw `Host` header, then the forwarded
+      request headers (X-Forwarded-Proto + Host) and a localhost fallback, with
+      a `SITE_ORIGIN` env override honored first. Both never call Bedrock.
+      Handler tests mock the service + store and include the stripped-Host
+      production path (Host = execute-api, `x-site-origin` present).
       - `backend/src/handlers/getOgImage.ts`, `backend/src/handlers/getShareHtml.ts`,
         and their `*.test.ts`.
 - [x] Infra: `GetOgImageFn` + `GetShareHtmlFn` Node 20 Lambdas carrying ONLY
@@ -848,8 +851,12 @@ shell.
       paths, no UA sniffing); the default SPA behavior and the 403/404 ->
       `/index.html` rewrites are unchanged. HTTP API CORS allow-origin is `*`
       (every handler already emits `*`) to avoid a CloudFront<->API cyclic
-      dependency. Stack test asserts five Lambdas, exactly one Bedrock policy,
-      the two new routes, and the CloudFront behaviors/origin.
+      dependency. A viewer-request CloudFront Function on the `/og*`/`/share*`
+      behaviors copies the viewer Host into an `x-site-origin` request header
+      (acyclic) so the share Lambda emits URLs on the public site origin, not
+      the execute-api host. Stack test asserts five Lambdas, exactly one Bedrock
+      policy, the two new routes, the CloudFront behaviors/origin, and the
+      `x-site-origin` viewer-request function association.
       - `infra/lib/mlb-postseason-stack.ts`, `infra/test/stack.test.ts`.
 - _Requirements: 21_
 
@@ -858,10 +865,12 @@ shell.
 - [x] Localized `<ShareButton>` building the `?lang=`-tagged permalink from the
       live origin + active language via the shared `buildSeriesPermalink`, with
       a three-tier flow (Web Share API -> clipboard copy with a "Link copied"
-      status -> read-only input for manual copy), every browser API
+      status -> read-only textarea for manual copy), every browser API
       feature-detected so it is inert under jsdom; the shared text appends the
-      localized `SHARE_DISCLAIMER`. Wired into the prediction panel and the
-      series detail page.
+      localized `SHARE_DISCLAIMER`, and the clipboard + manual-copy fallbacks
+      copy that SAME payload (title + disclaimer + URL) so copying never drops
+      the disclaimer. Wired into the prediction panel and the series detail
+      page.
       - `frontend/src/components/ShareButton.tsx` (+ `ShareButton.test.tsx`),
         `frontend/src/components/PredictionPanel.tsx`,
         `frontend/src/pages/SeriesDetailPage.tsx`, `frontend/src/styles.css`.

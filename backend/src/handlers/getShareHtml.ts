@@ -14,11 +14,20 @@
  * stored HTML WITHOUT rebuilding.
  *
  * Origin resolution: the SPA/canonical/OG-image URLs need the public site
- * origin. We prefer the `SITE_ORIGIN` env var injected by CDK (the CloudFront
- * domain, the one true public origin). When it is absent (local runs) we fall
- * back to deriving it from the request's forwarded headers (X-Forwarded-Proto +
- * Host), and finally to a localhost default. We deliberately route by a
- * dedicated `/share` path rather than User-Agent sniffing.
+ * origin (the CloudFront domain), NOT the execute-api host. CDK deliberately
+ * does NOT inject a `SITE_ORIGIN` env (that would complete a
+ * CloudFront<->Lambda synth cycle) and the `/share*`/`/og*` CloudFront
+ * behaviors use ALL_VIEWER_EXCEPT_HOST_HEADER, which strips the viewer Host so
+ * API Gateway would otherwise hand us its own execute-api host. Instead the
+ * public origin arrives via the `x-site-origin` CUSTOM ORIGIN REQUEST HEADER
+ * that CloudFront attaches on those behaviors. Preference order:
+ *   1. `SITE_ORIGIN` env var (honored first if ever set out-of-band).
+ *   2. The `x-site-origin` header injected by the CloudFront behavior.
+ *   3. The request's forwarded headers (`X-Forwarded-Proto` + `Host`) for
+ *      local/direct runs where neither of the above is present.
+ *   4. A localhost default.
+ * We deliberately route by a dedicated `/share` path rather than User-Agent
+ * sniffing.
  *
  * Contract: a missing/blank `seriesId` returns HTTP 400; an unknown series
  * returns HTTP 404; success is HTTP 200 `text/html`. No Bedrock.
@@ -42,17 +51,27 @@ const DEFAULT_ORIGIN = 'http://localhost:5173';
 const service = new BracketService();
 const store: BracketStore = new DynamoBracketStore();
 
+/** Strip trailing slashes so URL joins never produce a double slash. */
+function stripTrailingSlashes(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
 /**
  * Resolves the public site origin. Preference order:
- *   1. `SITE_ORIGIN` env var (the CloudFront domain injected by CDK).
- *   2. The request's forwarded headers (`X-Forwarded-Proto` + `Host`).
- *   3. A localhost default (local runs).
+ *   1. `SITE_ORIGIN` env var (honored first if ever set out-of-band).
+ *   2. The `x-site-origin` custom header CloudFront attaches on the share/OG
+ *      behaviors (the true public distribution origin). This is read AHEAD of
+ *      the raw Host header because those behaviors strip the viewer Host, so
+ *      Host would otherwise be API Gateway's execute-api domain.
+ *   3. The request's forwarded headers (`X-Forwarded-Proto` + `Host`) for
+ *      local/direct runs.
+ *   4. A localhost default.
  * Header names are matched case-insensitively since API Gateway may lowercase.
  */
 function resolveOrigin(event: APIGatewayProxyEventV2): string {
   const envOrigin = process.env.SITE_ORIGIN?.trim();
   if (envOrigin) {
-    return envOrigin.replace(/\/+$/, '');
+    return stripTrailingSlashes(envOrigin);
   }
 
   const headers = event.headers ?? {};
@@ -65,6 +84,13 @@ function resolveOrigin(event: APIGatewayProxyEventV2): string {
     }
     return undefined;
   };
+
+  // The CloudFront behavior injects the public site origin here, ahead of Host:
+  // under ALL_VIEWER_EXCEPT_HOST_HEADER the Host is the execute-api domain.
+  const siteOrigin = header('x-site-origin');
+  if (siteOrigin) {
+    return stripTrailingSlashes(siteOrigin);
+  }
 
   const host = header('host');
   if (host) {

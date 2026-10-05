@@ -398,11 +398,13 @@ back it, both reusing pure, tested builders in `@mlb/shared`:
   builds the canonical permalink from the live page origin and the active UI
   language via the shared `buildSeriesPermalink`, so the URL carries
   `?lang=en|ja` and opens in the same language for the recipient. On click it
-  prefers the **Web Share API** (`navigator.share`), falls back to **copying the
-  link** to the clipboard (`navigator.clipboard.writeText`, with a localized
-  "Link copied" confirmation), and if neither is available surfaces the URL in a
-  read-only input for manual copy; every browser API is feature-detected. The
-  shared text includes the localized disclaimer. On load, a valid `?lang=` from
+  prefers the **Web Share API** (`navigator.share`), falls back to **copying**
+  to the clipboard (`navigator.clipboard.writeText`, with a localized
+  "Link copied" confirmation), and if neither is available surfaces the payload
+  in a read-only textarea for manual copy; every browser API is feature-detected.
+  All three paths carry the SAME payload (title + localized disclaimer + URL), so
+  sharing via copy never drops the "reference values, not betting advice"
+  disclaimer. On load, a valid `?lang=` from
   a shared permalink takes precedence over the persisted language and is then
   persisted so later navigation keeps it.
 
@@ -413,7 +415,14 @@ returns **400**; an unknown series returns **404**. **CloudFront** routes the de
 `/og*` and `/share*` paths to the HTTP API (no User-Agent sniffing), so a social crawler
 fetching a share link on the site origin reaches the Lambda-rendered meta tags rather than
 the SPA shell; the default SPA behavior and the 403/404 -> `/index.html` rewrites are
-unchanged.
+unchanged. Because those `/og*`/`/share*` behaviors strip the viewer `Host`
+(`ALL_VIEWER_EXCEPT_HOST_HEADER`), a **viewer-request CloudFront Function** copies the
+viewer host into an `x-site-origin` header first, which the share Lambda reads ahead of
+`Host`, so `og:url`/`canonical`/`og:image`/the redirect all point at the public site
+origin instead of the raw execute-api host (and the og:image stays on the cached `/og*`
+behavior). The HTTP API CORS allow-origin is `*` (a public, read-only API where every
+handler already emits `*`), a conscious choice that also avoids a CloudFront&harr;API synth
+cycle.
 
 > **Note:** the OGP image is an **SVG** (no native rasterizer such as `sharp`, which keeps
 > the Lambda bundle clean and the build deterministic); some crawlers do not render an SVG

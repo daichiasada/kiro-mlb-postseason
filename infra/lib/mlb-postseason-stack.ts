@@ -129,9 +129,11 @@ export class MlbPostseasonStack extends Stack {
     // crawler HTML from the shared pure builders and cache the bytes in
     // DynamoDB. Like getGameDetail they NEVER call Bedrock, so they carry only
     // TABLE_NAME (no BEDROCK_MODEL_ID) and get no bedrock:InvokeModel policy.
-    // SITE_ORIGIN (the CloudFront domain) is injected AFTER the distribution is
-    // created (see below) so the share HTML emits absolute canonical /
-    // OG-image / SPA URLs on the one true public origin.
+    // These functions carry NO SITE_ORIGIN env: injecting the CloudFront domain
+    // as a Lambda env would complete a CloudFront<->Lambda synth cycle. The
+    // public site origin instead reaches the share Lambda at runtime via a
+    // custom CloudFront origin request header (`x-site-origin`); see the
+    // share/OG CloudFront behaviors below.
     const getOgImageFn = new lambdaNodejs.NodejsFunction(this, 'GetOgImageFn', {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(BACKEND_HANDLERS, 'getOgImage.ts'),
@@ -344,6 +346,42 @@ export class MlbPostseasonStack extends Stack {
     // cached separately.
     const apiDomain = Fn.select(2, Fn.split('/', apiUrl));
     const apiOrigin = new cloudfrontOrigins.HttpOrigin(apiDomain);
+
+    // Carry the PUBLIC site origin (the host the viewer actually requested -
+    // the CloudFront distribution domain, or a custom CNAME in front of it) to
+    // the share/OG Lambdas. The `/og*` and `/share*` behaviors below use
+    // ALL_VIEWER_EXCEPT_HOST_HEADER, which strips the viewer Host before the
+    // origin request, so without this the Lambda would read API Gateway's own
+    // execute-api host and bake the API domain into
+    // og:url/canonical/og:image/the redirect target.
+    //
+    // We cannot pass the distribution's own domain as a custom ORIGIN header or
+    // a Lambda env: `distribution.distributionDomainName` is a Fn::GetAtt on the
+    // distribution, and using it on the distribution's origin (self-reference)
+    // or on the share Lambda env (distribution -> API -> Lambda -> distribution)
+    // both create a synth cycle. Instead a VIEWER-REQUEST CloudFront Function
+    // copies the viewer's `Host` into an `x-site-origin` request header BEFORE
+    // the origin request policy strips Host. The function is a literal, static
+    // construct that references NOTHING else, so synth stays acyclic, and it
+    // naturally reports whatever public host the viewer used (cloudfront.net or
+    // a custom domain). The share handler reads `x-site-origin` ahead of Host.
+    const siteOriginFunction = new cloudfront.Function(this, 'ShareSiteOriginFn', {
+      comment:
+        'Copy the viewer Host into x-site-origin so the share/OG Lambda emits '
+        + 'absolute URLs on the public site origin, not the execute-api host.',
+      code: cloudfront.FunctionCode.fromInline(
+        [
+          'function handler(event) {',
+          '  var request = event.request;',
+          '  var host = request.headers.host && request.headers.host.value;',
+          '  if (host) {',
+          "    request.headers['x-site-origin'] = { value: 'https://' + host };",
+          '  }',
+          '  return request;',
+          '}',
+        ].join('\n'),
+      ),
+    });
     // A cache policy that INCLUDES the query string in the cache key so distinct
     // `?season=&seriesId=&lang=` combinations are cached (and served) as
     // distinct objects rather than collapsing to one.
@@ -362,6 +400,13 @@ export class MlbPostseasonStack extends Stack {
         cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
       cachePolicy: apiCachePolicy,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+      // Capture the public site host into x-site-origin before Host is stripped.
+      functionAssociations: [
+        {
+          function: siteOriginFunction,
+          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+        },
+      ],
     };
     for (const pattern of ['/og', '/og/*', '/share', '/share/*']) {
       distribution.addBehavior(pattern, apiOrigin, apiBehavior);
@@ -373,11 +418,14 @@ export class MlbPostseasonStack extends Stack {
     // distribution depend on this HTTP API (and therefore on its Lambdas);
     // adding `distribution.distributionDomainName` as an env on the share
     // Lambda would complete a CloudFront<->Lambda cyclic dependency that CDK
-    // rejects at synth. Instead the share handler derives the public origin
-    // from the forwarded request headers (X-Forwarded-Proto + Host) at runtime,
-    // which is exactly the CloudFront/host origin the crawler used, with a
-    // localhost fallback for local runs. The handler still honors a SITE_ORIGIN
-    // env if one is provided out-of-band, so the choice stays overridable.
+    // rejects at synth. Instead the public site origin reaches the share Lambda
+    // via the `x-site-origin` request header set by the VIEWER-REQUEST
+    // CloudFront Function above (it copies the viewer Host before Host is
+    // stripped) - acyclic because the function references nothing else. The
+    // handler reads `x-site-origin` ahead of the (stripped) Host header, with an
+    // X-Forwarded-Proto + Host derivation and a localhost fallback for local
+    // runs. A SITE_ORIGIN env is still honored first if one is ever provided
+    // out-of-band, so the choice stays overridable.
 
     // ---- Deploy the SPA + inject the API URL -----------------------------
     // The built SPA (frontend/dist, must exist at synth time) and the
