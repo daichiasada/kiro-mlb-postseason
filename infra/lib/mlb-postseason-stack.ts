@@ -3,8 +3,11 @@
  *
  * Resources:
  *   - DynamoDB table (bracket cache, PAY_PER_REQUEST, TTL on `ttl`).
- *   - Two bundled Lambda functions (getBracket, getPrediction) on Node 20.
- *   - HTTP API (API Gateway v2) with CORS for the SPA + localhost dev.
+ *   - Three bundled Lambda functions (getBracket, getPrediction, getGameDetail)
+ *     on Node 20. Only getPrediction is granted bedrock:InvokeModel; getGameDetail
+ *     talks to the public MLB API + DynamoDB only (no Bedrock).
+ *   - HTTP API (API Gateway v2) with CORS for the SPA + localhost dev, exposing
+ *     GET /bracket, GET + POST /prediction, and GET /game.
  *   - Private S3 bucket (OAC) + CloudFront distribution serving the SPA.
  *   - A BucketDeployment for the built SPA plus a deploy-time `/config.js`
  *     that injects the API base URL into the static bundle at runtime.
@@ -102,9 +105,29 @@ export class MlbPostseasonStack extends Stack {
       }
     );
 
+    // The game-detail function fetches per-game data from the public MLB API and
+    // caches it in DynamoDB. It never calls Bedrock, so it carries only
+    // TABLE_NAME (no BEDROCK_MODEL_ID) and gets no bedrock:InvokeModel policy.
+    const getGameDetailFn = new lambdaNodejs.NodejsFunction(
+      this,
+      'GetGameDetailFn',
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.join(BACKEND_HANDLERS, 'getGameDetail.ts'),
+        handler: 'handler',
+        memorySize: 256,
+        timeout: Duration.seconds(15),
+        environment: {
+          TABLE_NAME: table.tableName,
+        },
+        bundling: commonBundling,
+      }
+    );
+
     // ---- IAM --------------------------------------------------------------
     table.grantReadWriteData(getBracketFn);
     table.grantReadWriteData(getPredictionFn);
+    table.grantReadWriteData(getGameDetailFn);
 
     // Bedrock InvokeModel for the prediction function. The selectable models are
     // cross-region inference profiles (prefix `us.`): the Amazon Nova family
@@ -196,6 +219,11 @@ export class MlbPostseasonStack extends Stack {
         'GetPredictionIntegration',
         getPredictionFn
       );
+    const gameDetailIntegration =
+      new apigwv2Integrations.HttpLambdaIntegration(
+        'GetGameDetailIntegration',
+        getGameDetailFn
+      );
 
     httpApi.addRoutes({
       path: '/bracket',
@@ -206,6 +234,11 @@ export class MlbPostseasonStack extends Stack {
       path: '/prediction',
       methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
       integration: predictionIntegration,
+    });
+    httpApi.addRoutes({
+      path: '/game',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: gameDetailIntegration,
     });
 
     const apiUrl = httpApi.apiEndpoint;

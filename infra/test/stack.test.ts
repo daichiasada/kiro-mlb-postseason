@@ -29,10 +29,29 @@ describe('MlbPostseasonStack', () => {
     });
   });
 
-  it('creates two Node 20 app Lambda functions with TABLE_NAME + BEDROCK_MODEL_ID env', () => {
+  it('creates three Node 20 app Lambda functions carrying TABLE_NAME env', () => {
     // CDK also synthesizes helper Lambdas (bucket deployment + auto-delete),
-    // so assert on the two *application* functions by their nodejs20.x runtime
-    // and required environment rather than the raw total function count.
+    // so assert on the *application* functions by their nodejs20.x runtime and
+    // the required TABLE_NAME env rather than the raw total function count.
+    // The three are getBracket, getPrediction, and getGameDetail (ISSUE-19).
+    template.resourcePropertiesCountIs(
+      'AWS::Lambda::Function',
+      {
+        Runtime: 'nodejs20.x',
+        Environment: {
+          Variables: Match.objectLike({
+            TABLE_NAME: Match.anyValue(),
+          }),
+        },
+      },
+      3,
+    );
+  });
+
+  it('scopes BEDROCK_MODEL_ID env to exactly the two Bedrock-invoking functions (getGameDetail excluded)', () => {
+    // Only getBracket + getPrediction carry BEDROCK_MODEL_ID. The new
+    // getGameDetail function talks to the public MLB API + DynamoDB only and
+    // must NOT carry the model env, so the BEDROCK_MODEL_ID-bearing count stays 2.
     template.resourcePropertiesCountIs(
       'AWS::Lambda::Function',
       {
@@ -100,7 +119,7 @@ describe('MlbPostseasonStack', () => {
     });
   });
 
-  it('exposes GET /bracket and GET + POST /prediction HTTP API routes', () => {
+  it('exposes GET /bracket, GET + POST /prediction, and GET /game HTTP API routes', () => {
     template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
       RouteKey: 'GET /bracket',
     });
@@ -109,6 +128,9 @@ describe('MlbPostseasonStack', () => {
     });
     template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
       RouteKey: 'POST /prediction',
+    });
+    template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+      RouteKey: 'GET /game',
     });
   });
 
