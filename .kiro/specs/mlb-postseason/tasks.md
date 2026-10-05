@@ -358,3 +358,38 @@ Pythagorean/last-10 signal was added.
         `.kiro/specs/mlb-postseason/design.md`,
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
 - _Requirements: 2, 13_
+
+### B1. Shared: pure deterministic backtest engine + relocate predict() (task-issue-16 FEAT-002)
+
+- [x] Move the pure `predict()` into `shared/src/predict.ts` and re-export it
+      from `backend/src/predict/model.ts` with no behavior change; existing
+      backend predict tests stay green unchanged.
+- [x] Add `shared/src/backtest.ts` (`runBacktest`, `runMultiSeasonBacktest`,
+      `runBacktestAcrossAccuracies` + result types) importing only pure shared
+      code and the seed JSON (no AWS/Bedrock/network), with "predict at the end
+      of game k" semantics, hit rate, Brier score, and fixed-bucket calibration.
+- [x] Pin exact `hitRate`/`brierScore` for 2024, 2025, and combined at accuracy
+      0.5, plus the `accuracy=0 => brierScore 0.25` invariant and calibration
+      count invariants, in unit + fast-check property tests.
+      - `shared/src/predict.ts`, `shared/src/backtest.ts`,
+        `shared/src/index.ts`, `backend/src/predict/model.ts`,
+        `shared/src/backtest.test.ts`, `shared/src/backtest.property.test.ts`.
+- _Requirements: Model accuracy / backtest 1, 3_
+
+### B2. Frontend + docs: client-side Model accuracy page (task-issue-16 FEAT-003)
+
+- [x] New localized `accuracy.*` i18n keys (EN + JA) including the Brier and
+      calibration definitions; a `/accuracy` route and `AccuracyPage.tsx` that
+      computes metrics client-side via the shared engine (no backend endpoint,
+      no infra change), rendering the metric definitions, the multi-accuracy
+      comparison (hit rate + Brier for 2024/2025/combined across
+      `[0,0.25,0.5,0.75,1]`), and an accessible per-bucket calibration display.
+- [x] A visible localized nav link from the home header reachable in every
+      season; a frontend unit test and a Playwright e2e spec asserting the three
+      metrics, the metric explanations (JA by default and EN via the toggle),
+      and the multi-accuracy comparison; both READMEs document the feature.
+      - `frontend/src/i18n/messages.ts`, `frontend/src/pages/AccuracyPage.tsx`,
+        `frontend/src/App.tsx`, `frontend/src/pages/HomePage.tsx`,
+        `frontend/src/styles.css`, `frontend/src/pages/AccuracyPage.test.tsx`,
+        `frontend/e2e/accuracy.spec.ts`, `README.md`, `README.ja.md`.
+- _Requirements: Model accuracy / backtest 2, 4, 5, 6_

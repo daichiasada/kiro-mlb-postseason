@@ -101,7 +101,36 @@ export type MessageKey =
   | 'status.scheduled'
   | 'status.in_progress'
   | 'status.final'
-  | 'team.unknown';
+  | 'team.unknown'
+  | 'accuracy.nav'
+  | 'accuracy.pageTitle'
+  | 'accuracy.intro'
+  | 'accuracy.region'
+  | 'accuracy.metric.hitRate'
+  | 'accuracy.metric.hitRate.def'
+  | 'accuracy.metric.brier'
+  | 'accuracy.metric.brier.def'
+  | 'accuracy.metric.calibration'
+  | 'accuracy.metric.calibration.def'
+  | 'accuracy.definitionsTitle'
+  | 'accuracy.table.accuracy'
+  | 'accuracy.table.sampleCount'
+  | 'accuracy.table.season'
+  | 'accuracy.table.hitRate'
+  | 'accuracy.table.brier'
+  | 'accuracy.season.combined'
+  | 'accuracy.sliderCompareTitle'
+  | 'accuracy.sliderCompareSummary'
+  | 'accuracy.calibrationTitle'
+  | 'accuracy.calibrationSummary'
+  | 'accuracy.calibration.bucket'
+  | 'accuracy.calibration.predicted'
+  | 'accuracy.calibration.empirical'
+  | 'accuracy.calibration.count'
+  | 'accuracy.calibration.empty'
+  | 'accuracy.calibration.binLabel'
+  | 'accuracy.backToBracket'
+  | 'accuracy.methodology';
 
 export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
   en: {
@@ -198,6 +227,43 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     // Unknown/preview team ids (not in the TEAMS map) must NEVER leak a raw
     // "Team <id>" string; show a clear placeholder instead.
     'team.unknown': 'TBD (#{id})',
+    'accuracy.nav': 'Model accuracy',
+    'accuracy.pageTitle': 'Model accuracy / backtest',
+    'accuracy.intro':
+      'How well did the deterministic prediction model call completed series? These metrics are computed entirely in your browser by replaying the bundled 2024 and 2025 postseason seed data through the model. No backend, no network, and no Amazon Bedrock call is involved — the numbers are fully deterministic.',
+    'accuracy.region': 'Model accuracy and backtest results',
+    'accuracy.metric.hitRate': 'Hit rate',
+    'accuracy.metric.hitRate.def':
+      'The fraction of game-by-game snapshots where the team the model favored turned out to be the eventual series winner. Higher is better; range 0 to 1.',
+    'accuracy.metric.brier': 'Brier score',
+    'accuracy.metric.brier.def':
+      'The mean squared error between the predicted probability of the eventual series winner and 1. Range 0 to 1, lower is better, and 0 is a perfect score.',
+    'accuracy.metric.calibration': 'Calibration',
+    'accuracy.metric.calibration.def':
+      'Groups predictions into probability buckets and compares the mean predicted probability in each bucket to the actual win rate observed in that bucket. A well-calibrated model has predicted and empirical rates that match.',
+    'accuracy.definitionsTitle': 'Metric definitions',
+    'accuracy.table.accuracy': 'Accuracy',
+    'accuracy.table.sampleCount': 'Samples',
+    'accuracy.table.season': 'Season',
+    'accuracy.table.hitRate': 'Hit rate',
+    'accuracy.table.brier': 'Brier score',
+    'accuracy.season.combined': 'Combined',
+    'accuracy.sliderCompareTitle': 'Comparison across accuracy settings',
+    'accuracy.sliderCompareSummary':
+      'Hit rate and Brier score for each accuracy setting ({accuracies}) across the 2024 season, the 2025 season, and the two combined.',
+    'accuracy.calibrationTitle': 'Calibration (accuracy {accuracy}, combined 2024 + 2025)',
+    'accuracy.calibrationSummary':
+      'Per-bucket calibration at accuracy {accuracy}: each row shows the favorite-probability bucket, how many predictions fell in it, the mean predicted probability, and the empirical win rate.',
+    'accuracy.calibration.bucket': 'Probability bucket',
+    'accuracy.calibration.predicted': 'Mean predicted',
+    'accuracy.calibration.empirical': 'Empirical win rate',
+    'accuracy.calibration.count': 'Predictions',
+    'accuracy.calibration.empty': 'No predictions',
+    'accuracy.calibration.binLabel':
+      'Bucket {lower} to {upper}: {count} predictions, mean predicted {predicted}, empirical win rate {empirical}.',
+    'accuracy.backToBracket': '← Back to the bracket',
+    'accuracy.methodology':
+      'Methodology: for each completed series the model predicts at the end of every game (game 1, game 2, and so on), using only the games played so far. Each prediction is scored against the team that actually won the series. The favorite probability is always clamped to the 50%–95% range the model emits.',
   },
   ja: {
     'app.title': 'MLB Postseason Pulse',
@@ -293,6 +359,43 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     // 未知／プレビューのチームID（TEAMSマップに無い）で生の "Team <id>" を
     // 絶対に表示しないためのプレースホルダー。
     'team.unknown': '未定 (#{id})',
+    'accuracy.nav': 'モデル精度',
+    'accuracy.pageTitle': 'モデル精度 / バックテスト',
+    'accuracy.intro':
+      '決定論的な予測モデルは、終了したシリーズをどれだけ正しく当てられたのでしょうか。これらの指標は、収録済みの2024・2025年ポストシーズンのシードデータをモデルで再生して、すべてブラウザー内で算出しています。バックエンドもネットワークも、Amazon Bedrock の呼び出しも一切使いません。数値は完全に決定論的です。',
+    'accuracy.region': 'モデル精度とバックテスト結果',
+    'accuracy.metric.hitRate': '的中率',
+    'accuracy.metric.hitRate.def':
+      '試合ごとのスナップショットのうち、モデルが優勢とみなしたチームが最終的にシリーズを制した割合です。高いほど良く、範囲は0〜1です。',
+    'accuracy.metric.brier': 'ブライアスコア',
+    'accuracy.metric.brier.def':
+      '最終的なシリーズ勝者に対して予測した確率と1との平均二乗誤差です。範囲は0〜1で、低いほど良く、0が完璧なスコアです。',
+    'accuracy.metric.calibration': 'キャリブレーション',
+    'accuracy.metric.calibration.def':
+      '予測を確率のバケットにグループ分けし、各バケットの平均予測確率と、そのバケットで実際に観測された勝率を比較します。よく較正されたモデルでは、予測確率と実測勝率が一致します。',
+    'accuracy.definitionsTitle': '指標の定義',
+    'accuracy.table.accuracy': '精度',
+    'accuracy.table.sampleCount': 'サンプル数',
+    'accuracy.table.season': 'シーズン',
+    'accuracy.table.hitRate': '的中率',
+    'accuracy.table.brier': 'ブライアスコア',
+    'accuracy.season.combined': '合算',
+    'accuracy.sliderCompareTitle': '精度設定ごとの比較',
+    'accuracy.sliderCompareSummary':
+      '各精度設定（{accuracies}）における、2024年・2025年・両シーズン合算の的中率とブライアスコアです。',
+    'accuracy.calibrationTitle': 'キャリブレーション（精度 {accuracy}、2024 + 2025 合算）',
+    'accuracy.calibrationSummary':
+      '精度 {accuracy} でのバケットごとのキャリブレーション: 各行は優勢確率のバケット、その中に入った予測数、平均予測確率、実測勝率を示します。',
+    'accuracy.calibration.bucket': '確率バケット',
+    'accuracy.calibration.predicted': '平均予測',
+    'accuracy.calibration.empirical': '実測勝率',
+    'accuracy.calibration.count': '予測数',
+    'accuracy.calibration.empty': '予測なし',
+    'accuracy.calibration.binLabel':
+      'バケット {lower}〜{upper}: 予測数 {count}、平均予測 {predicted}、実測勝率 {empirical}。',
+    'accuracy.backToBracket': '← トーナメント表に戻る',
+    'accuracy.methodology':
+      '手法: 終了した各シリーズについて、モデルは毎試合の終了時点（第1戦、第2戦…）で、それまでに行われた試合だけを使って予測します。各予測は実際にシリーズを制したチームに対して採点されます。優勢確率は常にモデルが出力する50%〜95%の範囲にクランプされます。',
   },
 };
 

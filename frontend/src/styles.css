@@ -902,3 +902,92 @@ body {
     overflow-wrap: anywhere;
   }
 }
+
+/* ---- Model accuracy / backtest page ---- */
+.app__accuracy-link {
+  align-self: center;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+}
+.app__accuracy-link:hover {
+  text-decoration: underline;
+}
+.accuracy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+.accuracy__intro,
+.accuracy__methodology {
+  max-width: 70ch;
+  line-height: 1.6;
+}
+.accuracy__def-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+  max-width: 80ch;
+}
+.accuracy__def-list dt {
+  font-weight: 700;
+}
+.accuracy__def-list dd {
+  margin: 0;
+  line-height: 1.5;
+}
+.accuracy__table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 48rem;
+}
+.accuracy__table th,
+.accuracy__table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+.accuracy__caption {
+  caption-side: top;
+  text-align: left;
+  color: #475569;
+  margin-bottom: 0.4rem;
+  max-width: 70ch;
+}
+.accuracy__bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.accuracy__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.accuracy__bar-bucket {
+  min-width: 5.5rem;
+  font-weight: 600;
+}
+.accuracy__bar-meta {
+  color: #334155;
+}
+.accuracy__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

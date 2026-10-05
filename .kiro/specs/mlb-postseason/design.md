@@ -596,3 +596,69 @@ deploys in one command (requires active AWS credentials).
   deterministic templated fallback keeps `/prediction` returning HTTP 200 with a
   localized narrative; the operator should verify model access on redeploy for
   live generation from every selectable model.
+
+## Model accuracy / backtest (Issue #16)
+
+### Module boundary: `predict()` moved to `@mlb/shared`
+
+The pure prediction logic now lives in `shared/src/predict.ts` and is
+re-exported by `backend/src/predict/model.ts` with no behavior change, so the
+frontend and the backtest engine can import `predict()` without pulling in any
+backend/AWS code. Every existing backend import path and test is unchanged
+(prediction is byte-identical: clamp `[0.5, 0.95]`, sharpening factor
+`f = 2 * accuracy` around the 0.5 floor, 4-decimal rounding).
+
+### Pure, deterministic backtest engine (`shared/src/backtest.ts`)
+
+The engine imports ONLY `./predict.js`, `./types.js`, and the bundled seed JSON
+(`./seed/index.js`). It has no path to Bedrock, DynamoDB, or the network, which
+is the structural guarantee behind "Bedrock is not called".
+
+- **"Predict at the end of game k" semantics.** For a FINAL series with `N`
+  games (sorted by `seriesGameNumber`), for each `k` in `1..N` the engine builds
+  a PARTIAL series whose `games` are the first `k` games and whose `high.wins` /
+  `low.wins` are RECOMPUTED by counting winners among just those games (the
+  stored final win counts are not trusted). Status is `in_progress` for `k < N`
+  else `final`. It calls `predict(partial, bracket, {}, accuracy)` and compares
+  the favorite to the EVENTUAL series winner (the side with the greater final
+  win total; a decided best-of series cannot tie).
+- **Metrics.** `hitRate = mean(favoriteWasCorrect)`.
+  `brierScore = mean((probOfEventualWinner - 1)^2)`, i.e. the mean squared error
+  between the probability assigned to the team that actually won the series and
+  1 (0 is perfect, lower is better). Both are rounded to 6 decimals so expected
+  test values are stable.
+- **Calibration.** Five fixed buckets over the model's output range
+  `[0.5, 0.95]` with edges `[0.5, 0.6, 0.7, 0.8, 0.9, 0.95]` (left-inclusive,
+  last bin right-inclusive). Each bucket reports `predictedCount`,
+  `meanPredictedProbability` (mean favorite probability of its samples), and
+  `empiricalWinRate` (fraction of its samples where the favorite was correct).
+  Empty buckets report count 0 with `null` means.
+- **Aggregation.** `runMultiSeasonBacktest(accuracy, seasons=[2024,2025])` runs
+  per-season and a `combined` result recomputed over the POOLED samples (not an
+  average of per-season metrics). `runBacktestAcrossAccuracies([0,0.25,0.5,0.75,1])`
+  supports the UI comparison.
+- **Pinned numbers (accuracy 0.5).** 2024 `hitRate 0.906977` / `brier 0.134132`
+  (43 samples); 2025 `hitRate 0.744681` / `brier 0.194365` (47 samples);
+  combined `hitRate 0.822222` / `brier 0.165587` (90 samples). At `accuracy = 0`
+  every favorite probability collapses to 0.5 and `brierScore == 0.25` exactly.
+
+### Client-side computation choice (and why)
+
+The `/accuracy` page (`frontend/src/pages/AccuracyPage.tsx`) computes everything
+in a `useMemo` by calling the shared engine over the bundled seed brackets. We
+deliberately did NOT add a backend endpoint or any infra:
+
+- The backtest is a pure function of code + bundled seed JSON that already ship
+  in the frontend bundle, so a round-trip to the backend would add latency and
+  surface area for zero benefit.
+- Keeping it client-side makes the page fully deterministic and offline-capable,
+  and keeps the structural "no Bedrock / no network" guarantee visible in the
+  code (the page imports only `@mlb/shared`).
+- No new Lambda, route, IAM, or DynamoDB access is required, so CDK and the
+  deploy story are unchanged.
+
+The page renders a region landmark, the localized metric definitions, the
+multi-accuracy comparison table (hit rate + Brier for 2024 / 2025 / combined
+across `[0,0.25,0.5,0.75,1]`), and an accessible per-bucket calibration display
+(CSS bars plus per-row `aria-label`s and a caption). A visible localized nav
+link from the home header (`accuracy.nav`) reaches it in every season.

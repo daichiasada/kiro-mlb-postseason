@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Bracket } from '@mlb/shared';
 import { isPredictable } from '@mlb/shared';
 import { getBracket } from '../api';
@@ -165,6 +165,9 @@ export function HomePage() {
           </div>
         </div>
         <LanguageToggle />
+        <Link className="app__accuracy-link" to="/accuracy">
+          {t('accuracy.nav')}
+        </Link>
         <img className="app__hero" src={hero} alt={t('app.heroAlt')} />
       </header>
 

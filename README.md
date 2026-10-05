@@ -145,6 +145,40 @@ regular-season win pct (or "Not available" when unknown), so the basis is
 explainable. Only the win-pct signal is wired today; there is no Pythagorean
 (run-differential) or last-10 signal.
 
+### Model accuracy / backtest
+
+A client-side **Model accuracy** page (at `/accuracy`, reachable from a nav link
+in the header on every season) shows how well the deterministic prediction model
+called the **completed** 2024 and 2025 postseasons. It is backed by a pure,
+deterministic **backtest engine** in `@mlb/shared` that replays the bundled seed
+brackets through the same `predict()` the app uses.
+
+- **Deterministic, seed-only.** The engine imports only pure shared code and the
+  bundled seed JSON (2024 / 2025). The page computes everything **client-side**
+  in the browser — there is **no backend endpoint and no infrastructure
+  change** — so the numbers are reproducible and the exact `hitRate` /
+  `brierScore` at a known accuracy are pinned in unit tests.
+- **Amazon Bedrock is NOT called.** The backtest never touches Bedrock,
+  DynamoDB, or the network; the engine structurally cannot reach them (it only
+  imports pure code + seed data).
+- **"Predict at the end of game k".** For each completed series the model
+  predicts after every game (game 1, game 2, …) using only the games played so
+  far, and each prediction is scored against the team that actually won the
+  series. The page compares results across the accuracy settings
+  `0, 0.25, 0.5, 0.75, 1` for 2024, 2025, and the two combined.
+
+**Metric definitions** (shown on the page, localized EN/JA):
+
+- **Hit rate** — the fraction of game-by-game snapshots where the team the model
+  favored was the eventual series winner. Higher is better; range 0 to 1.
+- **Brier score** — the **mean squared error between the predicted probability of
+  the eventual series winner and 1**. Range 0 to 1, **lower is better**, and **0
+  is a perfect score**.
+- **Calibration** — **groups predictions into probability buckets and compares
+  the mean predicted probability in each bucket to the actual win rate** observed
+  in that bucket. A well-calibrated model has predicted and empirical rates that
+  match.
+
 ### Finished series: prediction turned OFF
 
 Even within the current, predictable season, a series that has already finished

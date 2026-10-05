@@ -499,3 +499,45 @@ the `AUTO_REFRESH_INTERVAL_MS` constant), and `frontend/src/pages/HomePage.tsx`
 8. WHEN a background refresh resolves AFTER the user has switched seasons THEN
    the system SHALL ignore the stale result (guarded by the requested season),
    so a late refresh never overwrites the newly selected season's bracket.
+
+## Requirement: Model accuracy / backtest (Issue #16)
+
+**User story:** As a visitor who sees an AI win/loss prediction, I want to see
+how accurate the underlying prediction model actually was on completed seasons,
+with the metrics clearly defined, so that I can judge how much to trust it.
+
+### Acceptance criteria
+
+1. The system SHALL provide a deterministic, seed-only backtest of the
+   prediction model over the bundled 2024 and 2025 postseason brackets. The
+   backtest SHALL replay each completed series game-by-game ("predict at the end
+   of game k" using only the games played so far) and score the model's favorite
+   probability against the team that actually won the series. The exact
+   `hitRate` and `brierScore` values at a known accuracy SHALL be pinned in unit
+   tests so the result is reproducible and cannot silently drift.
+2. The system SHALL define the metrics in the UI (localized EN + JA) and in both
+   READMEs:
+   - **Hit rate** — the fraction of game-by-game snapshots where the favored
+     team was the eventual series winner (higher is better; range 0..1).
+   - **Brier score** — the mean squared error between the predicted probability
+     of the eventual series winner and 1 (range 0..1, lower is better, 0 is
+     perfect).
+   - **Calibration** — groups predictions into probability buckets and compares
+     the mean predicted probability in each bucket to the actual win rate
+     observed in that bucket.
+3. The system SHALL NOT call Amazon Bedrock (or any network/AWS service) to
+   produce the backtest. The engine lives in `@mlb/shared`, imports only pure
+   code and the bundled seed JSON, and therefore structurally cannot reach
+   Bedrock, DynamoDB, or the network.
+4. WHEN the user opens `/accuracy` THEN the system SHALL render a Model accuracy
+   page showing hit rate, Brier score, and a calibration display, plus a
+   comparison of hit rate and Brier score across the fixed accuracy settings
+   `[0, 0.25, 0.5, 0.75, 1]` for the 2024 season, the 2025 season, and the two
+   combined. The calibration display SHALL carry accessible text (per-bucket
+   `aria-label`s and a caption summary) so it is not purely visual.
+5. The system SHALL compute all accuracy metrics CLIENT-SIDE in the SPA by
+   importing the shared backtest engine and the bundled seed brackets directly;
+   there SHALL be no new backend endpoint and no infrastructure change.
+6. The system SHALL expose a visible, localized navigation link to the accuracy
+   page from the main UI that is reachable in every season (including the
+   results-only 2024/2025 seasons).
