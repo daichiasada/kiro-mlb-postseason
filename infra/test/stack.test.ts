@@ -134,6 +134,19 @@ describe('MlbPostseasonStack', () => {
     });
   });
 
+  it('throttles the HTTP API default stage to bound Bedrock cost exposure (Issue #23)', () => {
+    // The implicit `$default` stage carries default-route throttling so the
+    // public, no-auth /prediction endpoint cannot be hammered into runaway
+    // Bedrock cost. Assert the exact steady-state rate (20 req/s) and burst (40)
+    // configured in the stack.
+    template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
+      DefaultRouteSettings: Match.objectLike({
+        ThrottlingRateLimit: 20,
+        ThrottlingBurstLimit: 40,
+      }),
+    });
+  });
+
   it('routes CloudFront 403 and 404 responses to the SPA index for deep links', () => {
     template.hasResourceProperties('AWS::CloudFront::Distribution', {
       DistributionConfig: Match.objectLike({

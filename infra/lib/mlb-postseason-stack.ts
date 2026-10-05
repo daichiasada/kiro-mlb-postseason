@@ -241,6 +241,27 @@ export class MlbPostseasonStack extends Stack {
       integration: gameDetailIntegration,
     });
 
+    // ---- HTTP API throttling (Issue #23) ---------------------------------
+    // /prediction is a public, no-auth endpoint whose billable branch invokes
+    // Amazon Bedrock, so an unbounded request rate is an open-ended cost risk.
+    // Apply default-route throttling to the implicit `$default` stage: a
+    // steady-state rate of 20 requests/second with a burst of 40. These values
+    // bound how fast the endpoint can be hammered into runaway Bedrock cost
+    // while sitting well above any normal browsing pattern (a visitor loading
+    // the bracket, prediction, and a few game details), so legitimate traffic
+    // is unaffected. The implicit default stage is created by apigwv2.HttpApi,
+    // so we reach its L1 CfnStage via the escape hatch to set DefaultRouteSettings.
+    //
+    // Prediction cache hit/miss and Bedrock InvokeModel metrics are emitted by
+    // the backend via Embedded Metric Format (EMF) stdout logs (FEAT-002), so
+    // no cloudwatch:PutMetricData IAM is required here.
+    const defaultStage = httpApi.defaultStage!.node
+      .defaultChild as apigwv2.CfnStage;
+    defaultStage.defaultRouteSettings = {
+      throttlingRateLimit: 20,
+      throttlingBurstLimit: 40,
+    };
+
     const apiUrl = httpApi.apiEndpoint;
 
     // ---- Deploy the SPA + inject the API URL -----------------------------
