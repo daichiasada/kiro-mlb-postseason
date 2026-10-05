@@ -61,6 +61,21 @@ export type MessageKey =
   | 'standings.champion'
   | 'standings.out'
   | 'standings.active'
+  | 'favorites.add'
+  | 'favorites.remove'
+  | 'favorites.marker'
+  | 'favorites.badge'
+  | 'favorites.eliminated'
+  | 'favorites.champion'
+  | 'favorites.header.title'
+  | 'favorites.header.status.leading'
+  | 'favorites.header.status.trailing'
+  | 'favorites.header.status.tied'
+  | 'favorites.header.status.inProgress'
+  | 'favorites.header.status.scheduled'
+  | 'favorites.header.status.nextGame'
+  | 'favorites.filter.label'
+  | 'favorites.filter.empty'
   | 'prediction.region'
   | 'prediction.title'
   | 'prediction.idleHint'
@@ -198,6 +213,22 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'standings.champion': 'Champion',
     'standings.out': 'Out ({round})',
     'standings.active': 'Active ({round})',
+    'favorites.add': 'Add {team} to favorites',
+    'favorites.remove': 'Remove {team} from favorites',
+    'favorites.marker': "Favorite team's series",
+    'favorites.badge': 'Favorite',
+    'favorites.eliminated': 'Eliminated',
+    'favorites.champion': 'Champion',
+    'favorites.header.title': 'Your teams',
+    'favorites.header.status.leading': '{round}, leading {wins}-{losses}',
+    'favorites.header.status.trailing': '{round}, trailing {wins}-{losses}',
+    'favorites.header.status.tied': '{round}, tied {wins}-{losses}',
+    'favorites.header.status.inProgress': '{round}, {wins}-{losses}',
+    'favorites.header.status.scheduled': '{round}, starts soon',
+    'favorites.header.status.nextGame': 'Next game {time}',
+    'favorites.filter.label': 'Show only my teams',
+    'favorites.filter.empty':
+      'None of your favorite teams have a series in this bracket.',
     'prediction.region': 'Win/loss prediction',
     'prediction.title': 'AI Prediction',
     'prediction.idleHint':
@@ -349,6 +380,22 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'standings.champion': '優勝',
     'standings.out': '敗退（{round}）',
     'standings.active': '勝ち残り（{round}）',
+    'favorites.add': '{team}をお気に入りに追加',
+    'favorites.remove': '{team}をお気に入りから外す',
+    'favorites.marker': 'お気に入りチームのシリーズ',
+    'favorites.badge': 'お気に入り',
+    'favorites.eliminated': '敗退',
+    'favorites.champion': '優勝',
+    'favorites.header.title': 'あなたのチーム',
+    'favorites.header.status.leading': '{round}、{wins}-{losses}でリード',
+    'favorites.header.status.trailing': '{round}、{wins}-{losses}でビハインド',
+    'favorites.header.status.tied': '{round}、{wins}-{losses}で五分',
+    'favorites.header.status.inProgress': '{round}、{wins}-{losses}',
+    'favorites.header.status.scheduled': '{round}、まもなく開始',
+    'favorites.header.status.nextGame': '次の試合 {time}',
+    'favorites.filter.label': 'お気に入りのチームだけ表示',
+    'favorites.filter.empty':
+      'お気に入りのチームのシリーズはこのトーナメント表にありません。',
     'prediction.region': '勝敗予測',
     'prediction.title': 'AI予測',
     'prediction.idleHint':

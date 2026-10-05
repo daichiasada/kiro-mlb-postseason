@@ -10,6 +10,7 @@ import {
   teamAbbr,
   teamName,
 } from './index';
+import { MESSAGES } from './messages';
 
 describe('i18n translator', () => {
   it('looks up a key for both languages', () => {
@@ -38,6 +39,27 @@ describe('i18n translator', () => {
     const t = createTranslator('en');
     // @ts-expect-error - exercising the defensive missing-key path.
     expect(t('does.not.exist')).toBe('does.not.exist');
+  });
+});
+
+describe('message dictionary parity', () => {
+  it('defines exactly the same keys in both en and ja (incl. favorites keys)', () => {
+    const enKeys = Object.keys(MESSAGES.en).sort();
+    const jaKeys = Object.keys(MESSAGES.ja).sort();
+    expect(jaKeys).toEqual(enKeys);
+  });
+
+  it('has non-empty values for every key in both languages', () => {
+    for (const lang of ['en', 'ja'] as const) {
+      for (const [key, value] of Object.entries(MESSAGES[lang])) {
+        expect(value, `${lang}:${key}`).toBeTruthy();
+      }
+    }
+  });
+
+  it('includes the Eliminated / 敗退 favorites string', () => {
+    expect(MESSAGES.en['favorites.eliminated']).toBe('Eliminated');
+    expect(MESSAGES.ja['favorites.eliminated']).toBe('敗退');
   });
 });
 

@@ -44,3 +44,18 @@ export const sampleBracket: Bracket = {
   updatedAt: '2024-10-31T00:00:00.000Z',
   series: [wildCardSeries, worldSeries],
 };
+
+/**
+ * An in-progress NL Championship Series: Mets (121) lead Brewers (158) 1-0.
+ * Used to exercise the "active but not final" favorite path.
+ */
+export const inProgressSeries: Series = {
+  id: '2024-nl-championship-121-158',
+  round: 'Championship Series',
+  league: 'NL',
+  high: { teamId: 121, wins: 1 },
+  low: { teamId: 158, wins: 0 },
+  bestOf: 7,
+  status: 'in_progress',
+  games: [],
+};

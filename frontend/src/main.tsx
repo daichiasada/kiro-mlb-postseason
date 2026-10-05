@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { I18nProvider } from './i18n';
 import { ThemeProvider } from './ThemeContext';
+import { FavoritesProvider } from './FavoritesContext';
 import './styles.css';
 
 const container = document.getElementById('root');
@@ -33,7 +34,15 @@ createRoot(container).render(
       */}
       <ThemeProvider>
         <I18nProvider>
-          <App />
+          {/*
+            Favorites live inside the i18n context so the (FEAT-002) favorite
+            UI - star toggles, the header pin, and the filter - can translate.
+            The provider hydrates the chosen team ids from localStorage
+            ('mlb.favorites') and persists changes.
+          */}
+          <FavoritesProvider>
+            <App />
+          </FavoritesProvider>
         </I18nProvider>
       </ThemeProvider>
     </BrowserRouter>
