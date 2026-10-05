@@ -59,3 +59,49 @@ export const inProgressSeries: Series = {
   status: 'in_progress',
   games: [],
 };
+
+/**
+ * A predictable (current-season) in-progress series WITH games: Mets (121)
+ * lead Brewers (158) 2-1 after three played games. Used to exercise the
+ * win-probability overlay, which only renders for a predictable season with
+ * games.
+ */
+export const predictableInProgressSeries: Series = {
+  id: '2026-nl-championship-121-158',
+  round: 'Championship Series',
+  league: 'NL',
+  high: { teamId: 121, wins: 2 },
+  low: { teamId: 158, wins: 1 },
+  bestOf: 7,
+  status: 'in_progress',
+  games: [
+    {
+      gamePk: 800001,
+      date: '2026-10-12',
+      away: { teamId: 158, score: 2, isWinner: false },
+      home: { teamId: 121, score: 5, isWinner: true },
+      seriesGameNumber: 1,
+    },
+    {
+      gamePk: 800002,
+      date: '2026-10-13',
+      away: { teamId: 158, score: 4, isWinner: true },
+      home: { teamId: 121, score: 1, isWinner: false },
+      seriesGameNumber: 2,
+    },
+    {
+      gamePk: 800003,
+      date: '2026-10-15',
+      away: { teamId: 121, score: 6, isWinner: true },
+      home: { teamId: 158, score: 3, isWinner: false },
+      seriesGameNumber: 3,
+    },
+  ],
+};
+
+/** A predictable (2026) bracket wrapping the in-progress series above. */
+export const predictableBracket: Bracket = {
+  season: 2026,
+  updatedAt: '2026-10-15T00:00:00.000Z',
+  series: [predictableInProgressSeries],
+};

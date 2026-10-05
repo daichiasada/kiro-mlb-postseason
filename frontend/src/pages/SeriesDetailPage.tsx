@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import type { Bracket, GameResult, Series } from '@mlb/shared';
 import { getBracket } from '../api';
 import { parseSeasonParam } from '../seasonRoute';
+import { isPredictable } from '@mlb/shared';
 import { clinchWins } from '../bracketLayout';
+import { SeriesFlowCharts } from '../components/SeriesFlowCharts';
 import {
   roundName,
   teamAbbr,
@@ -104,7 +106,13 @@ export function SeriesDetailPage() {
       )}
 
       {state.status === 'ready' && series && (
-        <SeriesDetail t={t} lang={lang} series={series} season={season} />
+        <SeriesDetail
+          t={t}
+          lang={lang}
+          series={series}
+          season={season}
+          bracket={state.bracket}
+        />
       )}
     </div>
   );
@@ -115,11 +123,13 @@ function SeriesDetail({
   lang,
   series,
   season,
+  bracket,
 }: {
   t: TFn;
   lang: Lang;
   series: Series;
   season: number;
+  bracket: Bracket;
 }) {
   const timeZone = resolveTimeZone();
   const needed = clinchWins(series.bestOf);
@@ -170,6 +180,13 @@ function SeriesDetail({
         <DetailTeam t={t} teamId={series.high.teamId} wins={series.high.wins} isWinner={highWon} />
         <DetailTeam t={t} teamId={series.low.teamId} wins={series.low.wins} isWinner={lowWon} />
       </div>
+
+      <SeriesFlowCharts
+        series={series}
+        bracket={bracket}
+        season={season}
+        predictable={isPredictable(season)}
+      />
 
       <h2 className="detail__games-title">{t('detail.gameByGame')}</h2>
       {series.games.length > 0 ? (

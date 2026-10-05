@@ -115,6 +115,26 @@ export type MessageKey =
   | 'detail.game'
   | 'detail.at'
   | 'detail.noGames'
+  | 'flow.heading'
+  | 'flow.chart.diff.title'
+  | 'flow.chart.trend.title'
+  | 'flow.chart.prob.title'
+  | 'flow.table.caption.diff'
+  | 'flow.table.caption.trend'
+  | 'flow.table.caption.prob'
+  | 'flow.table.game'
+  | 'flow.table.away'
+  | 'flow.table.home'
+  | 'flow.table.diff'
+  | 'flow.table.winner'
+  | 'flow.table.highWins'
+  | 'flow.table.lowWins'
+  | 'flow.table.probability'
+  | 'flow.winner.won'
+  | 'flow.winner.tie'
+  | 'flow.winner.inProgress'
+  | 'flow.showTable'
+  | 'flow.hideTable'
   | 'gametime.tbd'
   | 'gametime.startLabel'
   | 'ics.add'
@@ -272,6 +292,27 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'detail.game': 'Game {n}',
     'detail.at': '@',
     'detail.noGames': 'No game detail is available for this series.',
+    'flow.heading': 'Series flow',
+    'flow.chart.diff.title': 'Run differential by game',
+    'flow.chart.trend.title': 'Cumulative series wins',
+    'flow.chart.prob.title': 'Predicted win probability by game',
+    'flow.table.caption.diff': 'Run differential and winner for each game.',
+    'flow.table.caption.trend': 'Cumulative series wins for each team after every game.',
+    'flow.table.caption.prob':
+      'Predicted favorite and win probability after every game.',
+    'flow.table.game': 'Game',
+    'flow.table.away': 'Away',
+    'flow.table.home': 'Home',
+    'flow.table.diff': 'Run differential',
+    'flow.table.winner': 'Winner',
+    'flow.table.highWins': '{team} wins',
+    'flow.table.lowWins': '{team} wins',
+    'flow.table.probability': 'Favorite win probability',
+    'flow.winner.won': '{team} won',
+    'flow.winner.tie': 'Tie',
+    'flow.winner.inProgress': 'In progress',
+    'flow.showTable': 'Show data table',
+    'flow.hideTable': 'Hide data table',
     'gametime.tbd': 'Time TBD',
     'gametime.startLabel': 'First pitch',
     'ics.add': 'Add to calendar',
@@ -439,6 +480,26 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'detail.game': '第{n}戦',
     'detail.at': '@',
     'detail.noGames': 'このシリーズの試合詳細はありません。',
+    'flow.heading': 'シリーズの流れ',
+    'flow.chart.diff.title': '試合ごとの得点差',
+    'flow.chart.trend.title': 'シリーズ累計勝利数',
+    'flow.chart.prob.title': '試合ごとの予測勝利確率',
+    'flow.table.caption.diff': '各試合の得点差と勝者。',
+    'flow.table.caption.trend': '各試合終了時点での両チームのシリーズ累計勝利数。',
+    'flow.table.caption.prob': '各試合終了時点での優勢チームと勝利確率。',
+    'flow.table.game': '試合',
+    'flow.table.away': 'ビジター',
+    'flow.table.home': 'ホーム',
+    'flow.table.diff': '得点差',
+    'flow.table.winner': '勝者',
+    'flow.table.highWins': '{team} の勝利数',
+    'flow.table.lowWins': '{team} の勝利数',
+    'flow.table.probability': '優勢チームの勝利確率',
+    'flow.winner.won': '{team} が勝利',
+    'flow.winner.tie': '引き分け',
+    'flow.winner.inProgress': '進行中',
+    'flow.showTable': 'データ表を表示',
+    'flow.hideTable': 'データ表を隠す',
     'gametime.tbd': '時刻未定',
     'gametime.startLabel': '試合開始',
     'ics.add': 'カレンダーに追加',

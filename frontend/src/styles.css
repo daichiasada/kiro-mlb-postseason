@@ -827,6 +827,119 @@ body {
   color: var(--muted);
 }
 
+/* Series flow charts (Issue #24) */
+.series-flow {
+  margin: 1.25rem 0 0;
+}
+
+.series-flow__heading {
+  margin: 1rem 0 0.6rem;
+  font-size: 1rem;
+  color: var(--heading);
+}
+
+.series-flow__figure {
+  margin: 0 0 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.series-flow__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.series-flow__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+/* Axes/gridlines/frames reference theme vars so they are legible in both
+   light and dark palettes. */
+.series-flow__axis line {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.series-flow__tick {
+  fill: var(--muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.series-flow__bar-label {
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.series-flow__line {
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.series-flow__line--prob {
+  stroke: var(--focus-ring);
+}
+
+.series-flow__dot {
+  fill: var(--focus-ring);
+}
+
+.series-flow__table-toggle {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--heading);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.series-flow__table-toggle:hover {
+  background: var(--surface-3);
+}
+
+.series-flow__table-wrap {
+  margin-top: 0.6rem;
+  overflow-x: auto;
+}
+
+.series-flow__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.series-flow__table caption {
+  text-align: left;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.series-flow__table th,
+.series-flow__table td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  color: var(--ink);
+}
+
+.series-flow__table thead th {
+  background: var(--surface-3);
+  color: var(--heading);
+}
+
 /* Standings */
 .standings,
 .prediction {
