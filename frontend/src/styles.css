@@ -64,6 +64,10 @@
   /* Prediction bar track. */
   --bar-track: #e2e8f0;
 
+  /* Keyboard focus ring. A high-contrast blue that is legible on the light
+     surfaces; the dark palette overrides it with a brighter tone. */
+  --focus-ring: #1d4ed8;
+
   color-scheme: light;
 }
 
@@ -120,11 +124,30 @@
 
   --bar-track: #2b3647;
 
+  /* Brighter ring so the keyboard focus outline stays legible on the dark
+     surfaces. */
+  --focus-ring: #93c5fd;
+
   color-scheme: dark;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Theme-aware keyboard focus ring. Only shown for keyboard users
+   (:focus-visible) so mouse clicks stay clean. Legible in light and dark via
+   the --focus-ring variable. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The bracket series cards are focusable (roving tabindex); give the focused
+   card a slightly stronger ring so keyboard position is obvious. */
+.series-card:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 body {

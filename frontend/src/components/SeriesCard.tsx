@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useId, useState, type KeyboardEvent, type Ref } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Series, SeriesTeam } from '@mlb/shared';
 import { TeamBadge } from './TeamBadge';
 import { clinchWins, seriesLeaderId } from '../bracketLayout';
@@ -25,6 +25,20 @@ interface SeriesCardProps {
    * cannot trigger a prediction the backend refuses. Defaults to true.
    */
   predictable?: boolean;
+  /**
+   * Roving-tabindex value for the card <article>: `0` for the single active
+   * (roving) card, `-1` for every other card. Defaults to `0` when the card is
+   * used standalone (e.g. in isolation tests) so it stays reachable.
+   */
+  tabIndex?: number;
+  /** Ref to the card <article> so the bracket can move focus programmatically. */
+  cardRef?: Ref<HTMLElement>;
+  /**
+   * Arrow-key handler owned by the bracket (it knows the 2D column/row layout).
+   * Receives the raw event so the bracket can move the roving focus. Enter/Space
+   * activation is handled inside the card itself.
+   */
+  onCardKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
 }
 
 function TeamRow({
@@ -57,12 +71,50 @@ export function SeriesCard({
   selected = false,
   onSelect,
   predictable = true,
+  tabIndex = 0,
+  cardRef,
+  onCardKeyDown,
 }: SeriesCardProps) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const leaderId = seriesLeaderId(series);
   const needed = clinchWins(series.bestOf);
   const isFinal = series.status === 'final';
   const hasGames = series.games.length > 0;
+
+  const detailPath = `/season/${season}/series/${encodeURIComponent(series.id)}`;
+  // The card can be activated for prediction only when the mouse affordance
+  // would also appear (predictable, non-final, with an onSelect handler).
+  const canPredict = Boolean(onSelect) && predictable && !isFinal;
+
+  /**
+   * Keyboard model on the card <article>:
+   *  - Enter/Space activates the card (open detail for a FINAL series, or
+   *    select a predictable series) mirroring the mouse affordance.
+   *  - Arrow/Home/End keys are delegated to the bracket's roving handler.
+   * Events that originate on an inner control (the toggle button, detail link,
+   * or predict button) are ignored so those keep their native behavior and the
+   * card never double-fires.
+   */
+  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      if (isFinal) {
+        event.preventDefault();
+        navigate(detailPath);
+        return;
+      }
+      if (canPredict) {
+        event.preventDefault();
+        onSelect?.(series.id);
+        return;
+      }
+      return;
+    }
+    onCardKeyDown?.(event);
+  }
 
   // Game-by-game detail is collapsed by default so every card starts at a
   // consistent compact height (the primary fix for the uneven "gatagata"
@@ -79,11 +131,18 @@ export function SeriesCard({
 
   return (
     <article
+      ref={cardRef}
       className={classes.join(' ')}
       data-series-id={series.id}
-      aria-label={t('series.region', {
+      tabIndex={tabIndex}
+      onKeyDown={handleKeyDown}
+      aria-label={t('series.cardLabel', {
         high: teamName(t, series.high.teamId),
         low: teamName(t, series.low.teamId),
+        status: statusLabel(t, series.status),
+        bestOf: series.bestOf,
+        highWins: series.high.wins,
+        lowWins: series.low.wins,
       })}
     >
       <header className="series-card__header">
@@ -153,10 +212,7 @@ export function SeriesCard({
         the full game-by-game breakdown with teams, scores, winner, and result.
       */}
       {isFinal && (
-        <Link
-          className="series-card__detail-link"
-          to={`/season/${season}/series/${encodeURIComponent(series.id)}`}
-        >
+        <Link className="series-card__detail-link" to={detailPath}>
           {t('series.viewDetail')}
         </Link>
       )}

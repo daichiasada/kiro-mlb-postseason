@@ -41,10 +41,12 @@ export type MessageKey =
   | 'results.title'
   | 'results.hint'
   | 'bracket.region'
+  | 'bracket.gridLabel'
   | 'bracket.legend.al'
   | 'bracket.legend.ws'
   | 'bracket.legend.nl'
   | 'series.region'
+  | 'series.cardLabel'
   | 'series.bestOf'
   | 'series.showGames'
   | 'series.hideGames'
@@ -165,10 +167,13 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'results.hint':
       'The {season} postseason is complete. Final results are shown on the bracket; AI predictions are available only for the current season.',
     'bracket.region': 'Postseason bracket',
+    'bracket.gridLabel':
+      'Postseason bracket series. Use the arrow keys to move between series, and press Enter to open a finished series or select a series to predict.',
     'bracket.legend.al': 'American League',
     'bracket.legend.ws': 'World Series',
     'bracket.legend.nl': 'National League',
     'series.region': '{high} versus {low}',
+    'series.cardLabel': '{high} versus {low}, {status}, best of {bestOf}, {highWins}–{lowWins}',
     'series.bestOf': 'Best of {bestOf} · {highWins}–{lowWins}',
     'series.showGames': 'Show games',
     'series.hideGames': 'Hide games',
@@ -303,10 +308,13 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'results.hint':
       '{season}年のポストシーズンは終了しました。最終結果をトーナメント表に表示しています。AI予測は現在のシーズンのみ利用できます。',
     'bracket.region': 'ポストシーズンのトーナメント表',
+    'bracket.gridLabel':
+      'ポストシーズンのトーナメント表のシリーズ一覧。矢印キーでシリーズ間を移動し、Enterキーで終了したシリーズを開くか、予測するシリーズを選択します。',
     'bracket.legend.al': 'アメリカンリーグ',
     'bracket.legend.ws': 'ワールドシリーズ',
     'bracket.legend.nl': 'ナショナルリーグ',
     'series.region': '{high} 対 {low}',
+    'series.cardLabel': '{high} 対 {low}、{status}、{bestOf}試合制、{highWins}–{lowWins}',
     'series.bestOf': '{bestOf}試合制 · {highWins}–{lowWins}',
     'series.showGames': '試合を表示',
     'series.hideGames': '試合を隠す',
