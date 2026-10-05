@@ -166,6 +166,10 @@ brackets through the same `predict()` the app uses.
   far, and each prediction is scored against the team that actually won the
   series. The page compares results across the accuracy settings
   `0, 0.25, 0.5, 0.75, 1` for 2024, 2025, and the two combined.
+  - **Caveat:** each series includes a snapshot taken at the end of every game,
+    including the final, already-decided game. That last snapshot is a settled
+    outcome rather than a prediction, so the headline hit rate includes decided
+    results and overstates mid-series predictive skill.
 
 **Metric definitions** (shown on the page, localized EN/JA):
 

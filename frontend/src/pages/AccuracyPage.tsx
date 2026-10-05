@@ -121,6 +121,9 @@ export function AccuracyPage() {
         >
           <p className="accuracy__intro">{t('accuracy.intro')}</p>
           <p className="accuracy__methodology">{t('accuracy.methodology')}</p>
+          <p className="accuracy__caveat" role="note">
+            {t('accuracy.decidingGameCaveat')}
+          </p>
 
           {/* (2) Metric definitions, localized. */}
           <section

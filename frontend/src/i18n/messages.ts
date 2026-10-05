@@ -130,7 +130,8 @@ export type MessageKey =
   | 'accuracy.calibration.empty'
   | 'accuracy.calibration.binLabel'
   | 'accuracy.backToBracket'
-  | 'accuracy.methodology';
+  | 'accuracy.methodology'
+  | 'accuracy.decidingGameCaveat';
 
 export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
   en: {
@@ -264,6 +265,8 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'accuracy.backToBracket': '← Back to the bracket',
     'accuracy.methodology':
       'Methodology: for each completed series the model predicts at the end of every game (game 1, game 2, and so on), using only the games played so far. Each prediction is scored against the team that actually won the series. The favorite probability is always clamped to the 50%–95% range the model emits.',
+    'accuracy.decidingGameCaveat':
+      'Caveat: each series includes a snapshot taken at the end of every game, including the final, already-decided game. That last snapshot is a settled outcome rather than a prediction, so the headline hit rate includes decided results and overstates mid-series predictive skill.',
   },
   ja: {
     'app.title': 'MLB Postseason Pulse',
@@ -396,6 +399,8 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'accuracy.backToBracket': '← トーナメント表に戻る',
     'accuracy.methodology':
       '手法: 終了した各シリーズについて、モデルは毎試合の終了時点（第1戦、第2戦…）で、それまでに行われた試合だけを使って予測します。各予測は実際にシリーズを制したチームに対して採点されます。優勢確率は常にモデルが出力する50%〜95%の範囲にクランプされます。',
+    'accuracy.decidingGameCaveat':
+      '注意: 各シリーズには毎試合の終了時点のスナップショットが含まれ、これにはすでに勝敗が決した最終戦も含まれます。その最終スナップショットは予測ではなく確定した結果のため、ヘッドラインの的中率は確定済みの結果を含んでおり、シリーズ途中の予測能力を実際より高く見せています。',
   },
 };
 
