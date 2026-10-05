@@ -39,6 +39,15 @@ export const GAME_DETAIL_LIVE_TTL_SECONDS = 60; // 1 minute
  */
 export const PREDICTION_TTL_SECONDS = 60 * 15; // 15 minutes
 
+/**
+ * Cache lifetime for a generated OG image (SVG) and the matching share HTML.
+ * The cache key already encodes the series situation (high.wins-low.wins) and
+ * lang, so a game result update yields a different key and invalidates the
+ * cache naturally; this TTL only backstops a situation that lingers unchanged,
+ * matching the live/bracket refresh cadence (15 minutes).
+ */
+export const OG_IMAGE_TTL_SECONDS = 60 * 15; // 15 minutes
+
 export interface BracketStore {
   getCachedBracket(season: number): Promise<Bracket | undefined>;
   putCachedBracket(bracket: Bracket, ttlSeconds?: number): Promise<void>;
@@ -52,6 +61,14 @@ export interface BracketStore {
     response: PredictionResponse,
     ttlSeconds?: number,
   ): Promise<void>;
+  /**
+   * Reads a cached text payload (an SVG OG image or a share HTML document)
+   * stored under the given cache key. Returns `undefined` on a miss or when
+   * TABLE_NAME is unset. The key already carries its own type prefix (`OG#...`
+   * or `SHARE#...`), so a single pair of getters/putters serves both.
+   */
+  getCachedOgImage(cacheKey: string): Promise<string | undefined>;
+  putCachedOgImage(cacheKey: string, svg: string, ttlSeconds?: number): Promise<void>;
 }
 
 function partitionKey(season: number): string {
@@ -72,6 +89,15 @@ function gamePartitionKey(gamePk: number): string {
  * helper kept for symmetry with the other key builders.
  */
 function predictionPartitionKey(cacheKey: string): string {
+  return cacheKey;
+}
+
+/**
+ * Partition key for a cached OG image / share HTML. The cache key is already
+ * the full `OG#...`/`SHARE#...` string (see ogCacheKey), so this is an identity
+ * helper kept for symmetry with the other key builders.
+ */
+function ogImagePartitionKey(cacheKey: string): string {
   return cacheKey;
 }
 
@@ -209,6 +235,38 @@ export class DynamoBracketStore implements BracketStore {
         Item: {
           pk: predictionPartitionKey(cacheKey),
           prediction: response,
+          ttl,
+        },
+      }),
+    );
+  }
+
+  async getCachedOgImage(cacheKey: string): Promise<string | undefined> {
+    if (!this.tableName) return undefined;
+    const result = await this.doc.send(
+      new GetCommand({
+        TableName: this.tableName,
+        Key: { pk: ogImagePartitionKey(cacheKey) },
+      }),
+    );
+    const item = result.Item;
+    if (!item || typeof item.svg !== 'string') return undefined;
+    return item.svg;
+  }
+
+  async putCachedOgImage(
+    cacheKey: string,
+    svg: string,
+    ttlSeconds: number = OG_IMAGE_TTL_SECONDS,
+  ): Promise<void> {
+    if (!this.tableName) return;
+    const ttl = Math.floor(Date.now() / 1000) + ttlSeconds;
+    await this.doc.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          pk: ogImagePartitionKey(cacheKey),
+          svg,
           ttl,
         },
       }),

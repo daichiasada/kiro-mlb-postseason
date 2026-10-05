@@ -20,6 +20,7 @@ import {
   type StackProps,
   CfnOutput,
   Duration,
+  Fn,
   RemovalPolicy,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -124,10 +125,43 @@ export class MlbPostseasonStack extends Stack {
       }
     );
 
+    // The OG-image and share-HTML functions generate a deterministic SVG /
+    // crawler HTML from the shared pure builders and cache the bytes in
+    // DynamoDB. Like getGameDetail they NEVER call Bedrock, so they carry only
+    // TABLE_NAME (no BEDROCK_MODEL_ID) and get no bedrock:InvokeModel policy.
+    // SITE_ORIGIN (the CloudFront domain) is injected AFTER the distribution is
+    // created (see below) so the share HTML emits absolute canonical /
+    // OG-image / SPA URLs on the one true public origin.
+    const getOgImageFn = new lambdaNodejs.NodejsFunction(this, 'GetOgImageFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(BACKEND_HANDLERS, 'getOgImage.ts'),
+      handler: 'handler',
+      memorySize: 256,
+      timeout: Duration.seconds(15),
+      environment: {
+        TABLE_NAME: table.tableName,
+      },
+      bundling: commonBundling,
+    });
+
+    const getShareHtmlFn = new lambdaNodejs.NodejsFunction(this, 'GetShareHtmlFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(BACKEND_HANDLERS, 'getShareHtml.ts'),
+      handler: 'handler',
+      memorySize: 256,
+      timeout: Duration.seconds(15),
+      environment: {
+        TABLE_NAME: table.tableName,
+      },
+      bundling: commonBundling,
+    });
+
     // ---- IAM --------------------------------------------------------------
     table.grantReadWriteData(getBracketFn);
     table.grantReadWriteData(getPredictionFn);
     table.grantReadWriteData(getGameDetailFn);
+    table.grantReadWriteData(getOgImageFn);
+    table.grantReadWriteData(getShareHtmlFn);
 
     // Bedrock InvokeModel for the prediction function. The selectable models are
     // cross-region inference profiles (prefix `us.`): the Amazon Nova family
@@ -193,12 +227,19 @@ export class MlbPostseasonStack extends Stack {
       ],
     });
 
-    const corsOrigin = `https://${distribution.distributionDomainName}`;
-
     // ---- HTTP API ---------------------------------------------------------
+    // CORS allow-origins is a wildcard `*` rather than the specific CloudFront
+    // domain. Issue #21 adds CloudFront behaviors that forward `/og` and
+    // `/share` to THIS HTTP API, which makes the distribution depend on the
+    // API; referencing `distribution.distributionDomainName` back here (the old
+    // behavior) would then create a CloudFront<->API cyclic dependency that CDK
+    // rejects at synth. The API is a public, no-auth, read-only JSON/SVG/HTML
+    // surface and every handler already emits `Access-Control-Allow-Origin: *`,
+    // so a wildcard preflight origin is consistent and breaks the cycle without
+    // weakening anything meaningful.
     const httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
       corsPreflight: {
-        allowOrigins: [corsOrigin, 'http://localhost:5173', 'http://localhost:3000'],
+        allowOrigins: ['*'],
         allowMethods: [
           apigwv2.CorsHttpMethod.GET,
           apigwv2.CorsHttpMethod.POST,
@@ -224,6 +265,16 @@ export class MlbPostseasonStack extends Stack {
         'GetGameDetailIntegration',
         getGameDetailFn
       );
+    const ogImageIntegration =
+      new apigwv2Integrations.HttpLambdaIntegration(
+        'GetOgImageIntegration',
+        getOgImageFn
+      );
+    const shareHtmlIntegration =
+      new apigwv2Integrations.HttpLambdaIntegration(
+        'GetShareHtmlIntegration',
+        getShareHtmlFn
+      );
 
     httpApi.addRoutes({
       path: '/bracket',
@@ -239,6 +290,18 @@ export class MlbPostseasonStack extends Stack {
       path: '/game',
       methods: [apigwv2.HttpMethod.GET],
       integration: gameDetailIntegration,
+    });
+    // Issue #21: the per-series OG image (SVG) and the crawler-readable share
+    // HTML. Neither invokes Bedrock.
+    httpApi.addRoutes({
+      path: '/og',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: ogImageIntegration,
+    });
+    httpApi.addRoutes({
+      path: '/share',
+      methods: [apigwv2.HttpMethod.GET],
+      integration: shareHtmlIntegration,
     });
 
     // ---- HTTP API throttling (Issue #23) ---------------------------------
@@ -263,6 +326,58 @@ export class MlbPostseasonStack extends Stack {
     };
 
     const apiUrl = httpApi.apiEndpoint;
+
+    // ---- Share/OG routing through CloudFront (Issue #21) -----------------
+    // A social crawler fetching a share link must reach the Lambda-rendered
+    // meta tags on the SITE origin, not the SPA shell. We route by DEDICATED
+    // paths (`/og*` and `/share*`) to the HTTP API instead of User-Agent
+    // sniffing: UA sniffing is brittle (crawlers change UAs, previews from
+    // messaging apps vary) and would route the SAME SPA URL differently per
+    // client. A human who lands on `/share/...` is redirected into the SPA by
+    // the share HTML itself (meta-refresh + location.replace), so normal SPA
+    // navigation (the default behavior below) is unaffected.
+    //
+    // `httpApi.apiEndpoint` is `https://<id>.execute-api.<region>.amazonaws.com`;
+    // HttpOrigin wants just the host, so split off the domain. The origin
+    // request policy forwards the query string, and the cache policy keys on it,
+    // so `?season=&seriesId=&lang=` reach the Lambda and distinct series are
+    // cached separately.
+    const apiDomain = Fn.select(2, Fn.split('/', apiUrl));
+    const apiOrigin = new cloudfrontOrigins.HttpOrigin(apiDomain);
+    // A cache policy that INCLUDES the query string in the cache key so distinct
+    // `?season=&seriesId=&lang=` combinations are cached (and served) as
+    // distinct objects rather than collapsing to one.
+    const apiCachePolicy = new cloudfront.CachePolicy(this, 'ShareApiCachePolicy', {
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+      defaultTtl: Duration.minutes(15),
+      minTtl: Duration.seconds(0),
+      maxTtl: Duration.hours(1),
+      enableAcceptEncodingGzip: true,
+    });
+    const apiBehavior: cloudfront.AddBehaviorOptions = {
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      originRequestPolicy:
+        cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      cachePolicy: apiCachePolicy,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+    };
+    for (const pattern of ['/og', '/og/*', '/share', '/share/*']) {
+      distribution.addBehavior(pattern, apiOrigin, apiBehavior);
+    }
+
+    // NOTE on the public origin for the share HTML's absolute URLs:
+    // We deliberately do NOT inject the CloudFront domain as a SITE_ORIGIN env
+    // on getShareHtmlFn. The CloudFront behaviors above already make the
+    // distribution depend on this HTTP API (and therefore on its Lambdas);
+    // adding `distribution.distributionDomainName` as an env on the share
+    // Lambda would complete a CloudFront<->Lambda cyclic dependency that CDK
+    // rejects at synth. Instead the share handler derives the public origin
+    // from the forwarded request headers (X-Forwarded-Proto + Host) at runtime,
+    // which is exactly the CloudFront/host origin the crawler used, with a
+    // localhost fallback for local runs. The handler still honors a SITE_ORIGIN
+    // env if one is provided out-of-band, so the choice stays overridable.
 
     // ---- Deploy the SPA + inject the API URL -----------------------------
     // The built SPA (frontend/dist, must exist at synth time) and the

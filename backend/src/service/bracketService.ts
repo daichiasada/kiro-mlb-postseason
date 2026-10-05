@@ -394,6 +394,26 @@ export class BracketService {
   }
 
   /**
+   * Resolves a single series together with the bracket it belongs to, for the
+   * share/OG endpoints. Reuses the cache-first {@link getBracket} path (MLB
+   * fetch + seed fallback) and the tolerant {@link resolveSeries} lookup, so a
+   * high/low-ordering mismatch across the seed/live boundary still resolves.
+   * Returns `undefined` when the series id does not resolve to a series, which
+   * the handlers surface as a 404.
+   */
+  async getSeriesWithBracket(
+    seriesId: string,
+    season: number,
+  ): Promise<{ bracket: Bracket; series: Series } | undefined> {
+    const bracket = await this.getBracket(season);
+    const series = resolveSeries(bracket, seriesId);
+    if (!series) {
+      return undefined;
+    }
+    return { bracket, series };
+  }
+
+  /**
    * Returns the per-game detail (inning-by-inning line score, totals, pitcher
    * decisions, venue/state, optional recap highlight) for a game. Resolution:
    *   1. DynamoDB cache (hit) - RETURNS WITHOUT FETCHING (Issue #19 criterion 1).

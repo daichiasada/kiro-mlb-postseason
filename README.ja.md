@@ -60,10 +60,10 @@ diagrams.net で開けます）です。ベクター形式のエクスポート
 
 - **フロントエンド:** React + TypeScript（Vite）。**S3**（プライベート、Origin Access
   Control）にホストし、**CloudFront** 経由で配信します。
-- **バックエンド:** **API Gateway HTTP API**（CORS 付き）の背後にある 3 つの **AWS Lambda**
+- **バックエンド:** **API Gateway HTTP API**（CORS 付き）の背後にある 5 つの **AWS Lambda**
   関数（Node 20）。ルート: `GET /bracket`、`GET /prediction`、`POST /prediction`、
-  `GET /game`。Bedrock を呼ぶのは予測関数だけで、試合詳細関数は DynamoDB と公開 MLB API
-  のみを使用します。
+  `GET /game`、`GET /og`、`GET /share`。Bedrock を呼ぶのは予測関数だけで、試合詳細・OG 画像・
+  共有 HTML 関数は DynamoDB と公開 MLB API のみを使用します。
 - **データ:** **DynamoDB** がシーズンごとに集約済みブラケット JSON・レギュラーシーズン勝率・
   試合ごとの詳細をキャッシュします（単一テーブル、`pk` でキー管理）。
 - **AI:** **Amazon Bedrock**（`InvokeModel`）が、選択可能なモデル（Amazon Nova
@@ -346,6 +346,34 @@ UI はヘッダーに **JA/EN 言語トグル**を備えています。**日本�
 `GET /game` ルートは、`TABLE_NAME` だけを持ち **Bedrock へのアクセスを持たない**専用の Node 20
 Lambda（`GetGameDetailFn`）が担当し、公開 MLB API と DynamoDB のみに到達します。新しい UI 文字列は
 すべて EN / JA 対応です。
+
+### シリーズ単位の共有カード（OGP 画像 + クローラー用 HTML）
+
+各シリーズはリッチなソーシャルプレビュー付きで共有できます。これを支えるのは **Bedrock を使わない**
+2 つの Node 20 Lambda で、どちらも `@mlb/shared` の純粋・テスト済みビルダーを再利用します。
+
+- **`GET /og?season=&seriesId=&lang=`** は、共有の `buildOgImageSvg` が生成するシリーズ単位の
+  OpenGraph 画像を **`image/svg+xml`** として返します。両チームのブランドカラーで二分割した背景、
+  両チーム名、現在の `high.wins-low.wins` スコア、ラウンド/シーズンのラベル、モデルの本命チームと
+  勝利確率、そしてフッターにローカライズされた**免責事項**
+  （「予測は参考値であり、賭けの助言ではありません。」/ "Predictions are reference values, not
+  betting advice."）を含みます。
+- **`GET /share?season=&seriesId=&lang=`** は、共有の `buildShareHtml` が生成するクローラー向けの
+  **`text/html`** を返します。シリーズ単位の `og:title` / `og:description`（免責事項を含む）/
+  `og:image` / `og:url` と `twitter:*` メタタグに加え、**人間**の訪問者を SPA へリダイレクトする
+  `<meta refresh>` とインラインの `location.replace(...)` を含みます。
+
+生成されたバイト列は、シリーズの状況 + 言語をキー（`OG#...` / `SHARE#...`、`svg` 属性、15 分 TTL）に
+DynamoDB にキャッシュされます。キャッシュヒット時は再生成をスキップし、勝敗数が変わると新しいキーに
+なるのでカードが更新されます。`seriesId` 欠落は **400**、未知のシリーズは **404** を返します。
+**CloudFront** は専用パス `/og*` と `/share*` を HTTP API にルーティングするため（User-Agent による
+判定はしません）、共有リンクを取得するソーシャルクローラーはサイトオリジン上で SPA の殻ではなく
+Lambda が描画したメタタグに到達します。既定の SPA ビヘイビアと 403/404 -> `/index.html` の書き換えは
+変更していません。
+
+> **補足:** OGP 画像は **SVG** です（`sharp` のようなネイティブのラスタライザーに依存しないため、
+> Lambda のバンドルがクリーンでビルドが決定的になります）。一部のクローラーは SVG の `og:image` を
+> レンダリングしません。
 
 ### ダークモードとアクセシビリティ
 

@@ -29,11 +29,12 @@ describe('MlbPostseasonStack', () => {
     });
   });
 
-  it('creates three Node 20 app Lambda functions carrying TABLE_NAME env', () => {
+  it('creates five Node 20 app Lambda functions carrying TABLE_NAME env', () => {
     // CDK also synthesizes helper Lambdas (bucket deployment + auto-delete),
     // so assert on the *application* functions by their nodejs20.x runtime and
     // the required TABLE_NAME env rather than the raw total function count.
-    // The three are getBracket, getPrediction, and getGameDetail (ISSUE-19).
+    // The five are getBracket, getPrediction, getGameDetail (ISSUE-19), and the
+    // Issue #21 getOgImage + getShareHtml functions.
     template.resourcePropertiesCountIs(
       'AWS::Lambda::Function',
       {
@@ -44,7 +45,7 @@ describe('MlbPostseasonStack', () => {
           }),
         },
       },
-      3,
+      5,
     );
   });
 
@@ -78,6 +79,26 @@ describe('MlbPostseasonStack', () => {
         ]),
       },
     });
+  });
+
+  it('grants bedrock:InvokeModel to EXACTLY ONE function (getPrediction); the OG/share functions get none', () => {
+    // Only getPrediction may call Bedrock. The new Issue #21 OG-image and
+    // share-HTML functions (like getGameDetail) must carry NO bedrock policy,
+    // so exactly one IAM policy in the whole template authorizes InvokeModel.
+    template.resourcePropertiesCountIs(
+      'AWS::IAM::Policy',
+      {
+        PolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Effect: 'Allow',
+              Action: Match.arrayWith(['bedrock:InvokeModel']),
+            }),
+          ]),
+        },
+      },
+      1,
+    );
   });
 
   it('authorizes bedrock:InvokeModel on BOTH foundation-model and inference-profile ARNs (so Amazon Nova + Claude invocation is permitted)', () => {
@@ -119,7 +140,7 @@ describe('MlbPostseasonStack', () => {
     });
   });
 
-  it('exposes GET /bracket, GET + POST /prediction, and GET /game HTTP API routes', () => {
+  it('exposes GET /bracket, GET + POST /prediction, GET /game, GET /og, and GET /share HTTP API routes', () => {
     template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
       RouteKey: 'GET /bracket',
     });
@@ -131,6 +152,45 @@ describe('MlbPostseasonStack', () => {
     });
     template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
       RouteKey: 'GET /game',
+    });
+    template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+      RouteKey: 'GET /og',
+    });
+    template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+      RouteKey: 'GET /share',
+    });
+  });
+
+  it('routes the /og and /share path patterns through CloudFront to the HTTP API origin', () => {
+    // Issue #21: dedicated share/OG behaviors (no UA sniffing) that forward to a
+    // second (HTTP API) origin so a crawler hitting a share link on the site
+    // origin reaches the Lambda-rendered meta tags, not the SPA shell. Assert
+    // the extra cache behaviors exist for the four path patterns.
+    template.hasResourceProperties('AWS::CloudFront::Distribution', {
+      DistributionConfig: Match.objectLike({
+        CacheBehaviors: Match.arrayWith([
+          Match.objectLike({ PathPattern: '/og' }),
+          Match.objectLike({ PathPattern: '/og/*' }),
+          Match.objectLike({ PathPattern: '/share' }),
+          Match.objectLike({ PathPattern: '/share/*' }),
+        ]),
+      }),
+    });
+  });
+
+  it('configures a second CloudFront origin (the HTTP API) for the share/OG behaviors', () => {
+    // The share/OG behaviors point at an HttpOrigin (the execute-api domain),
+    // so the distribution now carries more than the single S3 origin.
+    template.hasResourceProperties('AWS::CloudFront::Distribution', {
+      DistributionConfig: Match.objectLike({
+        Origins: Match.arrayWith([
+          Match.objectLike({
+            CustomOriginConfig: Match.objectLike({
+              OriginProtocolPolicy: 'https-only',
+            }),
+          }),
+        ]),
+      }),
     });
   });
 

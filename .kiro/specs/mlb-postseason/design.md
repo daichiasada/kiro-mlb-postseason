@@ -1329,3 +1329,69 @@ the highlights link) live in BOTH the EN and JA message tables (default JA).
 This is the ONLY frontend consumer of the `GET /game` endpoint; the backend
 `GameDetailResponse` union and its member types are imported from `@mlb/shared`,
 so the contract stays single-sourced.
+
+## Shareable per-series OGP image + crawler HTML (Issue #21)
+
+Shareable social cards are built from pure, tested `@mlb/shared` functions that
+both the backend Lambdas and the frontend reuse, so the URL shapes and the card
+content stay single-sourced.
+
+### Shared pure builders (`@mlb/shared`)
+
+- `teamColors.ts` - backend-usable team brand colors (copied from the frontend
+  and re-exported so the frontend keeps a stable `teamColor`/`TeamColor` API).
+- `share.ts` - `ShareLang = 'en' | 'ja'` and `SHARE_DISCLAIMER` (EN
+  "Predictions are reference values, not betting advice.", JA
+  "予測は参考値であり、賭けの助言ではありません。").
+- `ogImage.ts` - `buildOgImageSvg({ series, season, lang })` returns a
+  deterministic 1200x630 SVG: a split background in the two teams' brand colors,
+  both display names, the `high.wins-low.wins` score, a round/season label, the
+  model favorite + win probability (via the shared `predict()` wrapped in a
+  single-series bracket), and the localized disclaimer footer. All interpolated
+  text is XML-escaped. No I/O, no native rasterizer (`sharp`) dependency.
+- `shareHtml.ts` - `buildShareHtml(...)` returns a minimal HTML5 document whose
+  `<head>` carries `og:type/title/description(incl. disclaimer)/image/url` and
+  `twitter:card/title/description/image`, and whose `<body>` carries a human
+  summary plus BOTH a `<meta http-equiv="refresh">` and an inline
+  `location.replace(appUrl)` so a crawler reads static meta tags while a human
+  is redirected into the SPA.
+- `permalink.ts` - `buildSeriesPermalink` (SPA deep link), `buildShareUrl`
+  (the `/share/...` crawler URL), and `buildOgImageUrl` (the `/og?...` image
+  URL), all trimming a trailing slash and encoding the series id.
+
+### Backend endpoints (`backend/src/handlers/getOgImage.ts`, `getShareHtml.ts`)
+
+Both handlers parse `season`/`seriesId`/`lang` (400 on a missing `seriesId`),
+resolve the series via a new `BracketService.getSeriesWithBracket(seriesId,
+season)` (which reuses the cache-first `getBracket` path and the tolerant series
+lookup; `undefined` -> 404 JSON), then go cache-first on the single-`pk`
+DynamoDB table. The pure `ogCacheKey`/`shareCacheKey`
+(`OG#`/`SHARE#` + `<seriesId>#<highWins>-<lowWins>#<lang>`) put the win counts in
+the key so a result change invalidates naturally; `getCachedOgImage`/
+`putCachedOgImage` store the payload under an `svg` attribute with a numeric
+`ttl` (`OG_IMAGE_TTL_SECONDS` = 15 min) and are shared by both endpoints (the
+`SHARE#` prefix keeps the HTML from colliding with the SVG). `/og` returns
+`image/svg+xml`; `/share` returns `text/html`; both set
+`Access-Control-Allow-Origin: *` and a `Cache-Control` header via the new
+`rawResponse` helper in `http.ts`. The `/share` absolute URLs use a public
+origin derived from the forwarded request headers (`X-Forwarded-Proto` + `Host`)
+with a `SITE_ORIGIN` env override and a localhost fallback. Neither Lambda
+touches Bedrock.
+
+### Infra (`infra/lib/mlb-postseason-stack.ts`)
+
+`GetOgImageFn` and `GetShareHtmlFn` are Node 20 `NodejsFunction`s (ESM,
+`externalModules ['@aws-sdk/*']`, 256 MB, 15 s) carrying ONLY `TABLE_NAME`
+(NO `BEDROCK_MODEL_ID`), granted `grantReadWriteData` on the table but NO
+`bedrock:InvokeModel`. They back the `GET /og` and `GET /share` HTTP API routes.
+CloudFront adds behaviors for the dedicated path patterns `/og`, `/og/*`,
+`/share`, and `/share/*` pointing at an `HttpOrigin` for the HTTP API, with a
+query-string-keyed cache policy and redirect-to-https, so a crawler on the site
+origin reaches the Lambda-rendered meta tags; routing is by DEDICATED PATH, not
+User-Agent sniffing. The default SPA behavior and the 403/404 -> `/index.html`
+error responses are unchanged. Because the new CloudFront behaviors make the
+distribution depend on the HTTP API, the HTTP API CORS allow-origin is set to
+`*` (every handler already emits `*`) to avoid a CloudFront<->API cyclic
+dependency, and `SITE_ORIGIN` is intentionally NOT injected from the stack onto
+the share Lambda (which would close a CloudFront<->Lambda cycle); the handler
+derives the origin from request headers instead.
