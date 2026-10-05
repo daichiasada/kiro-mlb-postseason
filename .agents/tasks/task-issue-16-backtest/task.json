@@ -1,9 +1,15 @@
 {
   "task_id": "task-issue-16-backtest",
   "task_description": "Implement GitHub Issue #16: backtest the deterministic prediction model over the completed 2024/2025 seed brackets by simulating 'what if we had predicted at the end of each game', computing hit rate, Brier score, and calibration, and visualizing it as a localized 'Model accuracy' page with an accuracy-slider comparison. Acceptance criteria: (1) deterministic seed-only backtest with fixed values verified in tests; (2) metric definitions explained in UI and README; (3) Bedrock not called (numeric model only). Design: pure engine in @mlb/shared (shared/src/backtest.ts), pure predict relocated to shared/src/predict.ts (backend re-exports it), metrics computed client-side in the SPA from the seed brackets (no backend endpoint, no infra change).",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
   "blocked_reason": null,
+  "review": {
+    "verdict": "APPROVED",
+    "version": "v1",
+    "file": "2026-10-05-081220-review.md",
+    "followup": "Addressed the review's main non-blocking finding by adding a localized (EN/JA) UI + README caveat that deciding-game (k=N) snapshots inflate the headline hit rate (commit dd7f6a3). The second finding (calibration bars encode frequency) left as optional/low-risk."
+  },
   "verification": {
     "build": "pass",
     "tests": "pass",
