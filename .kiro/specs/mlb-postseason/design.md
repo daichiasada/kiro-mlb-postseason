@@ -1037,3 +1037,103 @@ interpolated), `favorites.marker`, `favorites.badge`, `favorites.eliminated`
 Favorites are stored only in the browser's `localStorage` and all derivation is
 pure frontend code over the already-fetched bracket, so there is NO new Lambda,
 route, IAM, or DynamoDB access and the CDK/deploy story is unchanged.
+
+## Series-flow visualization (charts + sparkline) (Issue #24)
+
+The series-flow visualization is implemented ENTIRELY in the frontend. It turns
+a `Series` into a few small, accessible inline-SVG charts on the detail page and
+a tiny sparkline on each bracket card. No chart library is used, and the
+probability overlay reuses the pure shared `predict()` rather than any Bedrock
+or live MLB call, so the whole feature is offline-safe and works on the bundled
+seed / past seasons.
+
+### Pure data helpers (`frontend/src/seriesCharts.ts`)
+
+Three dependency-free, React-free helpers (unit-tested with injected fixtures,
+mirroring `gameTime.ts`/`upcomingGames.ts`) produce the plain data arrays the
+charts and their tabular fallbacks render from:
+
+- `seriesScoreDiffs(series)` -> per-game `{ gameNumber, awayTeamId, homeTeamId,
+  awayScore, homeScore, winnerTeamId, diff }`, sorted by `seriesGameNumber`. The
+  winner is resolved from each side's `isWinner` (null when neither is a
+  winner); `diff` is `|away - home|` or 0 when either score is null, so an
+  in-progress / unplayed game renders flat rather than throwing.
+- `cumulativeWinTrend(series)` -> running `{ gameNumber, highWins, lowWins }`
+  after each game, RECOMPUTING `isWinner` counts (it does not trust stored final
+  win totals), matching the backtest `countWins` semantics.
+- `winProbTrend(series, bracket, accuracy)` -> per-game favorite win
+  probability. It does NOT reimplement the per-game truncation: it delegates to
+  the shared `seriesProbTrend` (in `shared/src/backtest.ts`), which OWNS the
+  slice-first-k-games / recompute-high-low-wins / `predict` pipeline. This keeps
+  `predict()` the single source of truth for every probability and the
+  truncation logic in exactly one place. Returns `[]` for a games-less series.
+
+### Detail-page charts (`frontend/src/components/SeriesFlowCharts.tsx`)
+
+`<SeriesFlowCharts series bracket season predictable? accuracy?=0.5 />` renders
+up to three charts via a shared `ChartFigure` wrapper, each fed by the helpers
+above:
+
+1. a per-game run-DIFFERENCE bar chart - bar height proportional to the run
+   margin (scaled to the max), fill = `teamColor(winnerTeamId).primary` with a
+   neutral `var(--muted)` fallback when there is no winner; any on-bar diff
+   label uses `readableTextColor(primary)` for a legible foreground;
+2. a cumulative series-win trend chart - one team-colored polyline per team;
+3. (predictable current season AND the series has games) a predicted
+   favorite-win-probability trend line over the fixed `0.5..0.95` range the
+   model clamps into.
+
+The overlay is gated by `(predictable ?? isPredictable(season)) &&
+isPredictable(season) && series.games.length > 0`, so it is present for the
+predictable current season (e.g. 2026) and ABSENT for results-only seasons
+(2024/2025). The component returns `null` for a games-less series.
+
+#### SVG + table accessibility approach
+
+Each chart is an SVG with `role="img"` and an accessible name via
+`aria-labelledby` (pointing at its localized `<figcaption>`), AND is paired with
+a REAL `<table>` alternative wired via `aria-describedby`. The table is
+collapsed by default behind a localized `Show/Hide data table` toggle and
+conveys the SAME data in TEXT: game number (row header), away/home score, run
+differential, winner as TEXT (`{team} won` / `Tie` / `In progress` - never color
+alone), per-team cumulative wins, and the favorite + rounded win-probability %
+for the probability table. Unique element ids are built with `useId()` with the
+colons stripped (so `aria-*`/`#id` lookups work in the browser and Playwright),
+matching the `SeriesCard` pattern.
+
+#### Theming
+
+New `.series-flow*` classes in `styles.css` style the axes, gridlines, tick
+labels, chart frames, and tables via theme CSS variables (`--border-strong`,
+`--muted`, `--ink`, `--heading`, `--surface*`, `--focus-ring`), which already
+switch under `[data-theme='dark']`, so the charts stay legible in light and
+dark. SVGs are responsive via `viewBox` + `preserveAspectRatio` and
+`width:100%/max-width:100%` so they do not overflow at 375px.
+
+### Bracket-card sparkline (`frontend/src/components/ScoreDiffSparkline.tsx`)
+
+`<ScoreDiffSparkline series />` renders a tiny, decorative inline-SVG strip of
+per-game run-margin bars (reusing `seriesScoreDiffs`), fill colored by the
+winning team via `teamColor()` with a neutral fallback. It is a SINGLE
+`role="img"` element with a localized `aria-label`
+(`flow.sparkline.label` summarizing each game as `{winnerAbbr} +{diff}`) and
+`aria-hidden` children; it introduces NO focusable node, so the Issue #22
+roving-tabindex model and Enter/Space activation on the card are unchanged. It
+renders `null` for a games-less series. In `SeriesCard.tsx` it sits just below
+the series meta line and is rendered only when `series.games.length > 0`; its
+CSS fixes a small height and `max-width:100%` so card heights stay consistent
+and it never overflows at 375px, and it does not touch the favorite-highlight
+markup (Issue #18).
+
+### i18n keys
+
+One new key `flow.sparkline.label` (EN/JA, interpolating `{count}` and
+`{summary}`) is added for the sparkline aria-label, alongside the `flow.*` chart
+keys already added for the detail-page charts. Every string lives in BOTH the EN
+and JA tables (default JA).
+
+### No new endpoint / no infra change
+
+The whole feature is frontend-only over the already-fetched bracket plus the
+pure shared `predict()`/`seriesProbTrend`, so there is NO new Lambda, route,
+IAM, or DynamoDB access and the CDK/deploy story is unchanged.

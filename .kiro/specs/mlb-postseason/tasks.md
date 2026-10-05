@@ -590,3 +590,71 @@ backend or infra change.
         `.kiro/specs/mlb-postseason/design.md`,
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
 - _Requirements: 17_
+
+## Series-flow visualization: charts + sparkline (task-issue-24-series-flow-charts)
+
+GitHub Issue #24 under `.agents/tasks/task-issue-24-series-flow-charts/`
+(features FEAT-001 through FEAT-003): a frontend-only series-flow visualization.
+Pure chart-data helpers, detail-page inline-SVG charts with tabular
+alternatives and a predictable-season probability overlay, and a bracket-card
+score-diff sparkline. All strings EN/JA (default JA). The probability overlay
+reuses the pure shared `predict()` via the shared `seriesProbTrend` truncation;
+no Bedrock or live MLB call, no backend or infra change.
+
+### F1. Pure chart-data helpers (task-issue-24 FEAT-001)
+
+- [x] Dependency-free, React-free `seriesScoreDiffs`, `cumulativeWinTrend`, and
+      `winProbTrend` with exact-number unit tests (sweep, close full-length, and
+      null-score/in-progress fixtures).
+      - `frontend/src/seriesCharts.ts`, `frontend/src/seriesCharts.test.ts`.
+- [x] Additive shared `seriesProbTrend(series, bracket, accuracy)` that OWNS the
+      per-game truncation (slice first k games, recompute high/low wins,
+      `predict`); the private `sampleSeries` was refactored to delegate to it so
+      the truncation lives in one place and `predict()` stays the single
+      probability source. Existing backtest behavior/tests unchanged.
+      - `shared/src/backtest.ts`, `shared/src/backtest.test.ts`.
+
+### F2. Detail-page charts + tabular alternatives + probability overlay (task-issue-24 FEAT-002)
+
+- [x] `SeriesFlowCharts` renders the run-difference bar chart, the cumulative
+      win-trend chart, and (predictable season with games) the win-probability
+      trend chart as inline SVGs, team-colored via `teamColor()`/
+      `readableTextColor()`, each with `role="img"` + a REAL `<table>`
+      alternative (collapsed behind a Show/Hide data-table toggle, winner as
+      TEXT), wired via `aria-labelledby`/`aria-describedby`.
+      - `frontend/src/components/SeriesFlowCharts.tsx`,
+        `frontend/src/components/SeriesFlowCharts.test.tsx`,
+        `frontend/src/pages/SeriesDetailPage.tsx`, `frontend/src/styles.css`.
+- [x] New localized `flow.*` i18n keys (EN + JA, default JA) for the headings,
+      chart titles, table captions/headers, winner phrasing, and the data-table
+      toggle.
+      - `frontend/src/i18n/messages.ts`.
+
+### F3. Bracket-card sparkline + e2e + docs (task-issue-24 FEAT-003)
+
+- [x] `ScoreDiffSparkline` (single `role="img"` SVG, `aria-hidden` children, NO
+      focusable node, localized `flow.sparkline.label`) rendered in `SeriesCard`
+      only when the series has games; subtle, theme-aware, `max-width:100%` so
+      it does not overflow at 375px and does not regress the Issue #22 keyboard
+      model or the Issue #18 favorite highlight.
+      - `frontend/src/components/ScoreDiffSparkline.tsx`,
+        `frontend/src/components/SeriesCard.tsx`, `frontend/src/styles.css`,
+        `frontend/src/i18n/messages.ts`.
+- [x] Component tests: the sparkline renders with `role="img"` + aria-label for
+      a series with games and renders nothing for a games-less series; the card
+      keeps its accessible label + keyboard affordances (no extra tab stop).
+      - `frontend/src/components/SeriesCard.test.tsx`.
+- [x] Playwright e2e: a 2024 seed detail renders the diff + trend charts + the
+      tabular alternative and NO probability chart; a predictable 2026
+      series-with-games renders the probability-trend chart + column; a bracket
+      card shows the sparkline; a dark-mode detail screenshot is captured to the
+      gitignored `test-results/`.
+      - `frontend/e2e/series-flow.spec.ts`, `frontend/e2e/fixtures.ts`.
+- [x] Full verification green (`npm run build`, `npm test`,
+      `npm run test:e2e -w frontend`, `npm run synth`); keyboard/favorites/a11y
+      e2e specs unregressed. Keep the spec-driven-dev artifacts and both READMEs
+      truthful to the series-flow visualization.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
+- _Requirements: 18_

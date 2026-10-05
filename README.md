@@ -377,6 +377,32 @@ frontend-only feature; there is no backend or infrastructure change.
   `frontend/src/bracketLayout.ts`), the `FavoriteToggle` and `FavoritesPin` components, and
   the bracket highlight/filter.
 
+### Series-flow visualization
+
+See how a series flowed at a glance. This is a **frontend-only** feature; there is no
+backend or infrastructure change, and the probability overlay reuses the **pure shared
+`predict()`** (never a Bedrock or live MLB call).
+
+- **Detail-page charts.** Opening a series with games shows compact inline-SVG charts: a
+  **per-game run-differential bar chart** and a **cumulative series-win trend chart**, with
+  bars and lines in each team's brand color.
+- **Works on past / seed seasons without a prediction overlay.** The charts render for the
+  bundled **2024 and 2025** seed seasons (served fully offline) **without** the prediction
+  overlay. Only for the **predictable current season** (and a series that has games) is a
+  **predicted win-probability trend** chart added.
+- **Accessible, not color-only.** Every chart is an SVG with `role="img"` and an accessible
+  name, and is paired with a real **data table** (collapsed behind a **"Show/Hide data
+  table"** toggle) that conveys the same numbers in text, including the **winner as text**
+  (`{team} won` / `Tie` / `In progress`), never color alone. Axes, gridlines, and labels use
+  the theme variables so the charts stay legible in **dark mode**.
+- **Bracket-card sparkline.** Each bracket card with games shows a subtle, theme-aware
+  **score-difference sparkline** (a single `role="img"` element with a localized
+  `aria-label` and no focusable child), so it does not add a tab stop, does not regress the
+  keyboard model or the favorite highlight, and does not overflow at a 375px mobile width.
+- **EN / JA.** Every string is localized (default Japanese). The logic lives in pure,
+  tested helpers (`frontend/src/seriesCharts.ts`, delegating the per-game truncation to the
+  shared `seriesProbTrend`), the `SeriesFlowCharts` and `ScoreDiffSparkline` components.
+
 ## Amazon Bedrock usage
 
 The win probability is computed by a transparent heuristic in `backend/src/predict/`

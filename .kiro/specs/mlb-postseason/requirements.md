@@ -769,3 +769,54 @@ EN/JA. Multiple favorites are allowed.
    UpcomingGames UI SHALL be unregressed.
 8. WHEN any favorites UI string is shown THEN it SHALL exist in BOTH the EN and
    JA message tables (Issue #18 criterion 3).
+
+## Requirement 18 - Series-flow visualization (charts + sparkline) (Issue #24)
+
+**User story:** As a fan reviewing a postseason series, I want to see how the
+series flowed game by game (run margins, who was pulling ahead, and - for the
+current predictable season - the model's shifting win probability) as compact,
+accessible charts, so I can read the arc of the series at a glance without
+parsing a raw box-score list, and so a quick sparkline on each bracket card
+summarizes the series on the home page.
+
+This feature is FRONTEND-ONLY. It reuses the pure shared `predict()` (via the
+shared `seriesProbTrend` per-game truncation) for the probability overlay and
+never makes a Bedrock or live MLB call. It works for the bundled seed / past
+seasons (2024, 2025) WITHOUT a prediction overlay, since those seasons are not
+predictable.
+
+### Acceptance criteria
+
+1. WHEN a series with at least one game is shown on its detail page THEN the
+   system SHALL render a per-game run-DIFFERENCE bar chart and a cumulative
+   series-win trend chart as inline SVG, fed by the pure helpers
+   `seriesScoreDiffs` and `cumulativeWinTrend`, with bars/lines colored by the
+   relevant team's brand color via `teamColor()`.
+2. WHEN the selected season is the predictable current season AND the series has
+   games THEN the system SHALL ALSO render a per-game predicted
+   favorite-win-probability trend chart, computed via `winProbTrend` which
+   delegates to the shared `seriesProbTrend` (predict + the single-source
+   per-game truncation); WHEN the season is results-only (seed/past) THEN the
+   probability chart SHALL be ABSENT.
+3. WHEN any chart renders THEN it SHALL be an accessible SVG (`role="img"` with
+   an accessible name via `aria-labelledby`) AND SHALL be paired with a real
+   tabular `<table>` alternative (wired via `aria-describedby`, collapsed behind
+   a localized show/hide data-table toggle) conveying the SAME data in TEXT,
+   with the winner conveyed as TEXT (`{team} won` / `Tie` / `In progress`), not
+   color alone.
+4. WHEN charts render THEN axes, gridlines, tick labels, and frames SHALL use
+   theme CSS variables so they are legible in BOTH the light and the dark theme,
+   and any text drawn on a team-color fill SHALL pick its foreground via
+   `readableTextColor()`.
+5. WHEN a `SeriesCard` with at least one game renders on the bracket THEN the
+   system SHALL show a subtle, theme-aware inline-SVG score-DIFFERENCE sparkline
+   (reusing `seriesScoreDiffs`) with a localized `aria-label` on a single
+   `role="img"` element whose children are `aria-hidden`; cards WITHOUT games
+   SHALL show NO sparkline.
+6. WHEN the sparkline is present THEN it SHALL add NO focusable element (no
+   `tabindex`, no interactive node) so the Issue #22 roving-tabindex keyboard
+   model and Enter/Space activation are unchanged, SHALL NOT regress the Issue
+   #18 favorite highlight, and SHALL NOT cause horizontal overflow at a 375px
+   mobile width (width is constrained to the card content width).
+7. WHEN any series-flow string is shown THEN it SHALL exist in BOTH the EN and
+   JA message tables (default JA).
