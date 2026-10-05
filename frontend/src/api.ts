@@ -1,5 +1,6 @@
 import type {
   Bracket,
+  GameDetailResponse,
   NarrativeLanguage,
   PredictionResponse,
 } from '@mlb/shared';
@@ -104,4 +105,24 @@ export async function getPrediction(
     query += `&model=${encodeURIComponent(model)}`;
   }
   return requestJson<PredictionResponse>(`/prediction${query}`);
+}
+
+/**
+ * Fetches the per-game detail (inning-by-inning line score, totals, W/L/S
+ * pitcher decisions, venue + game state, and an optional recap highlight) for a
+ * single game.
+ *
+ * Returns the {@link GameDetailResponse} discriminated union served at HTTP 200
+ * for BOTH variants: `status:'ok'` carries the full detail, while
+ * `status:'unavailable'` is the backend's documented fallback when the upstream
+ * MLB fetch fails. Unlike {@link getBracket} there is NO seed fallback here: a
+ * transport/HTTP failure throws an {@link ApiError} so the caller can catch it
+ * and keep showing the already-known final score (Issue #19 criterion 2).
+ */
+export async function getGameDetail(
+  gamePk: number,
+): Promise<GameDetailResponse> {
+  return requestJson<GameDetailResponse>(
+    `/game?gamePk=${encodeURIComponent(gamePk)}`,
+  );
 }

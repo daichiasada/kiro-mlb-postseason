@@ -291,6 +291,73 @@ export async function stubPredictionCapturingLangModel(
 }
 
 /**
+ * A realistic `status:'ok'` GameDetailResponse for gamePk 800001 (the final
+ * ALCS game 1 in {@link SAMPLE_2026_BRACKET}): Houston (117, home) beat Seattle
+ * (136, away) 5-3. Used to stub the `/game` endpoint so the accordion panel's
+ * inning table, pitchers, venue, and highlight render deterministically.
+ */
+export const SAMPLE_GAME_DETAIL_OK = {
+  status: 'ok' as const,
+  gamePk: 800001,
+  gameState: 'Final',
+  venue: 'Daikin Park',
+  innings: [
+    { inning: 1, ordinal: '1st', away: { runs: 1, hits: 1, errors: 0 }, home: { runs: 0, hits: 1, errors: 0 } },
+    { inning: 2, ordinal: '2nd', away: { runs: 0, hits: 0, errors: 0 }, home: { runs: 2, hits: 2, errors: 0 } },
+    { inning: 3, ordinal: '3rd', away: { runs: 2, hits: 2, errors: 1 }, home: { runs: 1, hits: 2, errors: 0 } },
+    { inning: 4, ordinal: '4th', away: { runs: 0, hits: 0, errors: 0 }, home: { runs: 2, hits: 3, errors: 0 } },
+  ],
+  totals: {
+    away: { runs: 3, hits: 3, errors: 1 },
+    home: { runs: 5, hits: 8, errors: 0 },
+  },
+  pitchers: {
+    winner: 'Framber Valdez',
+    loser: 'Logan Gilbert',
+    save: 'Josh Hader',
+  },
+  highlight: {
+    title: 'Astros take Game 1',
+    url: 'https://www.mlb.com/video/astros-game-1',
+  },
+};
+
+/**
+ * Routes `**\/game*` to a given GameDetailResponse body (defaults to
+ * {@link SAMPLE_GAME_DETAIL_OK}). Both the `ok` and `unavailable` variants are
+ * served at HTTP 200, matching the backend contract.
+ */
+export async function stubGameDetail(
+  page: Page,
+  body: unknown = SAMPLE_GAME_DETAIL_OK,
+): Promise<void> {
+  await page.route('**/game*', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  });
+}
+
+/**
+ * Routes `**\/game*` to a 500 so the accordion's inline error-note fallback can
+ * be asserted while the always-visible final score stays visible (criterion 2).
+ */
+export async function stubGameDetailError(
+  page: Page,
+  status = 500,
+): Promise<void> {
+  await page.route('**/game*', async (route: Route) => {
+    await route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: 'Game detail service unavailable' }),
+    });
+  });
+}
+
+/**
  * Routes `**\/bracket*` to the 2026 bracket but with a non-empty
  * `integrityWarnings` array attached to the response body, simulating the
  * FEAT-003 backend surfacing a finished matchup that still references a

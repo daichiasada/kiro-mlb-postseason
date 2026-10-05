@@ -1,7 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { Bracket, GameResult, Series } from '@mlb/shared';
-import { getBracket } from '../api';
+import type {
+  Bracket,
+  GameDetailResponse,
+  GameResult,
+  InningLine,
+  LineScoreSide,
+  Series,
+} from '@mlb/shared';
+import { getBracket, getGameDetail } from '../api';
 import { parseSeasonParam } from '../seasonRoute';
 import { isPredictable } from '@mlb/shared';
 import { clinchWins } from '../bracketLayout';
@@ -230,6 +237,25 @@ function DetailTeam({
   );
 }
 
+/**
+ * Per-game accordion state. The panel lazy-fetches /game only on first expand:
+ *   - idle: never fetched (collapsed, or expanded before the fetch resolves)
+ *   - loading: a fetch is in flight
+ *   - ready: an `ok` GameDetailResponse arrived; render the detail panel
+ *   - fallback: the fetch rejected OR returned `status:'unavailable'`; show a
+ *     gentle inline note and keep the always-visible final score (criterion 2)
+ */
+type GameDetailState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; detail: Extract<GameDetailResponse, { status: 'ok' }> }
+  | { status: 'fallback' };
+
+/** A line-score cell value: a number, or a localized dash when unknown/null. */
+function cell(value: number | null): string {
+  return value === null ? '-' : String(value);
+}
+
 function DetailGame({
   t,
   lang,
@@ -256,29 +282,224 @@ function DetailGame({
     tbdLabel: t('gametime.tbd'),
   });
 
+  const [open, setOpen] = useState(false);
+  const [detailState, setDetailState] = useState<GameDetailState>({
+    status: 'idle',
+  });
+  // useId() yields colons that are invalid in CSS/DOM id selectors; strip them
+  // so aria-controls / #id lookups work in the browser and in Playwright.
+  const panelId = `game-detail-${useId().replace(/:/g, '')}`;
+
+  function handleToggle() {
+    const next = !open;
+    setOpen(next);
+    // Lazy fetch: only fire on the FIRST expand, and never after a result has
+    // settled (ready or fallback) so re-collapsing/expanding is free.
+    if (next && detailState.status === 'idle') {
+      setDetailState({ status: 'loading' });
+      getGameDetail(game.gamePk)
+        .then((detail) => {
+          if (detail.status === 'ok') {
+            setDetailState({ status: 'ready', detail });
+          } else {
+            // Documented 'unavailable' fallback: treat like an error.
+            setDetailState({ status: 'fallback' });
+          }
+        })
+        .catch(() => {
+          setDetailState({ status: 'fallback' });
+        });
+    }
+  }
+
   return (
     <li className="detail__game">
-      <span className="detail__game-num">
-        {t('detail.game', { n: game.seriesGameNumber })}
-      </span>
-      <span
-        className={
-          'detail__game-side' +
-          (winnerSide === 'away' ? ' detail__game-side--winner' : '')
-        }
+      <div className="detail__game-row">
+        <button
+          type="button"
+          className="detail__game-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={handleToggle}
+        >
+          <span className="detail__game-num">
+            {t('detail.game', { n: game.seriesGameNumber })}
+          </span>
+          <span
+            className={
+              'detail__game-side' +
+              (winnerSide === 'away' ? ' detail__game-side--winner' : '')
+            }
+          >
+            {teamAbbr(t, game.away.teamId)} {awayScore}
+          </span>
+          <span className="detail__game-at">{t('detail.at')}</span>
+          <span
+            className={
+              'detail__game-side' +
+              (winnerSide === 'home' ? ' detail__game-side--winner' : '')
+            }
+          >
+            {teamAbbr(t, game.home.teamId)} {homeScore}
+          </span>
+          <span className="detail__game-time">{localTime}</span>
+          <span className="detail__game-toggle-label">
+            {open ? t('detail.game.collapse') : t('detail.game.expand')}
+          </span>
+        </button>
+      </div>
+
+      <div
+        id={panelId}
+        className="detail__game-panel"
+        role="region"
+        aria-label={t('detail.game', { n: game.seriesGameNumber })}
+        hidden={!open}
       >
-        {teamAbbr(t, game.away.teamId)} {awayScore}
-      </span>
-      <span className="detail__game-at">{t('detail.at')}</span>
-      <span
-        className={
-          'detail__game-side' +
-          (winnerSide === 'home' ? ' detail__game-side--winner' : '')
-        }
-      >
-        {teamAbbr(t, game.home.teamId)} {homeScore}
-      </span>
-      <span className="detail__game-time">{localTime}</span>
+        {detailState.status === 'loading' && (
+          <p className="detail__game-status" role="status">
+            {t('detail.game.loading')}
+          </p>
+        )}
+        {detailState.status === 'fallback' && (
+          <p className="detail__game-status detail__game-status--error" role="status">
+            {t('detail.game.error')}
+          </p>
+        )}
+        {detailState.status === 'ready' && (
+          <GameDetailPanel t={t} game={game} detail={detailState.detail} />
+        )}
+      </div>
     </li>
+  );
+}
+
+/**
+ * The expanded, successful game-detail panel: venue, W/L/S pitchers (the save
+ * line omitted when absent), an optional recap highlight link, and the inning
+ * R/H/E table wrapped in a horizontally-scrollable container so it scrolls on
+ * narrow screens without forcing page-level horizontal overflow (criterion 3).
+ */
+function GameDetailPanel({
+  t,
+  game,
+  detail,
+}: {
+  t: TFn;
+  game: GameResult;
+  detail: Extract<GameDetailResponse, { status: 'ok' }>;
+}) {
+  const { venue, pitchers, highlight, innings, totals } = detail;
+  const awayLabel = teamAbbr(t, game.away.teamId);
+  const homeLabel = teamAbbr(t, game.home.teamId);
+
+  return (
+    <div className="detail__linescore-wrap">
+      {venue !== undefined && venue !== '' && (
+        <p className="detail__game-venue">
+          <span className="detail__game-venue-label">
+            {t('detail.game.venue')}:
+          </span>{' '}
+          {venue}
+        </p>
+      )}
+
+      <dl className="detail__game-pitchers">
+        {pitchers.winner !== undefined && (
+          <div className="detail__game-pitcher">
+            <dt>{t('detail.game.winPitcher')}</dt>
+            <dd>{pitchers.winner}</dd>
+          </div>
+        )}
+        {pitchers.loser !== undefined && (
+          <div className="detail__game-pitcher">
+            <dt>{t('detail.game.losePitcher')}</dt>
+            <dd>{pitchers.loser}</dd>
+          </div>
+        )}
+        {pitchers.save !== undefined && (
+          <div className="detail__game-pitcher">
+            <dt>{t('detail.game.savePitcher')}</dt>
+            <dd>{pitchers.save}</dd>
+          </div>
+        )}
+      </dl>
+
+      <div className="detail__linescore-scroll">
+        <table className="detail__linescore">
+          <thead>
+            <tr>
+              <th scope="col">{t('detail.game.inning')}</th>
+              {innings.map((inning) => (
+                <th scope="col" key={inning.inning}>
+                  {inning.ordinal ?? inning.inning}
+                </th>
+              ))}
+              <th scope="col" title={t('detail.game.runs')}>
+                {t('detail.game.runsShort')}
+              </th>
+              <th scope="col" title={t('detail.game.hits')}>
+                {t('detail.game.hitsShort')}
+              </th>
+              <th scope="col" title={t('detail.game.errors')}>
+                {t('detail.game.errorsShort')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <LineScoreRow
+              label={awayLabel}
+              innings={innings}
+              side="away"
+              totals={totals.away}
+            />
+            <LineScoreRow
+              label={homeLabel}
+              innings={innings}
+              side="home"
+              totals={totals.home}
+            />
+          </tbody>
+        </table>
+      </div>
+
+      {highlight !== undefined && (
+        <p className="detail__game-highlight">
+          <a
+            href={highlight.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="detail__game-highlight-link"
+          >
+            {t('detail.game.highlights')}: {highlight.title}
+          </a>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** One body row (away or home) of the inning R/H/E line-score table. */
+function LineScoreRow({
+  label,
+  innings,
+  side,
+  totals,
+}: {
+  label: string;
+  innings: InningLine[];
+  side: 'away' | 'home';
+  totals: LineScoreSide;
+}) {
+  return (
+    <tr>
+      <th scope="row">{label}</th>
+      {innings.map((inning) => (
+        <td key={inning.inning}>{cell(inning[side].runs)}</td>
+      ))}
+      <td className="detail__linescore-total">{cell(totals.runs)}</td>
+      <td className="detail__linescore-total">{cell(totals.hits)}</td>
+      <td className="detail__linescore-total">{cell(totals.errors)}</td>
+    </tr>
   );
 }

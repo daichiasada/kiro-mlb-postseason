@@ -830,6 +830,133 @@ body {
   text-align: center;
 }
 
+/* Per-game accordion (Issue #19) */
+.detail__game {
+  display: block;
+}
+
+.detail__game-row {
+  display: block;
+}
+
+.detail__game-toggle {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.detail__game-toggle .detail__game-time {
+  color: var(--muted);
+  font-size: 0.82rem;
+  grid-column: 2 / -1;
+}
+
+.detail__game-toggle-label {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--link, var(--heading));
+}
+
+.detail__game-panel {
+  margin-top: 0.6rem;
+}
+
+.detail__game-status {
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.detail__game-status--error {
+  color: var(--heading);
+}
+
+.detail__game-venue {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.detail__game-venue-label {
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.detail__game-pitchers {
+  margin: 0 0 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+}
+
+.detail__game-pitcher {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.detail__game-pitcher dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.detail__game-pitcher dd {
+  margin: 0;
+}
+
+/* The scroll container absorbs the table's width on narrow screens so ONLY the
+   table scrolls horizontally and the rest of the page keeps the 375px
+   no-horizontal-overflow guarantee (criterion 3). */
+.detail__linescore-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.detail__linescore {
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail__linescore th,
+.detail__linescore td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.detail__linescore th[scope='row'] {
+  text-align: left;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.detail__linescore-total {
+  font-weight: 700;
+}
+
+.detail__game-highlight {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+}
+
+.detail__game-highlight-link {
+  color: var(--heading);
+  text-decoration: underline;
+}
+
 .detail--missing {
   text-align: center;
 }

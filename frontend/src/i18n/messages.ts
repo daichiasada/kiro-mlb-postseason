@@ -115,6 +115,25 @@ export type MessageKey =
   | 'detail.game'
   | 'detail.at'
   | 'detail.noGames'
+  | 'detail.game.expand'
+  | 'detail.game.collapse'
+  | 'detail.game.loading'
+  | 'detail.game.error'
+  | 'detail.game.inning'
+  | 'detail.game.runs'
+  | 'detail.game.hits'
+  | 'detail.game.errors'
+  | 'detail.game.runsShort'
+  | 'detail.game.hitsShort'
+  | 'detail.game.errorsShort'
+  | 'detail.game.total'
+  | 'detail.game.winPitcher'
+  | 'detail.game.losePitcher'
+  | 'detail.game.savePitcher'
+  | 'detail.game.venue'
+  | 'detail.game.highlights'
+  | 'detail.game.away'
+  | 'detail.game.home'
   | 'flow.heading'
   | 'flow.chart.diff.title'
   | 'flow.chart.trend.title'
@@ -294,6 +313,26 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'detail.game': 'Game {n}',
     'detail.at': '@',
     'detail.noGames': 'No game detail is available for this series.',
+    'detail.game.expand': 'Show game detail',
+    'detail.game.collapse': 'Hide game detail',
+    'detail.game.loading': 'Loading game detail…',
+    'detail.game.error':
+      'Game detail is unavailable; showing the final score.',
+    'detail.game.inning': 'Inning',
+    'detail.game.runs': 'Runs',
+    'detail.game.hits': 'Hits',
+    'detail.game.errors': 'Errors',
+    'detail.game.runsShort': 'R',
+    'detail.game.hitsShort': 'H',
+    'detail.game.errorsShort': 'E',
+    'detail.game.total': 'Total',
+    'detail.game.winPitcher': 'Win',
+    'detail.game.losePitcher': 'Loss',
+    'detail.game.savePitcher': 'Save',
+    'detail.game.venue': 'Venue',
+    'detail.game.highlights': 'Highlights',
+    'detail.game.away': 'Away',
+    'detail.game.home': 'Home',
     'flow.heading': 'Series flow',
     'flow.chart.diff.title': 'Run differential by game',
     'flow.chart.trend.title': 'Cumulative series wins',
@@ -484,6 +523,25 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'detail.game': '第{n}戦',
     'detail.at': '@',
     'detail.noGames': 'このシリーズの試合詳細はありません。',
+    'detail.game.expand': '試合詳細を表示',
+    'detail.game.collapse': '試合詳細を隠す',
+    'detail.game.loading': '試合詳細を読み込み中…',
+    'detail.game.error': '試合詳細を取得できませんでした。最終スコアを表示します。',
+    'detail.game.inning': 'イニング',
+    'detail.game.runs': '得点',
+    'detail.game.hits': '安打',
+    'detail.game.errors': '失策',
+    'detail.game.runsShort': 'R',
+    'detail.game.hitsShort': 'H',
+    'detail.game.errorsShort': 'E',
+    'detail.game.total': '合計',
+    'detail.game.winPitcher': '勝利投手',
+    'detail.game.losePitcher': '敗戦投手',
+    'detail.game.savePitcher': 'セーブ投手',
+    'detail.game.venue': '球場',
+    'detail.game.highlights': 'ハイライト',
+    'detail.game.away': 'ビジター',
+    'detail.game.home': 'ホーム',
     'flow.heading': 'シリーズの流れ',
     'flow.chart.diff.title': '試合ごとの得点差',
     'flow.chart.trend.title': 'シリーズ累計勝利数',
