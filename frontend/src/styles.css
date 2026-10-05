@@ -703,6 +703,43 @@ body {
   color: var(--muted);
 }
 
+/* Prediction basis (regular-season metrics the model used) */
+.prediction__metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.4rem 0 0;
+  padding: 0.6rem 0.7rem;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.prediction__metrics-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.prediction__metrics-caption {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.prediction__metrics-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.prediction__metrics-item {
+  font-size: 0.82rem;
+}
+
 /* Model-accuracy control */
 .prediction__accuracy {
   display: flex;

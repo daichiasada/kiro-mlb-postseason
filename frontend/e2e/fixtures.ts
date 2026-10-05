@@ -99,6 +99,12 @@ export const SAMPLE_PREDICTION = {
     'behind clutch late-inning hitting.',
   model: 'anthropic.claude-3-haiku',
   generatedAt: '2026-10-25T00:00:00.000Z',
+  // Additive regular-season metrics the model used, split by role (favorite vs
+  // underdog). The UI surfaces these as the explainable "prediction basis".
+  metrics: {
+    favorite: { teamId: 119, winPct: 0.605 },
+    underdog: { teamId: 147, winPct: 0.58 },
+  },
 };
 
 /** Routes `**\/bracket*` for 2026 to a real-looking in-progress bracket. */

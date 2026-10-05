@@ -37,8 +37,11 @@ test.describe('prediction panel (2026 predictable season)', () => {
     const panel = page.getByRole('region', { name: /勝敗予測/ });
     await expect(panel).toBeVisible();
 
-    // Favorite team name.
-    await expect(panel.getByText('Los Angeles Dodgers')).toBeVisible();
+    // Favorite team name (exact, so it targets the favorite block and not the
+    // "{team}: {pct}" line in the prediction-basis block below).
+    await expect(
+      panel.getByText('Los Angeles Dodgers', { exact: true }),
+    ).toBeVisible();
 
     // Accessible, labeled probability bar.
     const bar = panel.getByRole('progressbar');
@@ -62,6 +65,13 @@ test.describe('prediction panel (2026 predictable season)', () => {
         exact: false,
       }),
     ).toBeVisible();
+
+    // The explainable "prediction basis" block surfaces each team's
+    // regular-season win pct (localized title in the default UI language, ja).
+    await expect(panel.getByText('予測の根拠')).toBeVisible();
+    // Favorite 0.605 -> 60.5%, underdog 0.58 -> 58.0%.
+    await expect(panel.getByText(/60\.5%/)).toBeVisible();
+    await expect(panel.getByText(/58\.0%/)).toBeVisible();
 
     await page.screenshot({
       path: 'test-results/prediction-success.png',

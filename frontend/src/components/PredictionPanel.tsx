@@ -1,5 +1,10 @@
 import { useEffect, useId, useState } from 'react';
-import type { Prediction, PredictionResponse, Series } from '@mlb/shared';
+import type {
+  Prediction,
+  PredictionMetrics,
+  PredictionResponse,
+  Series,
+} from '@mlb/shared';
 import { DEFAULT_NARRATIVE_MODEL_ID, NARRATIVE_MODEL_OPTIONS } from '@mlb/shared';
 import { getPrediction } from '../api';
 import {
@@ -278,6 +283,51 @@ function PredictionResult({
       <p className="prediction__model">
         {t('prediction.model', { model: prediction.model })}
       </p>
+
+      {prediction.metrics && (
+        <PredictionMetricsBlock t={t} metrics={prediction.metrics} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * The accessible, localized "Prediction basis" block. Shows each team's
+ * regular-season win pct (favorite and underdog) so the basis of the
+ * prediction is explainable. A `null` win pct renders a localized "not
+ * available" string rather than NaN. Guarded by the caller behind an existing
+ * `prediction.metrics`, so responses without metrics render unchanged.
+ */
+function PredictionMetricsBlock({
+  t,
+  metrics,
+}: {
+  t: TFn;
+  metrics: PredictionMetrics;
+}) {
+  const formatPct = (winPct: number | null): string =>
+    winPct === null
+      ? t('prediction.metrics.unknown')
+      : `${(winPct * 100).toFixed(1)}%`;
+
+  const line = (metric: PredictionMetrics['favorite']): string =>
+    t('prediction.metrics.team', {
+      team: teamName(t, metric.teamId),
+      pct: formatPct(metric.winPct),
+    });
+
+  return (
+    <div className="prediction__metrics">
+      <p className="prediction__metrics-title">
+        {t('prediction.metrics.title')}
+      </p>
+      <p className="prediction__metrics-caption">
+        {t('prediction.metrics.winPct')}
+      </p>
+      <ul className="prediction__metrics-list">
+        <li className="prediction__metrics-item">{line(metrics.favorite)}</li>
+        <li className="prediction__metrics-item">{line(metrics.underdog)}</li>
+      </ul>
     </div>
   );
 }

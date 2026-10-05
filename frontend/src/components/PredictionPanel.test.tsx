@@ -31,6 +31,10 @@ const prediction: PredictionResponse = {
   narrative: 'The Dodgers hold a commanding series lead and are poised to close it out.',
   model: 'anthropic.claude-3-haiku-20240307-v1:0',
   generatedAt: '2024-10-30T00:00:00.000Z',
+  metrics: {
+    favorite: { teamId: 119, winPct: 0.605 },
+    underdog: { teamId: 147, winPct: 0.58 },
+  },
 };
 
 describe('PredictionPanel', () => {
@@ -59,6 +63,16 @@ describe('PredictionPanel', () => {
 
     const bar = screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuenow', '73');
+
+    // The prediction basis block surfaces each team's regular-season win pct
+    // (favorite and underdog), localized in English.
+    expect(screen.getByText('Prediction basis')).toBeInTheDocument();
+    expect(screen.getByText('Regular-season win %')).toBeInTheDocument();
+    // 0.605 -> 60.5%, 0.58 -> 58.0%, labeled with the resolved team names.
+    expect(
+      screen.getByText('Los Angeles Dodgers: 60.5%'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('New York Yankees: 58.0%')).toBeInTheDocument();
     // The panel threads the default model accuracy (0.5), the active UI
     // language ('en', pinned by the provider), and the default model id.
     expect(mockedGetPrediction).toHaveBeenCalledWith(
@@ -68,6 +82,41 @@ describe('PredictionPanel', () => {
       'en',
       DEFAULT_NARRATIVE_MODEL_ID,
     );
+  });
+
+  it('renders a localized "not available" basis when a team win pct is null', async () => {
+    mockedGetPrediction.mockResolvedValue({
+      ...prediction,
+      metrics: {
+        favorite: { teamId: 119, winPct: 0.605 },
+        underdog: { teamId: 147, winPct: null },
+      },
+    });
+    renderWithI18n(<PredictionPanel series={worldSeries} season={2024} />);
+
+    await waitFor(() =>
+      expect(screen.getByText('Los Angeles Dodgers: 60.5%')).toBeInTheDocument(),
+    );
+    // The null underdog win pct renders the localized placeholder, never NaN.
+    expect(
+      screen.getByText('New York Yankees: Not available'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it('omits the basis block entirely for a response without metrics', async () => {
+    const { metrics: _omit, ...withoutMetrics } = prediction as Extract<
+      PredictionResponse,
+      { mode: 'prediction' }
+    >;
+    mockedGetPrediction.mockResolvedValue(withoutMetrics);
+    renderWithI18n(<PredictionPanel series={worldSeries} season={2024} />);
+
+    await waitFor(() =>
+      expect(screen.getByText('Los Angeles Dodgers')).toBeInTheDocument(),
+    );
+    // Backward compatible: no basis block when the response carries no metrics.
+    expect(screen.queryByText('Prediction basis')).not.toBeInTheDocument();
   });
 
   it('re-requests the prediction with the chosen accuracy when the slider changes', async () => {

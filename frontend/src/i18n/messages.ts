@@ -70,6 +70,10 @@ export type MessageKey =
   | 'prediction.accuracy.conservative'
   | 'prediction.accuracy.aggressive'
   | 'prediction.model.selectLabel'
+  | 'prediction.metrics.title'
+  | 'prediction.metrics.winPct'
+  | 'prediction.metrics.unknown'
+  | 'prediction.metrics.team'
   | 'integrity.banner'
   | 'detail.breadcrumb'
   | 'detail.back'
@@ -154,6 +158,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.accuracy.conservative': 'Conservative',
     'prediction.accuracy.aggressive': 'Confident',
     'prediction.model.selectLabel': 'AI model',
+    'prediction.metrics.title': 'Prediction basis',
+    'prediction.metrics.winPct': 'Regular-season win %',
+    'prediction.metrics.unknown': 'Not available',
+    'prediction.metrics.team': '{team}: {pct}',
     'integrity.banner':
       'Data integrity: {count} finished matchup(s) still reference an undetermined team.',
     'detail.breadcrumb': 'Breadcrumb',
@@ -241,6 +249,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.accuracy.conservative': '控えめ',
     'prediction.accuracy.aggressive': '強気',
     'prediction.model.selectLabel': 'AIモデル',
+    'prediction.metrics.title': '予測の根拠',
+    'prediction.metrics.winPct': 'レギュラーシーズン勝率',
+    'prediction.metrics.unknown': 'データなし',
+    'prediction.metrics.team': '{team}: {pct}',
     'integrity.banner':
       'データ整合性: 終了した{count}件の対戦が未確定のチームを参照しています。',
     'detail.breadcrumb': 'パンくずリスト',
