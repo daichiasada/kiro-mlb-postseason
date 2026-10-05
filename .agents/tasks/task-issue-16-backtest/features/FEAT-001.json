@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish a green baseline before any changes. Confirm the toolchain, install state, and that build + unit tests + synth all pass on the current feat/mlb-postseason-site branch so later verification deltas are attributable to this feature's changes.",
+  "status": "completed",
+  "steps": [
+    "Confirm node/npm: run `PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" node --version && npm --version` from repo root /projects/sandbox/kiro-mlb-postseason. All subsequent npm commands must use that PATH prefix.",
+    "If node_modules is incomplete, run `npm install` at the repo root (workspaces hoist). Otherwise skip.",
+    "Run `npm run build` (ordered shared->backend->frontend->infra) and confirm it succeeds.",
+    "Run `npm test` and confirm all existing Vitest suites pass (baseline).",
+    "Run `npm run synth` and confirm cdk synth succeeds with no AWS calls.",
+    "Record the baseline results (pass/fail per command) in this feature's findings. Do NOT change any source in this feature."
+  ],
+  "acceptance_criteria": [
+    "`npm run build` exits 0",
+    "`npm test` exits 0 with all suites passing",
+    "`npm run synth` exits 0",
+    "findings records the baseline command results"
+  ],
+  "verification": [
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": "Baseline on branch feat/mlb-postseason-site (HEAD c586e83) is fully green. No source files changed. Toolchain: node v22.23.3, npm 11.4.2 (require PATH prefix /root/.nvm/versions/node/v22.23.3/bin). node_modules already installed; no npm install needed. Results: (1) `npm run build` (ordered shared->backend->frontend->infra) exit 0 — all tsc builds + vite build succeeded (frontend bundle index-EAUMFcn_.js 215.01 kB). (2) `npm test` exit 0 — all suites pass: shared/backend/frontend 57 tests across 9 files, infra 8 tests; total green. Harmless infra stderr WARNINGs about nodejs20.x runtime deprecation (W2531) — pre-existing, not a failure. (3) `npm run synth` exit 0 — cdk synth produced the stack template with no AWS calls (62 unconfigured feature-flag notice is informational). Baseline deltas for later features are now attributable to their own changes."
+}
