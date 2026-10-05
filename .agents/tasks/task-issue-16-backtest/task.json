@@ -3,5 +3,12 @@
   "task_description": "Implement GitHub Issue #16: backtest the deterministic prediction model over the completed 2024/2025 seed brackets by simulating 'what if we had predicted at the end of each game', computing hit rate, Brier score, and calibration, and visualizing it as a localized 'Model accuracy' page with an accuracy-slider comparison. Acceptance criteria: (1) deterministic seed-only backtest with fixed values verified in tests; (2) metric definitions explained in UI and README; (3) Bedrock not called (numeric model only). Design: pure engine in @mlb/shared (shared/src/backtest.ts), pure predict relocated to shared/src/predict.ts (backend re-exports it), metrics computed client-side in the SPA from the seed brackets (no backend endpoint, no infra change).",
   "status": "in_progress",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "npm run build (ordered shared->backend->frontend->infra) exit 0. npm test exit 0: shared 34, backend 92, frontend 62, infra 8. npm run synth exit 0 (no AWS calls). npm run test:e2e -w @mlb/frontend exit 0: 24 Playwright tests incl. 2 new accuracy specs. Test quality: backtest.test.ts pins concrete literal hitRate/brierScore (2024 0.906977/0.134132, 2025 0.744681/0.194365, combined 0.822222/0.165587) that would fail if predict() or the engine regressed; accuracy=0 => brier exactly 0.25; calibration-count invariants; property test bounds hitRate/brier in [0,1]. Backtest engine imports only predict.js + types.js + seed JSON (verified no AWS/Bedrock/DynamoDB/network imports), so Bedrock structurally cannot be called. No Dockerfile build applicable (client-side + shared only). No infra/backend behavior change."
+  }
 }
