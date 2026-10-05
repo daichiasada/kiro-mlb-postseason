@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { Bracket } from '@mlb/shared';
 import { isPredictable } from '@mlb/shared';
 import { getBracket } from '../api';
-import { SELECTABLE_SEASONS } from '../config';
+import { POLL_INTERVAL_MS, SELECTABLE_SEASONS } from '../config';
 import { hasStartedContent, parseSeasonParam } from '../seasonRoute';
 import { BracketView } from '../components/BracketView';
 import { StandingsPanel } from '../components/StandingsPanel';
@@ -132,7 +132,10 @@ export function HomePage() {
 
   useAutoRefresh({
     enabled: pollingEnabled,
-    intervalMs: AUTO_REFRESH_INTERVAL_MS,
+    // Production always polls every AUTO_REFRESH_INTERVAL_MS (60s); the e2e
+    // suite injects a much shorter interval via VITE_AUTO_REFRESH_INTERVAL_MS
+    // so it can actually observe (or prove the absence of) a tick.
+    intervalMs: POLL_INTERVAL_MS,
     onRefresh: refresh,
   });
 

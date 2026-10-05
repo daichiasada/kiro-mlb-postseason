@@ -10,10 +10,27 @@ import { SAMPLE_2026_BRACKET, SAMPLE_2026_SERIES_ID } from './fixtures';
  * line and the manual refresh button are matched by their localized strings
  * ("最終更新" and the "更新" button).
  *
- * The auto-refresh interval is 60s (AUTO_REFRESH_INTERVAL_MS); these tests must
- * stay deterministic, so they drive the MANUAL refresh button rather than
- * waiting for the interval to fire.
+ * Production polls every 60s (AUTO_REFRESH_INTERVAL_MS), far longer than any
+ * test could wait. To make the auto-poll assertions MEANINGFUL, the e2e bundle
+ * is built with a short test-only interval injected via
+ * `VITE_AUTO_REFRESH_INTERVAL_MS` (see `playwright.config.ts`'s
+ * `E2E_POLL_INTERVAL_MS`). With that short interval:
+ *   - the in-progress 2026 test can wait past one period and observe an
+ *     UNPROMPTED, interval-driven second `/bracket` fetch (polling is ON), and
+ *   - the results-only 2024 test can wait past several periods and prove NO
+ *     extra fetch fires (the polling gate is OFF) - an assertion that would now
+ *     genuinely fail if polling were wrongly enabled.
+ *
+ * The short interval is a build-time test override only; it never changes the
+ * 60s production default.
  */
+
+/**
+ * Must comfortably exceed `E2E_POLL_INTERVAL_MS` in `playwright.config.ts` so a
+ * tick WOULD fire within the window if polling were armed. Kept small to stay
+ * fast while leaving ample margin over the short test interval.
+ */
+const POLL_WAIT_MS = 3000;
 
 /**
  * Routes `**\/bracket*` to the in-progress 2026 bracket and returns a getter
@@ -97,11 +114,21 @@ test.describe('auto-refresh (Issue #17)', () => {
     });
     await expect(bracket).toBeVisible();
 
-    // Drive the manual refresh (do NOT wait for the 60s interval).
+    // Auto-polling is ON for an in-progress season: with the short test
+    // interval, an UNPROMPTED, interval-driven second /bracket fetch must fire
+    // within the window WITHOUT any user interaction. This proves the polling
+    // path end-to-end (not just the manual button). The default 60s production
+    // interval would make this impossible, hence the test-only override.
+    await expect.poll(bracketRequests, { timeout: POLL_WAIT_MS }).toBeGreaterThanOrEqual(2);
+    const afterAutoPoll = bracketRequests();
+
+    // Drive the manual refresh too and confirm it issues yet another fetch.
     await refreshButton.click();
 
-    // A second /bracket request is made.
-    await expect.poll(bracketRequests).toBeGreaterThanOrEqual(2);
+    // A further /bracket request is made on top of the auto-polled ones.
+    await expect
+      .poll(bracketRequests)
+      .toBeGreaterThan(afterAutoPoll);
 
     // The refresh is flicker-free: the full-screen loading status never shows
     // and the bracket region stays mounted/visible throughout.
@@ -142,9 +169,12 @@ test.describe('auto-refresh (Issue #17)', () => {
     // additional unprompted fetch may occur.
     const afterLoad = bracketRequests();
 
-    // Wait a few seconds (well short of the 60s interval) and confirm no extra,
+    // Wait well PAST several short test-interval periods and confirm no extra,
     // unprompted /bracket request fired - i.e. the page is not auto-polling.
-    await page.waitForTimeout(3000);
+    // Because the e2e bundle uses the short E2E_POLL_INTERVAL_MS, a tick WOULD
+    // have fired in this window if the gate were (wrongly) armed, so this
+    // assertion is now a genuine proof of criterion 1 rather than vacuous.
+    await page.waitForTimeout(POLL_WAIT_MS);
     expect(bracketRequests()).toBe(afterLoad);
 
     await page.screenshot({

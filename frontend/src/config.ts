@@ -19,6 +19,7 @@ import {
   DEFAULT_ACCURACY,
   ACCURACY_STEP,
 } from '@mlb/shared';
+import { AUTO_REFRESH_INTERVAL_MS } from './useAutoRefresh';
 
 declare global {
   interface Window {
@@ -66,3 +67,29 @@ export { SELECTABLE_SEASONS };
  * transform) so the initial UI behavior is unchanged.
  */
 export { MIN_ACCURACY, MAX_ACCURACY, DEFAULT_ACCURACY, ACCURACY_STEP };
+
+/**
+ * The background auto-refresh poll interval, in milliseconds.
+ *
+ * Production always uses the 60s {@link AUTO_REFRESH_INTERVAL_MS} default (tied
+ * to the backend's ~15 minute bracket cache TTL). The only reason this is
+ * resolved from an env var is to let the e2e suite inject a much shorter
+ * interval so the "does not auto-poll" assertion can actually fail if the
+ * polling gate were wrong, and so interval-driven polling can be verified
+ * end-to-end. `VITE_AUTO_REFRESH_INTERVAL_MS` is read at build time (and is
+ * never set for normal dev/prod builds); any unset or invalid value falls back
+ * to the 60s production default, so production behavior cannot be weakened by
+ * accident.
+ */
+function readAutoRefreshIntervalMs(): number {
+  const raw = import.meta.env.VITE_AUTO_REFRESH_INTERVAL_MS;
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    return AUTO_REFRESH_INTERVAL_MS;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : AUTO_REFRESH_INTERVAL_MS;
+}
+
+export const POLL_INTERVAL_MS: number = readAutoRefreshIntervalMs();

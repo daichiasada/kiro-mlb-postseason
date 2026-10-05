@@ -12,6 +12,20 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const PORT = 4318;
 
+/**
+ * Test-only auto-refresh poll interval, in milliseconds.
+ *
+ * Production always polls every 60s (AUTO_REFRESH_INTERVAL_MS). For the e2e
+ * run we bake a much shorter interval into the bundle via
+ * `VITE_AUTO_REFRESH_INTERVAL_MS` (read in `src/config.ts`) so the suite can
+ * actually observe an interval-driven tick within its wait window - and so the
+ * "results-only season does not auto-poll" assertion can genuinely fail if the
+ * polling gate were ever wrong, instead of being vacuous against a 60s period.
+ * This env var is set here only; normal dev/prod builds leave it unset and keep
+ * the 60s default.
+ */
+const E2E_POLL_INTERVAL_MS = 500;
+
 export default defineConfig({
   testDir: './e2e',
   // Artifacts (screenshots, traces) land here; gitignored.
@@ -43,6 +57,12 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort --host 127.0.0.1`,
     url: `http://127.0.0.1:${PORT}`,
+    // Bake the short test-only poll interval into the bundle. Vite reads
+    // VITE_* vars from the environment at build time, so this value flows into
+    // `src/config.ts`'s POLL_INTERVAL_MS for the e2e bundle only.
+    env: {
+      VITE_AUTO_REFRESH_INTERVAL_MS: String(E2E_POLL_INTERVAL_MS),
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     stdout: 'ignore',
