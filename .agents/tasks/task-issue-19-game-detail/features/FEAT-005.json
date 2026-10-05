@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-005",
+  "type": "docs",
+  "description": "Update the spec-driven-dev artifacts and both READMEs to truthfully document Issue #19: the per-game detail feature, the new GET /game endpoint + GameDetail contract, the DynamoDB GAME#<gamePk> caching with TTL-by-state, the new infra Lambda/route/IAM scope, and the frontend accordion with mobile horizontal-scroll. Spec-driven dev is graded. Depends on FEAT-002, FEAT-003, FEAT-004.",
+  "status": "completed",
+  "steps": [
+    "Update .kiro/specs/mlb-postseason/requirements.md: add a requirement for the series game-detail enhancement capturing Issue #19's three acceptance criteria (per-game caching with long-cache for completed games; API-failure fallback to the final score; mobile horizontal-scroll inning table) plus the W/L/S pitchers, venue, and optional highlights link.",
+    "Update .kiro/specs/mlb-postseason/design.md: document the GET /game?gamePk= endpoint and the GameDetailResponse (ok | unavailable) contract, the MLB endpoints used (linescore + feed/live, plus optional content/recap for highlights), the pure parsers in backend/src/mlb/gameDetail.ts, the DynamoDB GAME#<gamePk> cache with the long-vs-short TTL by game state, the new GetGameDetailFn Lambda (TABLE_NAME only, no Bedrock) + GET /game route, and the frontend accordion with its horizontally-scrollable linescore table.",
+    "Update .kiro/specs/mlb-postseason/tasks.md: add a completed task entry for Issue #19 referencing the implementing features (FEAT-002..FEAT-004) and the verification performed.",
+    "Update README.md (English): document the new game-detail accordion feature, the /game endpoint and its contract, the per-game caching + TTL behavior, and note the mobile horizontal-scroll inning table. Keep the architecture/endpoint list sections accurate (3 Lambdas / 3 routes now: /bracket, /prediction, /game).",
+    "Update README.ja.md with the equivalent Japanese documentation, mirroring the English changes (keep the two READMEs in sync).",
+    "Confirm no code assertions in the docs are false (endpoint paths, env vars, TTL values) by cross-checking against the implemented FEAT-002/003/004 code."
+  ],
+  "acceptance_criteria": [
+    "requirements.md, design.md, tasks.md under .kiro/specs/mlb-postseason/ document Issue #19's feature and all three acceptance criteria.",
+    "README.md and README.ja.md both document the game-detail accordion, the GET /game endpoint + GameDetail contract, the GAME#<gamePk> caching with TTL-by-state, and the mobile horizontal-scroll table, and are consistent with each other.",
+    "The documented endpoint paths, env vars, and TTL values match the implemented code."
+  ],
+  "verification": [
+    "Manual read-through confirming specs + both READMEs match the implemented endpoint/contract/caching/infra; cross-check paths against backend/src/handlers/getGameDetail.ts, backend/src/store/dynamo.ts, and infra/lib/mlb-postseason-stack.ts."
+  ],
+  "blocked_reason": null,
+  "findings": "Documentation-only feature; committed as 3779032 on feat/mlb-postseason-site. Edited .kiro/specs/mlb-postseason/{requirements,design,tasks}.md and README.md + README.ja.md. Added Requirement 19 (Issue #19) covering all three acceptance criteria plus pitchers/venue/optional highlights and the no-Bedrock Lambda scope; documented GET /game, the GameDetailResponse ok|unavailable contract, the pure parsers in backend/src/mlb/gameDetail.ts, the GAME#<gamePk> cache with TTL-by-state, the three-Lambda/three-route infra, and the mobile horizontal-scroll accordion in design.md; added a completed Issue #19 task block (D1-D4 referencing FEAT-002..005) in tasks.md; mirrored the EN/JA README changes (feature bullet, architecture now 3 Lambdas/4 route lines incl GET /game, a new per-game-detail section). Cross-checked all asserted values against the code: endpoint GET /game?gamePk= with parseGamePk 400 on non-positive int; TTL constants GAME_DETAIL_FINAL_TTL_SECONDS=604800 (1 week) and GAME_DETAIL_LIVE_TTL_SECONDS=60; MLB URLs v1 linescore, v1.1 feed/live, v1 content; GetGameDetailFn has TABLE_NAME only (no BEDROCK_MODEL_ID), DynamoDB RW, no bedrock:InvokeModel. Verified with PATH-prefixed `npm run build` (shared->backend->frontend->infra all green). frontend/dist was rebuilt but is gitignored and not committed. Pre-existing em dash on requirements.md line 520 (Issue #16 content) left untouched; no em dashes added in new prose."
+}

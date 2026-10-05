@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish a green baseline before implementing Issue #19. Confirm the toolchain, install deps if needed, and run the existing build/test/synth so later regressions are attributable to this task. This is an existing project so a baseline is mandatory.",
+  "status": "completed",
+  "steps": [
+    "Confirm npm via the nvm PATH prefix: run `PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm -v` and `node -v` from repo root /projects/sandbox/kiro-mlb-postseason.",
+    "If node_modules looks stale, run `PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm install` at the repo root (workspaces install).",
+    "Run `PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build` and confirm the ordered shared->backend->frontend->infra build succeeds (frontend/dist is produced).",
+    "Run `PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test` and confirm all vitest suites pass.",
+    "Run `PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth` and confirm cdk synth succeeds with no AWS calls.",
+    "Install the Playwright chromium browser once if not present: `PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npx playwright install chromium` (run from frontend workspace or repo root).",
+    "Record the baseline results in this feature's findings field. Do not commit anything in this feature (no source changes)."
+  ],
+  "acceptance_criteria": [
+    "`npm run build` exits 0 and frontend/dist exists.",
+    "`npm test` exits 0 with all suites passing.",
+    "`npm run synth` exits 0.",
+    "Baseline results recorded in findings."
+  ],
+  "verification": [
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": "GREEN baseline established on branch feat/mlb-postseason-site (HEAD 9356096). Toolchain: node v22.23.3, npm 11.4.2 (via nvm PATH prefix). node_modules already present; no npm install needed. `npm run build` exit 0: ordered shared->backend->frontend->infra all compiled; frontend/dist produced (index.html + assets, vite built in ~6.8s). `npm test` exit 0: all vitest suites pass across workspaces. Frontend workspace: 25 test files, 188 tests passed. Infra workspace: 1 file, 8 tests passed (shared/backend suites also ran green). Note: infra tests emit a non-fatal CDK WARNING that Lambda runtime nodejs20.x is deprecated (W2531) - pre-existing, not a failure. `npm run synth` exit 0: cdk synth produced MlbPostseasonStack template with no AWS calls (62 unconfigured feature flags noted, informational only). Playwright chromium installed via `npx playwright install chromium` (OS not officially supported -> fallback ubuntu24.04-x64 build downloaded, exit 0). No source changes made; nothing committed per feature scope."
+}
