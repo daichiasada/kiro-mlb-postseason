@@ -820,3 +820,72 @@ predictable.
    mobile width (width is constrained to the card content width).
 7. WHEN any series-flow string is shown THEN it SHALL exist in BOTH the EN and
    JA message tables (default JA).
+
+## Requirement 19 - Per-game detail: line score, pitchers, venue, highlights (Issue #19)
+
+**User story:** As a fan reviewing a series, I want to open a single game and
+see its inning-by-inning line score (R/H/E), the winning/losing/save pitchers,
+the venue, and a recap/highlights link when one exists, so that I can study how
+a game played out without leaving the series detail page.
+
+GitHub Issue #19. The series detail page gains a per-game ACCORDION: expanding a
+game lazily fetches its detail from a NEW backend endpoint `GET /game?gamePk=`,
+which returns a `GameDetailResponse` discriminated union. The backend assembles
+the detail from the MLB Stats API linescore (per-inning + totals R/H/E) and
+feed/live (venue, game state, W/L/S pitcher decisions), plus an OPTIONAL
+best-effort content/recap link, using PURE parsers in
+`backend/src/mlb/gameDetail.ts`. Each game's detail is cached in DynamoDB under
+`pk = GAME#<gamePk>` with a TTL chosen by game state (a completed game is cached
+long; an in-progress game short). A new `GetGameDetailFn` Lambda (TABLE_NAME env
+only, NO Bedrock) backs the `GET /game` route, so the API now exposes three app
+Lambdas and routes (`GET /bracket`, `GET`/`POST /prediction`, `GET /game`).
+
+### Acceptance criteria
+
+1. WHEN a game's detail is requested THEN the system SHALL first read the
+   DynamoDB cache keyed by `pk = GAME#<gamePk>` and return a cache hit WITHOUT
+   refetching; on a miss it SHALL fetch, assemble, and write the detail back
+   with a TTL chosen by game state - a COMPLETED game (MLB `abstractGameState`
+   `Final`/`Game Over`/`Completed Early`) uses the LONG TTL
+   (`GAME_DETAIL_FINAL_TTL_SECONDS = 604800`, one week) and anything else uses
+   the SHORT live TTL (`GAME_DETAIL_LIVE_TTL_SECONDS = 60`, one minute), so a
+   finished game is cached long and never needlessly refetched (Issue #19
+   criterion 1).
+2. WHEN the upstream MLB linescore/feed-live fetch fails for ANY reason THEN the
+   system SHALL return the documented `{ status: 'unavailable', gamePk }`
+   fallback at HTTP 200 WITHOUT throwing and WITHOUT caching it, so the frontend
+   keeps showing the already-known final score instead of surfacing an error
+   (Issue #19 criterion 2).
+3. WHEN a game detail is served `ok` THEN it SHALL carry the inning-by-inning
+   line score and the game totals (per side `runs`/`hits`/`errors`, each `null`
+   when the MLB API omits it), the winning/losing/save pitcher decisions
+   (`pitchers.winner`/`loser`/`save`, each omitted when absent), the game state,
+   the venue when available, and an OPTIONAL recap `highlight` (`{ title, url }`)
+   that is included only when the best-effort content fetch yields a link; a
+   content fetch/parse failure SHALL NEVER fail the overall call.
+4. WHEN the detail is parsed THEN the parsing SHALL be done by PURE,
+   side-effect-free functions in `backend/src/mlb/gameDetail.ts`
+   (`parseLinescore`, `parseGameMeta`, `parseHighlight`, `buildGameDetail`) that
+   tolerate missing fields and perform NO network or AWS access, so they are
+   unit-testable with the MLB API mocked.
+5. IF the `gamePk` query is missing or is not a positive integer THEN the
+   `GET /game` endpoint SHALL respond `400`; a parse/assembly it cannot recover
+   from SHALL respond `500`.
+6. WHEN a game is shown on the series detail page THEN the system SHALL render a
+   per-game accordion toggle (`aria-expanded`/`aria-controls`) that LAZILY
+   fetches `GET /game` only on first expand, renders the inning R/H/E table, the
+   W/L/S pitchers, the venue, and the optional highlights link, and on a fetch
+   failure or an `unavailable` response SHALL keep the existing final score
+   visible rather than erroring.
+7. WHEN the inning line-score table is shown on a narrow (mobile) viewport THEN
+   it SHALL sit inside a horizontally-scrollable container
+   (`.detail__linescore-scroll`) so the table scrolls on its own without
+   breaking the page-level 375px no-horizontal-overflow guarantee (Issue #19
+   criterion 3).
+8. WHEN any game-detail UI string is shown THEN it SHALL exist in BOTH the EN
+   and JA message tables (default JA).
+9. WHEN the stack is synthesized THEN the game-detail Lambda (`GetGameDetailFn`,
+   Node 20) SHALL carry ONLY the `TABLE_NAME` environment variable (NO
+   `BEDROCK_MODEL_ID`), SHALL be granted DynamoDB read/write but NO
+   `bedrock:InvokeModel` IAM, and SHALL be wired to a `GET /game` HTTP API route,
+   so the API exposes exactly three app Lambdas and three route paths.

@@ -13,12 +13,13 @@ CloudFront (HTTPS)  --->  S3 (private, OAC)  [static React/Vite SPA bundle]
   |   /config.js injects window.__API_BASE_URL__
   v
 API Gateway (HTTP API, CORS)
-  |-- GET  /bracket      -> Lambda getBracket   (Node 20)
+  |-- GET  /bracket      -> Lambda getBracket    (Node 20)
   |-- GET/POST /prediction -> Lambda getPrediction (Node 20)
+  |-- GET  /game         -> Lambda getGameDetail (Node 20, no Bedrock)
           |
           v
-   BracketService  --->  DynamoDB cache (pk BRACKET#<season> + STANDINGS#<season>, ttl)
-          |          --->  MLB Stats API (statsapi.mlb.com: schedule + standings)
+   BracketService  --->  DynamoDB cache (pk BRACKET#<season> + STANDINGS#<season> + GAME#<gamePk>, ttl)
+          |          --->  MLB Stats API (statsapi.mlb.com: schedule + standings + per-game linescore/feed-live/content)
           |          --->  Amazon Bedrock (selectable Amazon Nova / Anthropic Claude)
           |          --->  bundled 2024 + 2025 seeds (shared/src/seed)
 ```
@@ -277,7 +278,7 @@ without a full loading screen; a results-only 2024 season does not auto-poll).
 
 ## API and Lambdas
 
-Two Node 20 Lambdas behind an API Gateway HTTP API with CORS:
+Three Node 20 Lambdas behind an API Gateway HTTP API with CORS:
 
 - `backend/src/handlers/getBracket.ts` - `GET /bracket?season=YYYY`. Parses and
   validates the season, calls `BracketService.getBracket`, returns the bracket
@@ -287,8 +288,16 @@ Two Node 20 Lambdas behind an API Gateway HTTP API with CORS:
   `PredictionResponse` union (`mode: 'prediction' | 'results' | 'upcoming'`)
   with HTTP 200; `400` for a missing `seriesId` or invalid `season`; `500` if
   `getBracket` throws.
+- `backend/src/handlers/getGameDetail.ts` - `GET /game?gamePk=NNN` (Issue #19).
+  Parses `gamePk` with `parseGamePk` (must be a positive integer), calls
+  `BracketService.getGameDetail`, and returns the `GameDetailResponse` union
+  (`status: 'ok' | 'unavailable'`) with HTTP 200; `400` for a missing/invalid
+  `gamePk`; `500` only if the service itself throws unexpectedly. The
+  `unavailable` variant is the DOCUMENTED fallback (still HTTP 200), not an
+  error, so the frontend branches on it to keep showing the final score.
 - `backend/src/handlers/http.ts` provides `jsonResponse` (with CORS headers),
-  `parseSeason`, and `DEFAULT_SEASON` (derived from the shared `CURRENT_YEAR`).
+  `parseSeason`, `parseGamePk`, and `DEFAULT_SEASON` (derived from the shared
+  `CURRENT_YEAR`).
 
 ## BracketService resolution order
 
@@ -362,6 +371,44 @@ The handler (`getPrediction.ts`) parses `accuracy` from BOTH the GET query
 `accuracy` never causes a `400`). It returns all three variants with HTTP 200;
 it still responds `400` for a missing `seriesId` or an invalid `season`, and
 `500` only if `getBracket` itself throws.
+
+### getGameDetail(gamePk) - per-game detail resolution order (Issue #19)
+
+`getGameDetail` returns a `GameDetailResponse` discriminated union
+(`status: 'ok' | 'unavailable'`). It is cache-first and NEVER throws on an
+upstream MLB failure:
+
+1. Read the DynamoDB cache (`store.getCachedGameDetail(gamePk)`). On a hit,
+   RETURN it WITHOUT fetching (Issue #19 criterion 1).
+2. On a miss, fetch the linescore and feed/live IN PARALLEL
+   (`fetchGameLinescore` + `fetchGameFeedLive`), parse them with the pure
+   `parseLinescore` + `parseGameMeta`, then make a BEST-EFFORT content fetch
+   (`fetchGameContent` -> `parseHighlight`) for a recap link; a content
+   fetch/parse failure is swallowed so the overall call still yields an `ok`
+   response without a highlight. `buildGameDetail` assembles the `ok` union.
+3. Write the result back with a TTL chosen by game state: a completed game
+   (`isCompletedGameState` -> MLB `abstractGameState` `final`/`game over`/
+   `completed early`, case-insensitive) uses `GAME_DETAIL_FINAL_TTL_SECONDS`
+   (one week); anything else uses `GAME_DETAIL_LIVE_TTL_SECONDS` (one minute).
+4. On ANY linescore/feed-live upstream failure, RETURN the documented
+   `{ status: 'unavailable', gamePk }` fallback WITHOUT throwing and WITHOUT
+   caching it (Issue #19 criterion 2), so the frontend keeps the final score.
+
+The MLB endpoints are thin, response-narrowing clients in
+`backend/src/mlb/client.ts`: `fetchGameLinescore` ->
+`https://statsapi.mlb.com/api/v1/game/{gamePk}/linescore` (per-inning + totals
+R/H/E), `fetchGameFeedLive` ->
+`https://statsapi.mlb.com/api/v1.1/game/{gamePk}/feed/live` (venue, game state,
+and the W/L/S pitcher decisions, which are NOT in the boxscore), and
+`fetchGameContent` -> `https://statsapi.mlb.com/api/v1/game/{gamePk}/content`
+(optional recap). The parsing lives in PURE functions in
+`backend/src/mlb/gameDetail.ts` - `parseLinescore`, `parseGameMeta`,
+`parseHighlight`, `buildGameDetail` - that tolerate missing fields (a missing
+run/hit/error maps to `null`, an absent decision/venue is omitted, a missing
+recap yields `undefined`) and do NO network or AWS access, so they are
+unit-testable with the MLB API mocked. The `GameDetailResponse`,
+`InningLine`, `LineScoreSide`, `LineScoreTotals`, `GamePitchers`, and
+`GameHighlight` types live ONLY in `@mlb/shared` (`shared/src/types.ts`).
 
 ## Aggregation - aggregateBracket
 
@@ -540,10 +587,15 @@ free):
 bracket JSON in DynamoDB keyed by season (`BRACKET#<season>`), with a TTL so the
 cache refreshes. The same store also caches the regular-season win-pct map keyed
 by `STANDINGS#<season>` via `getCachedStandings` / `putCachedStandings`, using
-the same default TTL (~15 min) as the bracket cache. Both key families share the
-single `pk` partition key, so NO infra schema change was needed to add the
-standings cache. All methods are no-ops / return `undefined` when `TABLE_NAME` is
-unset, so the service runs locally and in tests without AWS.
+the same default TTL (~15 min) as the bracket cache, and the per-game detail
+keyed by `GAME#<gamePk>` via `getCachedGameDetail` / `putCachedGameDetail`
+(Issue #19). The game-detail TTL is caller-chosen by game state: a COMPLETED
+game uses `GAME_DETAIL_FINAL_TTL_SECONDS` (one week, `604800`) because a finished
+game is immutable, while an in-progress game uses `GAME_DETAIL_LIVE_TTL_SECONDS`
+(one minute, `60`) so a live score stays fresh. All three key families share the
+single `pk` partition key, so NO infra schema change was needed to add either the
+standings or the game-detail cache. All methods are no-ops / return `undefined`
+when `TABLE_NAME` is unset, so the service runs locally and in tests without AWS.
 
 ## Seed fallback
 
@@ -566,9 +618,23 @@ seed if a bracket request fails, so the demo renders offline.
 ## Infrastructure (CDK)
 
 `infra/` provisions the whole stack in TypeScript: S3 + CloudFront (OAC), the
-HTTP API + the two Lambdas, the DynamoDB table (TTL enabled), and Bedrock IAM
-permissions. `npm run synth` produces the template; `npm run deploy` builds and
-deploys in one command (requires active AWS credentials).
+HTTP API + the three Lambdas (`getBracket`, `getPrediction`, `getGameDetail`),
+the DynamoDB table (TTL enabled), and Bedrock IAM permissions. `npm run synth`
+produces the template; `npm run deploy` builds and deploys in one command
+(requires active AWS credentials).
+
+### Game-detail Lambda + route (Issue #19)
+
+The `GetGameDetailFn` is a THIRD Node 20 Lambda bundled from
+`backend/src/handlers/getGameDetail.ts`. Unlike the prediction function it never
+calls Bedrock, so it carries ONLY the `TABLE_NAME` environment variable (NO
+`BEDROCK_MODEL_ID`) and is granted DynamoDB read/write but gets NO
+`bedrock:InvokeModel` IAM policy; it reaches the public MLB API over plain
+HTTPS. It is wired to a `GET /game` route on the same HTTP API, so the API now
+exposes exactly three app Lambdas and three route paths: `GET /bracket`,
+`GET`/`POST /prediction`, and `GET /game`. `infra/test/stack.test.ts` asserts
+the game-detail function has `TABLE_NAME` without `BEDROCK_MODEL_ID` and that
+the `GET /game` route exists.
 
 ### Bedrock model id + IAM (selectable Amazon Nova / Claude)
 
@@ -1137,3 +1203,34 @@ and JA tables (default JA).
 The whole feature is frontend-only over the already-fetched bracket plus the
 pure shared `predict()`/`seriesProbTrend`, so there is NO new Lambda, route,
 IAM, or DynamoDB access and the CDK/deploy story is unchanged.
+
+## Per-game detail: line score, pitchers, venue, highlights (Issue #19)
+
+The series detail page (`frontend/src/pages/SeriesDetailPage.tsx`) renders a
+per-game ACCORDION. Each game row has a toggle (`aria-expanded`/`aria-controls`,
+with the `useId()` colons stripped so the id is valid in both CSS selectors and
+assistive tech) whose panel is backed by `GameDetailPanel`. The detail is
+fetched LAZILY: `getGameDetail(gamePk)` (`frontend/src/api.ts`) is called only on
+the first expand, and the panel tracks its own `loading`/`ok`/`error` state so
+collapsing and re-expanding does not refetch.
+
+- On an `ok` response the panel renders the inning R/H/E table (an away row and
+  a home row with per-inning columns plus R/H/E totals, headers labeled from the
+  localized `detail.game.*` keys), the W/L/S pitchers (each shown only when
+  present), the venue (only when non-empty), and the optional highlights link
+  (only when `highlight` is present), the link opening in a new tab with
+  `rel="noopener noreferrer"`.
+- On a fetch failure OR an `unavailable` response the panel keeps the already
+  rendered final score visible and surfaces nothing destructive, so the API
+  being down never hides the score (Issue #19 criterion 2).
+
+The inning table is wrapped in a `.detail__linescore-scroll` container
+(`overflow-x: auto`) so on a narrow mobile viewport the TABLE scrolls
+horizontally on its own while the page keeps its 375px no-horizontal-overflow
+guarantee (Issue #19 criterion 3). All new strings (`detail.game.*`: the
+show/hide toggle, inning/R/H/E headers, venue, win/lose/save pitcher labels, and
+the highlights link) live in BOTH the EN and JA message tables (default JA).
+
+This is the ONLY frontend consumer of the `GET /game` endpoint; the backend
+`GameDetailResponse` union and its member types are imported from `@mlb/shared`,
+so the contract stays single-sourced.

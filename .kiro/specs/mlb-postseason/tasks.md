@@ -658,3 +658,74 @@ no Bedrock or live MLB call, no backend or infra change.
         `.kiro/specs/mlb-postseason/design.md`,
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
 - _Requirements: 18_
+
+## Per-game detail: line score, pitchers, venue, highlights (task-issue-19-game-detail)
+
+GitHub Issue #19 under `.agents/tasks/task-issue-19-game-detail/` (features
+FEAT-002 through FEAT-005): a per-game detail accordion on the series detail
+page, backed by a NEW `GET /game?gamePk=` endpoint. The backend assembles the
+`GameDetailResponse` union from the MLB linescore + feed/live (and an optional
+content recap) via pure parsers, caches it under `GAME#<gamePk>` with a
+long-vs-short TTL by game state, and is served by a third Lambda with no Bedrock.
+
+### D1. Backend: endpoint, pure parsers, GAME#<gamePk> cache (task-issue-19 FEAT-002)
+
+- [x] Shared `GameDetailResponse` discriminated union (`status: 'ok' |
+      'unavailable'`) plus `InningLine`, `LineScoreSide`, `LineScoreTotals`,
+      `GamePitchers`, and `GameHighlight` in `@mlb/shared`.
+      - `shared/src/types.ts`.
+- [x] Pure parsers `parseLinescore`/`parseGameMeta`/`parseHighlight`/
+      `buildGameDetail` tolerating missing fields with NO network/AWS access,
+      plus thin response-narrowing MLB clients `fetchGameLinescore`
+      (v1 linescore), `fetchGameFeedLive` (v1.1 feed/live), and best-effort
+      `fetchGameContent` (v1 content).
+      - `backend/src/mlb/gameDetail.ts`, `backend/src/mlb/client.ts`,
+        `backend/src/mlb/gameDetail.test.ts`.
+- [x] `BracketService.getGameDetail(gamePk)`: cache-first on `GAME#<gamePk>`,
+      parallel linescore+feed-live fetch on a miss, best-effort content
+      highlight, write-back with `GAME_DETAIL_FINAL_TTL_SECONDS` (1 week) for a
+      completed game or `GAME_DETAIL_LIVE_TTL_SECONDS` (60s) otherwise, and the
+      `{ status: 'unavailable', gamePk }` fallback (never thrown, never cached)
+      on an upstream failure. New `getCachedGameDetail`/`putCachedGameDetail` on
+      the store; `GET /game` handler with `parseGamePk` (400 on a non-positive
+      integer).
+      - `backend/src/service/bracketService.ts`, `backend/src/store/dynamo.ts`,
+        `backend/src/handlers/getGameDetail.ts`, `backend/src/handlers/http.ts`,
+        and their `*.test.ts`.
+
+### D2. Infra: GetGameDetailFn Lambda + GET /game route (task-issue-19 FEAT-003)
+
+- [x] A third Node 20 Lambda `GetGameDetailFn` bundled from
+      `getGameDetail.ts`, carrying ONLY `TABLE_NAME` (NO `BEDROCK_MODEL_ID`),
+      granted DynamoDB read/write but NO `bedrock:InvokeModel`, wired to a
+      `GET /game` HTTP API route. Stack test asserts the env scope and the route.
+      - `infra/lib/mlb-postseason-stack.ts`, `infra/test/stack.test.ts`.
+
+### D3. Frontend: lazy per-game accordion + mobile scroll (task-issue-19 FEAT-004)
+
+- [x] A per-game accordion on the series detail page that lazily calls
+      `getGameDetail` on first expand, renders the inning R/H/E table, W/L/S
+      pitchers, venue, and the optional highlights link, and keeps the final
+      score visible on a fetch failure / `unavailable` response. The inning
+      table is wrapped in a horizontally-scrollable `.detail__linescore-scroll`
+      container so it does not break the 375px no-overflow guarantee. New
+      `detail.game.*` i18n keys (EN + JA, default JA).
+      - `frontend/src/pages/SeriesDetailPage.tsx`, `frontend/src/api.ts`,
+        `frontend/src/i18n/messages.ts`, `frontend/src/styles.css`,
+        `frontend/src/pages/SeriesDetailPage.test.tsx`,
+        `frontend/e2e/game-detail-accordion.spec.ts`, `frontend/e2e/fixtures.ts`.
+
+### D4. Spec + README truthfulness (task-issue-19 FEAT-005)
+
+- [x] Keep the spec-driven-dev artifacts and both READMEs truthful to the
+      game-detail endpoint, the `GameDetailResponse` contract, the
+      `GAME#<gamePk>` cache with TTL-by-state, the three-Lambda / three-route
+      infra, and the mobile horizontal-scroll accordion. Verification was a
+      read-through cross-checking the docs against
+      `backend/src/handlers/getGameDetail.ts`, `backend/src/store/dynamo.ts`,
+      `backend/src/mlb/gameDetail.ts`, and `infra/lib/mlb-postseason-stack.ts`,
+      plus a `npm run build` sanity check.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
+- _Requirements: 19_

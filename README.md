@@ -23,7 +23,10 @@ final exam.
   in-progress one.
 - **Graphical postseason view** — a bracket from the Wild Card round through the World
   Series, showing each series, both teams, the series score, and status.
-- **Series detail** — per-series, game-by-game results (available for every season).
+- **Series detail** — per-series, game-by-game results (available for every season),
+  with a **per-game accordion** that expands to show the inning-by-inning line score
+  (R/H/E), the winning/losing/save pitchers, the venue, and a recap/highlights link when
+  one exists.
 - **Standings / summary panel** — participating teams grouped by league with their
   postseason progress.
 - **Win/loss prediction (added feature, current season only)** — for a series in the
@@ -62,9 +65,12 @@ and a PNG (`docs/architecture.png`) are included.
 
 - **Frontend:** React + TypeScript (Vite), hosted on **S3** (private, Origin Access
   Control) and served through **CloudFront**.
-- **Backend:** two **AWS Lambda** functions (Node 20) behind an **API Gateway HTTP API**
-  with CORS. Routes: `GET /bracket`, `GET /prediction`, `POST /prediction`.
-- **Data:** **DynamoDB** caches the aggregated bracket JSON per season.
+- **Backend:** three **AWS Lambda** functions (Node 20) behind an **API Gateway HTTP API**
+  with CORS. Routes: `GET /bracket`, `GET /prediction`, `POST /prediction`, and
+  `GET /game`. Only the prediction function talks to Bedrock; the game-detail function
+  uses DynamoDB and the public MLB API only.
+- **Data:** **DynamoDB** caches the aggregated bracket JSON per season, the regular-season
+  win pct, and the per-game detail (one table, keyed by `pk`).
 - **AI:** **Amazon Bedrock** (`InvokeModel`) generates the prediction narrative from a
   selectable model (Amazon Nova micro/lite/pro, default Nova Lite; Anthropic Claude also
   available), localized to the UI language.
@@ -288,6 +294,40 @@ localized banner and still renders the bracket. A clean bracket shows no banner.
   game-by-game result; an unknown id shows a friendly "Series not found" page. Path-based
   deep links work in production because CloudFront rewrites `403`/`404` responses to
   `/index.html` (HTTP 200), so the SPA shell loads and renders the requested route.
+
+### Per-game detail (line score, pitchers, venue, highlights)
+
+On the series detail page, each game has a **per-game accordion**. Expanding a game
+**lazily** fetches its detail from a dedicated endpoint and renders:
+
+- the **inning-by-inning line score** (R/H/E per inning plus totals),
+- the **winning / losing / save pitchers**,
+- the **venue**, and
+- an optional **recap / highlights** link when the MLB content endpoint provides one.
+
+The endpoint is **`GET /game?gamePk=NNN`**, which returns a `GameDetailResponse`
+discriminated union at HTTP 200: `{ status: 'ok', ... }` with the full detail, or
+`{ status: 'unavailable', gamePk }` when the upstream MLB fetch fails. The frontend
+branches on `status`, so **an API failure falls back to the already-shown final score**
+instead of erroring (`gamePk` must be a positive integer, otherwise `400`).
+
+- **Assembled from the MLB Stats API** by pure, unit-tested parsers
+  (`backend/src/mlb/gameDetail.ts`): the per-inning + totals R/H/E from
+  `.../game/{gamePk}/linescore`, the venue, game state, and W/L/S decisions from
+  `.../v1.1/game/{gamePk}/feed/live`, and the optional recap link from
+  `.../game/{gamePk}/content` (best effort - a content failure never fails the call).
+- **Cached per game in DynamoDB** under `pk = GAME#<gamePk>`, cache-first (a hit skips the
+  fetch). The TTL is chosen by game state: a **completed** game is cached **one week**
+  (`GAME_DETAIL_FINAL_TTL_SECONDS = 604800`) because it is immutable, while an
+  **in-progress** game is cached **one minute** (`GAME_DETAIL_LIVE_TTL_SECONDS = 60`) so a
+  live score stays fresh. The `unavailable` fallback is never cached.
+- **Mobile-friendly table.** The inning table sits in a horizontally-scrollable container,
+  so on a narrow screen the table scrolls on its own without breaking the page-level 375px
+  no-horizontal-overflow guarantee.
+
+The `GET /game` route is served by a **separate Node 20 Lambda** (`GetGameDetailFn`) that
+carries only `TABLE_NAME` and has **no Bedrock** access - it reaches the public MLB API
+and DynamoDB only. All new UI strings are EN / JA.
 
 ### Dark mode and accessibility
 
