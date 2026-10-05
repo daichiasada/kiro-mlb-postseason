@@ -12,11 +12,11 @@ function game(partial: Partial<RawGame> & {
 }): RawGame {
   return {
     gamePk: partial.gamePk,
-    gameDate: partial.gameDate ?? '2024-10-01T18:00:00Z',
+    gameDate: partial.gameDate ?? '2024-10-01T18:32:00Z',
     seriesDescription: partial.seriesDescription,
     seriesGameNumber: partial.seriesGameNumber,
     gamesInSeries: partial.gamesInSeries ?? 3,
-    status: { abstractGameState: 'Final' },
+    status: partial.status ?? { abstractGameState: 'Final' },
     teams: {
       away: {
         team: { id: partial.awayId, name: `away-${partial.awayId}` },
@@ -88,6 +88,54 @@ describe('aggregateBracket', () => {
     expect(series.id).toBe('2024-al-wildcard-117-116');
     expect(series.games).toHaveLength(2);
     expect(series.games[0]!.seriesGameNumber).toBe(1);
+    // The date field stays date-only (backward compatible), while the full
+    // start time is preserved into the new startTime field.
+    expect(series.games[0]!.date).toBe('2024-10-01');
+    expect(series.games[0]!.startTime).toBe('2024-10-01T18:32:00Z');
+    expect(series.games[0]!.timeTbd).toBe(false);
+  });
+
+  it('flags a game whose start time is TBD and omits startTime', () => {
+    const games: RawGame[] = [
+      game({
+        gamePk: 50,
+        gameDate: '2024-10-01T18:32:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 1,
+        awayId: 116,
+        homeId: 117,
+        awayWin: true,
+        status: { abstractGameState: 'Preview', startTimeTBD: true },
+      }),
+    ];
+
+    const bracket = aggregateBracket(games, 2024);
+    const g = bracket.series[0]!.games[0]!;
+    // date is still derived from the (placeholder) gameDate, unchanged.
+    expect(g.date).toBe('2024-10-01');
+    expect(g.timeTbd).toBe(true);
+    expect(g.startTime).toBeUndefined();
+  });
+
+  it('treats a date-only/midnight placeholder gameDate as time TBD', () => {
+    const games: RawGame[] = [
+      game({
+        gamePk: 60,
+        gameDate: '2026-10-01T00:00:00Z',
+        seriesDescription: 'AL Wild Card Series',
+        seriesGameNumber: 1,
+        awayId: 116,
+        homeId: 117,
+        awayWin: true,
+        status: { abstractGameState: 'Preview' },
+      }),
+    ];
+
+    const bracket = aggregateBracket(games, 2026);
+    const g = bracket.series[0]!.games[0]!;
+    expect(g.date).toBe('2026-10-01');
+    expect(g.timeTbd).toBe(true);
+    expect(g.startTime).toBeUndefined();
   });
 
   it('marks an unfinished series as in_progress', () => {

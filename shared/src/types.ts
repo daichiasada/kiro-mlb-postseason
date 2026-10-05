@@ -32,7 +32,29 @@ export interface TeamSideResult {
 /** The result of a single postseason game. */
 export interface GameResult {
   gamePk: number;
+  /**
+   * The game's calendar date in date-only `YYYY-MM-DD` form. This stays
+   * date-only for backward compatibility: existing producers, the bundled seed
+   * datasets, and any consumer that reads only the date remain valid.
+   */
   date: string;
+  /**
+   * Optional full ISO-8601 UTC datetime of first pitch (e.g.
+   * `2024-10-01T18:32:00Z`), copied verbatim from the MLB Stats API `gameDate`.
+   * This preserves the start time that `date` truncates away. Omitted when the
+   * start time is undetermined ({@link GameResult.timeTbd} is true) and absent
+   * on older producers and the bundled seed datasets, hence optional.
+   */
+  startTime?: string;
+  /**
+   * Optional flag marking a start time that is not yet scheduled (TBD). True
+   * when the MLB Stats API reports `status.startTimeTBD` or supplies only a
+   * date-only midnight placeholder for a not-yet-scheduled game; in that case
+   * {@link GameResult.startTime} is omitted so the UI can render a localized
+   * "Time TBD" rather than a bogus midnight. Absent on older producers and the
+   * bundled seed datasets, hence optional.
+   */
+  timeTbd?: boolean;
   away: TeamSideResult;
   home: TeamSideResult;
   seriesGameNumber: number;

@@ -202,6 +202,14 @@ describe('aggregateBracket (property-based)', () => {
             expect(VALID_STATUSES).toContain(series.status);
             expect(VALID_LEAGUES).toContain(series.league);
             expect(VALID_ROUNDS).toContain(series.round);
+
+            // A TBD start time must never carry a concrete startTime: the two
+            // are mutually exclusive by construction in the aggregator.
+            for (const g of series.games) {
+              if (g.timeTbd === true) {
+                expect(g.startTime).toBeUndefined();
+              }
+            }
           }
         },
       ),

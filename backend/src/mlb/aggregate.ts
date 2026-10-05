@@ -70,6 +70,25 @@ function toSlug(round: RoundName): string {
 }
 
 /**
+ * Detects whether a raw `gameDate` carries only a date (no meaningful
+ * time-of-day). The live MLB Stats API uses a midnight UTC placeholder
+ * (`...T00:00:00Z`) for games whose first pitch is not yet scheduled, so an
+ * exact midnight-UTC time component is treated as a date-only placeholder
+ * rather than a real 00:00 first pitch. A value that does not parse is also
+ * treated as having no usable time-of-day.
+ */
+function hasNoTimeOfDay(gameDate: string): boolean {
+  const parsed = new Date(gameDate);
+  if (Number.isNaN(parsed.getTime())) return true;
+  return (
+    parsed.getUTCHours() === 0 &&
+    parsed.getUTCMinutes() === 0 &&
+    parsed.getUTCSeconds() === 0 &&
+    parsed.getUTCMilliseconds() === 0
+  );
+}
+
+/**
  * Aggregates raw postseason games into a {@link Bracket}.
  *
  * Games are grouped into series by `(seriesDescription + unordered team pair)`.
@@ -107,9 +126,18 @@ export function aggregateBracket(games: RawGame[], season: number): Bracket {
       acc.lowId = awayId;
     }
 
+    // Preserve the full start datetime that `date` truncates away. A start
+    // time is TBD when the API explicitly flags `status.startTimeTBD` OR when
+    // `gameDate` is a date-only/midnight placeholder the API uses for
+    // not-yet-scheduled games. When TBD we omit `startTime` so the UI renders a
+    // localized "Time TBD" instead of a bogus midnight; otherwise we copy the
+    // full ISO `gameDate` verbatim.
+    const timeTbd = game.status?.startTimeTBD === true || hasNoTimeOfDay(game.gameDate);
+
     const gameResult: GameResult = {
       gamePk: game.gamePk,
       date: game.gameDate.slice(0, 10),
+      ...(timeTbd ? { timeTbd: true } : { startTime: game.gameDate, timeTbd: false }),
       away: {
         teamId: awayId,
         score: game.teams.away.score ?? null,

@@ -21,7 +21,7 @@ export interface RawGame {
   seriesDescription: string;
   seriesGameNumber: number;
   gamesInSeries: number;
-  status?: { abstractGameState?: string };
+  status?: { abstractGameState?: string; startTimeTBD?: boolean };
   teams: {
     away: RawTeamSide;
     home: RawTeamSide;
