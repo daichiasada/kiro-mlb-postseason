@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-004",
+  "type": "docs",
+  "description": "Document Issue #21 truthfully in the spec-driven artifacts and both READMEs. Update .kiro/specs/mlb-postseason/{requirements,design,tasks}.md and README.md + README.ja.md to describe the share feature, the chosen OGP image approach and its honest tradeoff (SVG via Lambda, cached; some crawlers do not render SVG og:image), the crawler-readable /share HTML path (how a SPA still serves per-series meta tags and how a human is redirected into the app), the language-query permalink, the caching, and the new infra (two no-Bedrock Lambdas, /og + /share HTTP API routes, CloudFront behaviors). Map each of the three issue acceptance criteria.",
+  "status": "pending",
+  "steps": [
+    "Update .kiro/specs/mlb-postseason/requirements.md with a new requirement block for sharing/OGP (user story + acceptance criteria mirroring Issue #21's three criteria: OGP generation method decided+implemented; crawler-readable meta tags for the SPA; disclaimer included in shared content).",
+    "Update .kiro/specs/mlb-postseason/design.md: describe the design decisions - OG image is generated as SVG by a Lambda (GET /og) and cached in DynamoDB keyed by seriesId+situation+lang; the honest tradeoff vs PNG (sharp native binaries are risky under esbuild/Lambda bundling, so SVG is chosen; some crawlers do not render an SVG og:image - document the raster path for a future PNG upgrade); the /share Lambda returns per-series OG/Twitter meta HTML with a redirect into the SPA (criterion 2); CloudFront routes /og and /share to the API; permalink+lang handling; and that neither new Lambda calls Bedrock.",
+    "Update .kiro/specs/mlb-postseason/tasks.md marking the Issue #21 tasks and their status.",
+    "Update README.md: add a 'Share a series / prediction (permalinks + OGP)' section under the feature list and/or architecture, documenting the share button (Web Share + copy fallback), the ?lang= permalink, the /og SVG + /share HTML endpoints, the caching, the disclaimer in shared content, and the SVG-vs-PNG crawler caveat. Update the Architecture backend bullet (now FIVE Lambdas; routes now include GET /og and GET /share; CloudFront has extra behaviors) so the docs stay truthful.",
+    "Mirror the same additions in README.ja.md (Japanese), keeping it consistent with README.md.",
+    "Run `PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build && npm test && npm run synth` once more to confirm docs-only changes did not break anything.",
+    "Commit, e.g. `docs(issue-21): document share/OGP design, endpoints, caching, and SVG tradeoff in specs and both READMEs`."
+  ],
+  "acceptance_criteria": [
+    "requirements.md, design.md, tasks.md describe the share/OGP feature and map Issue #21's three acceptance criteria.",
+    "README.md and README.ja.md both document the share button, ?lang= permalink, /og + /share endpoints, caching, disclaimer, and the SVG-vs-PNG crawler tradeoff, and the architecture bullets reflect FIVE Lambdas and the new routes/behaviors.",
+    "`npm run build`, `npm test`, and `npm run synth` still pass."
+  ],
+  "verification": [
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -1,0 +1,7 @@
+{
+  "task_id": "task-issue-21-share-ogp",
+  "task_description": "Implement GitHub Issue #21: share a series/prediction via a localized Web-Share/copy-link button with a language-aware permalink; generate per-series OGP images (team colors, series score, win probability) via a cached Lambda; serve crawler-readable per-series OpenGraph/Twitter meta tags for the SPA via a dedicated /share HTML Lambda; and include the 'predictions are reference values, not betting advice' disclaimer in all shared content. Keep all prior features (#15-#24) green. No push/PR/deploy.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}
