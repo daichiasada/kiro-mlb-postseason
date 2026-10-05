@@ -793,24 +793,39 @@ describe('BracketService.getPrediction (prediction cache, Issue #23)', () => {
       ],
     };
     const store = memoryStore(bracket, { 116: 0.58, 117: 0.52 });
-    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    // Return a distinguishable narrative per call so the two prediction
+    // responses are observably different, not just re-served.
+    const bedrockInvoke = vi
+      .fn()
+      .mockResolvedValueOnce('narrative one')
+      .mockResolvedValueOnce('narrative two');
     const service = new BracketService({
       store,
       fetchSchedule: vi.fn(),
       bedrockInvoker: { invoke: bedrockInvoke },
     });
 
-    await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
+    const first = await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
     expect(bedrockInvoke).toHaveBeenCalledOnce();
 
     // Simulate a game result update: the high seed wins another game.
     bracket.series[0]!.high.wins = 2;
 
-    await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
+    const second = await service.getPrediction('2026-al-wildcard-117-116', 2026, 0.5, 'en');
 
     // The win-count change produced a different cache key, so a fresh Bedrock
     // call was made (the cache was effectively invalidated).
     expect(bedrockInvoke).toHaveBeenCalledTimes(2);
+
+    // Freshness: the second response must actually differ from the first, so a
+    // regression that re-served the stale cached value would fail here.
+    expect(second).not.toEqual(first);
+    expect(first.mode).toBe('prediction');
+    expect(second.mode).toBe('prediction');
+    if (first.mode === 'prediction' && second.mode === 'prediction') {
+      expect(second.narrative).not.toBe(first.narrative);
+      expect(second.favoriteWinProbability).not.toBe(first.favoriteWinProbability);
+    }
   });
 });
 
