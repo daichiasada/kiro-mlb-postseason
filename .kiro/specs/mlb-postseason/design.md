@@ -662,3 +662,122 @@ multi-accuracy comparison table (hit rate + Brier for 2024 / 2025 / combined
 across `[0,0.25,0.5,0.75,1]`), and an accessible per-bucket calibration display
 (CSS bars plus per-row `aria-label`s and a caption). A visible localized nav
 link from the home header (`accuracy.nav`) reaches it in every season.
+
+## Dark mode and accessibility (Issue #22)
+
+A frontend-only UX layer that adds a System/Light/Dark theme and hardens the
+app for keyboard and screen-reader use. It is split into a pure, testable core
+and a thin React/CSS glue, mirroring the existing i18n precedent.
+
+### Pure theme core (`frontend/src/theme.ts`)
+
+Framework-free and unit-tested (`theme.test.ts`):
+
+- `type ThemePreference = 'light' | 'dark' | 'system'` (what the user chose) and
+  `type ResolvedTheme = 'light' | 'dark'` (what is actually applied).
+- `THEME_STORAGE_KEY = 'mlb.theme'` and `THEME_PREFERENCES = ['system', 'light',
+  'dark']` (also the toggle button order).
+- `readStoredTheme()` / `storeTheme(pref)` - guarded `localStorage` access that
+  mirrors `readStoredLang`/`storeLang` in i18n: both are wrapped in try/catch and
+  guard `typeof localStorage` so they are inert (never throw) under jsdom/SSR; an
+  absent/invalid stored value yields `null` so callers fall back to `'system'`.
+- `resolveTheme(pref, systemPrefersDark)` - the PURE resolver: `'light'`/`'dark'`
+  map to themselves, `'system'` maps to `systemPrefersDark ? 'dark' : 'light'`.
+- `getSystemPrefersDark()` - reads `matchMedia('(prefers-color-scheme: dark)')`,
+  guarded for environments where `matchMedia` is undefined (returns `false`).
+
+### React glue (`frontend/src/ThemeContext.tsx`)
+
+`ThemeProvider` is mounted ABOVE the router (in `main.tsx`:
+`BrowserRouter > ThemeProvider > I18nProvider > App`) so every route inherits
+the theme. It hydrates the preference from `readStoredTheme()` (default
+`'system'`), computes `resolved = resolveTheme(preference, systemPrefersDark)`
+in a `useMemo`, and applies it in a `useEffect` by setting `data-theme` on
+`document.documentElement`. While the preference is `'system'` it subscribes to
+the `matchMedia` `change` event so a live OS color-scheme change flips the theme
+without a reload. `useTheme()` exposes `{ preference, resolved, setPreference }`;
+`setPreference` updates state and persists via `storeTheme`. An inline script in
+`index.html` sets `data-theme` before React mounts to avoid a light-to-dark
+flash on first paint. Everything is guarded so the provider is inert under
+jsdom.
+
+### Header toggle (`frontend/src/components/ThemeToggle.tsx`)
+
+Mirrors `LanguageToggle`: a `role="group"` with an accessible label
+(`app.theme.group`) wrapping three buttons (System/Light/Dark, labels from the
+`app.theme.*` i18n keys added to BOTH the EN and JA message tables and the
+`MessageKey` union), the active preference marked by `aria-pressed`. It renders
+in the header of all three pages (home, series detail, accuracy). On the detail
+page the segmented pills sit on the page background rather than the navy header,
+so `styles.css` gives `.app__controls--detail` a surface-tinted track and
+readable ink in both themes.
+
+### CSS-variable theming (`frontend/src/styles.css`)
+
+ALL themeable colors are CSS custom properties declared on `:root` (the light
+palette) and overridden under `[data-theme='dark']` (the dark palette); the rest
+of the stylesheet references only those variables. Every foreground/background
+pair is chosen to clear WCAG AA (>= 4.5:1 normal text, >= 3:1 large text / UI
+affordances) in BOTH palettes, and `color-scheme` is set per theme so native
+form controls and scrollbars match.
+
+- `--navy` is used in TWO roles. As a BACKGROUND/fill (header gradient, active
+  buttons, selected states, prediction bar) it stays a deep navy in both themes.
+  As FOREGROUND TEXT on surfaces (round titles, panel titles, detail title/game
+  numbers, back links) it uses a DEDICATED `--heading` variable so the dark
+  palette can brighten just the text role: `--heading` is `#1b3a6b` in light
+  (equal to `--navy`) and `#8fb4f2` in dark, which clears AA (>= 5.9:1) against
+  every dark surface. Splitting the variable was the Issue #22 contrast fix that
+  made the axe scan pass in dark mode without lightening the navy fills.
+- `--focus-ring` drives a theme-aware `:focus-visible` outline (a darker blue in
+  light, a brighter blue in dark) so the keyboard focus ring stays legible on
+  both palettes; the focused bracket card gets a slightly stronger ring.
+- The accent used for links (`--accent`) is darkened in light and brightened in
+  dark; the accuracy table bar colors are kept as explicit values that read on
+  both themes.
+
+### Team-badge text contrast (`frontend/src/readableTextColor.ts`)
+
+`readableTextColor(hex)` is a pure helper (unit-tested in
+`readableTextColor.test.ts`) that picks black or white for text drawn ON a given
+fill by comparing WCAG contrast, so a team badge's abbreviation always clears AA
+on its primary-color disc. `TeamBadge.tsx` computes the abbreviation `fill` with
+it instead of the previous hard-coded `#ffffff` (which failed on light-colored
+team primaries). The badge discs are self-colored SVG and are theme-independent.
+
+### Keyboard navigation + screen-reader labels (`frontend/src/components/BracketView.tsx`)
+
+The bracket uses a ROVING-TABINDEX model so it is a single Tab stop and the
+arrow keys move between cards:
+
+- Exactly one series card has `tabIndex={0}` at a time (the active card); all
+  others have `tabIndex={-1}`, so Tab enters the bracket once rather than
+  stepping through every card.
+- Arrow keys move the active card: Left/Right move across round columns,
+  Up/Down move within a column (clamped at the ends), and focus follows the
+  active card. A visible `:focus-visible` ring shows the position.
+- Enter/Space on a FINISHED (`status === 'final'`) card navigates to its detail
+  route (the same target as the card's "View details" link), so keyboard users
+  reach the detail page without a mouse.
+- Each card exposes an accessible label announcing the two teams, the series
+  status, and the current score, so a screen-reader user understands the matchup
+  without seeing it. The labels are localized through the existing i18n layer.
+
+### Automated accessibility verification (`frontend/e2e/a11y.spec.ts`)
+
+`@axe-core/playwright` (added as a `@mlb/frontend` devDependency) runs an
+`AxeBuilder` scan scoped to the WCAG 2.1 A/AA rule tags
+(`wcag2a`/`wcag2aa`/`wcag21a`/`wcag21aa`) over the three main surfaces - the
+home bracket (results-only 2024 so the full bracket renders offline), a
+finished-series detail page (bracket stubbed via `page.route`), and the accuracy
+page - in BOTH the light and the dark theme, asserting ZERO violations with
+impact `serious` or `critical`. The theme is driven deterministically by seeding
+`localStorage['mlb.theme']` to the literal `'light'`/`'dark'` via
+`page.addInitScript` BEFORE the SPA boots, then asserting
+`document.documentElement[data-theme]` before scanning. A separate diagnostic
+test captures a full-page dark-mode home screenshot into the gitignored
+`frontend/test-results` so the bracket connectors/borders and the SVG
+logos/marks can be visually reviewed (criterion 3). The SVG league marks
+(AL/NL/WS), brand, hero, and baseball assets all sit on their own colored
+discs/gradient backgrounds, so they stay legible on the dark background without
+editing the SVG fills.

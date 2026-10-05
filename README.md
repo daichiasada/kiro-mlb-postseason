@@ -37,6 +37,11 @@ explainable and unit-tested); **Amazon Bedrock** turns it into prose using a
 **Anthropic Claude** also available), and the narrative is **localized to the UI
 language (EN / JA)**.
 
+- **Dark mode and accessibility** — a **System / Light / Dark** theme toggle that follows
+  your OS preference (persisted to `localStorage`), WCAG-AA contrast in both themes,
+  automatic team-badge text color, full **keyboard navigation** of the bracket, and
+  **screen-reader labels** — verified by an automated **axe** check across light and dark.
+
 No authentication. Public, read-only. Not a betting product.
 
 ---
@@ -277,6 +282,36 @@ localized banner and still renders the bracket. A clean bracket shows no banner.
   game-by-game result; an unknown id shows a friendly "Series not found" page. Path-based
   deep links work in production because CloudFront rewrites `403`/`404` responses to
   `/index.html` (HTTP 200), so the SPA shell loads and renders the requested route.
+
+### Dark mode and accessibility
+
+The UI ships a **System / Light / Dark** theme toggle in the header (on every page):
+
+- **Follows your OS preference.** The default is **System**, which tracks the OS
+  `prefers-color-scheme` live (changing your OS theme flips the app without a reload).
+  Picking **Light** or **Dark** overrides it. The choice is persisted to `localStorage`
+  (key **`mlb.theme`**, values `system | light | dark`) and restored on reload. An inline
+  script applies the theme before the app paints, so there is no light-to-dark flash. The
+  resolved theme is applied as `data-theme` on `<html>`, so all colors (defined as CSS
+  variables for a light and a dark palette) switch together.
+- **WCAG-AA contrast in both themes.** Every foreground/background pair is chosen to clear
+  WCAG AA (≥ 4.5:1 for normal text, ≥ 3:1 for large text and UI affordances) in both the
+  light and the dark palette, and each team badge's abbreviation text color is **computed
+  automatically** from the badge color so it always reads on the disc.
+- **Keyboard navigation.** The bracket uses a **roving-tabindex** model: Tab enters the
+  bracket once, then the **arrow keys** move focus between series cards (within a round
+  column and across columns), a visible focus ring shows the position, and **Enter / Space**
+  on a finished series opens its detail page. Mouse users are unaffected.
+- **Screen-reader labels.** Each series card exposes an accessible label announcing the
+  two teams, the series status, and the score, so the bracket is understandable without
+  sight.
+- **Automated accessibility check.** A Playwright end-to-end test
+  (`frontend/e2e/a11y.spec.ts`) runs **[`@axe-core/playwright`](https://www.npmjs.com/package/@axe-core/playwright)**
+  (added as a `@mlb/frontend` devDependency) over the home bracket, a finished-series
+  detail page, and the accuracy page in **both the light and the dark theme**, asserting
+  **zero `serious`/`critical` violations**. It also captures a dark-mode home screenshot
+  (into the gitignored `frontend/test-results`) for visual review of the connectors and
+  logos.
 
 ## Amazon Bedrock usage
 

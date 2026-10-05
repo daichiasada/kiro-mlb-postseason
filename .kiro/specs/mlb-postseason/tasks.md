@@ -393,3 +393,65 @@ Pythagorean/last-10 signal was added.
         `frontend/src/styles.css`, `frontend/src/pages/AccuracyPage.test.tsx`,
         `frontend/e2e/accuracy.spec.ts`, `README.md`, `README.ja.md`.
 - _Requirements: Model accuracy / backtest 2, 4, 5, 6_
+
+## Dark mode and accessibility (task-issue-22-dark-mode-a11y)
+
+GitHub Issue #22 under `.agents/tasks/task-issue-22-dark-mode-a11y/` (features
+FEAT-001 through FEAT-003): a frontend-only System/Light/Dark theme that follows
+`prefers-color-scheme` and persists to `localStorage['mlb.theme']`, WCAG-AA
+badge text color, keyboard navigation + screen-reader labels for the bracket,
+and an automated axe check across both themes. No backend or infra change.
+
+### A1. Theming core + AA badge text color (task-issue-22 FEAT-001)
+
+- [x] Pure, framework-free theme model: the `ThemePreference`/`ResolvedTheme`
+      types, the `mlb.theme` key, guarded `readStoredTheme`/`storeTheme`, the
+      pure `resolveTheme`, and `getSystemPrefersDark` (all jsdom/SSR safe).
+      - `frontend/src/theme.ts`, `frontend/src/theme.test.ts`.
+- [x] React glue: `ThemeProvider` mounted above the router applies the resolved
+      theme to `<html data-theme>`, hydrates from `localStorage` (default
+      `system`), and subscribes to `matchMedia` so `system` reacts live; a
+      header `ThemeToggle` (role=group, `aria-pressed`) switches + persists.
+      - `frontend/src/ThemeContext.tsx`, `frontend/src/components/ThemeToggle.tsx`,
+        `frontend/src/components/ThemeToggle.test.tsx`, `frontend/src/main.tsx`,
+        `frontend/index.html` (no-flash inline script),
+        `frontend/src/i18n/messages.ts` (`app.theme.*` keys, EN + JA).
+- [x] CSS-variable light/dark palettes on `:root` / `[data-theme='dark']`, every
+      pair AA-compliant; computed AA team-badge text color.
+      - `frontend/src/styles.css`, `frontend/src/readableTextColor.ts`,
+        `frontend/src/readableTextColor.test.ts`,
+        `frontend/src/components/TeamBadge.tsx`.
+- _Requirements: 15_
+
+### A2. Bracket keyboard navigation + screen-reader labels (task-issue-22 FEAT-002)
+
+- [x] Roving-tabindex model (one tabbable card), arrow-key movement within and
+      across round columns, Enter/Space opening a finished series' detail route,
+      a theme-aware `:focus-visible` ring, and accessible per-card labels
+      announcing teams/status/score; Playwright keyboard spec.
+      - `frontend/src/components/BracketView.tsx`,
+        `frontend/src/components/SeriesCard.tsx`, `frontend/src/styles.css`,
+        `frontend/e2e/keyboard.spec.ts`.
+- _Requirements: 15_
+
+### A3. Automated axe verification, dark/light legibility, docs (task-issue-22 FEAT-003)
+
+- [x] `@axe-core/playwright` e2e (`AxeBuilder`, WCAG 2.1 A/AA tags) over the home
+      bracket, a finished-series detail page, and the accuracy page in BOTH
+      light and dark, asserting zero `serious`/`critical` violations; the theme
+      is seeded via `localStorage['mlb.theme']` before load and confirmed on
+      `<html data-theme>`. A diagnostic dark-mode home screenshot is captured to
+      the gitignored `frontend/test-results`.
+      - `frontend/e2e/a11y.spec.ts`, `frontend/package.json`
+        (`@axe-core/playwright` devDependency).
+- [x] Fix the dark-mode contrast failures the axe scan surfaced by splitting the
+      navy text role into a brightened `--heading` CSS variable (headings,
+      panel/detail titles, game numbers, back links) without lightening the navy
+      fills; confirm the SVG league marks/logos stay legible on dark.
+      - `frontend/src/styles.css`.
+- [x] Keep the spec-driven-dev artifacts and both READMEs truthful to the dark
+      mode + accessibility feature as built.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
+- _Requirements: 15_

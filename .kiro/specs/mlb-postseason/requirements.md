@@ -541,3 +541,77 @@ with the metrics clearly defined, so that I can judge how much to trust it.
 6. The system SHALL expose a visible, localized navigation link to the accuracy
    page from the main UI that is reachable in every season (including the
    results-only 2024/2025 seasons).
+
+## Requirement 15 - Dark mode and accessibility (Issue #22)
+
+**User story:** As a visitor who prefers a dark interface or who navigates by
+keyboard or a screen reader, I want a dark theme that follows my OS preference
+(and that I can override), legible team-badge text, and a fully keyboard- and
+screen-reader-operable bracket, so that the site is comfortable to read and
+usable without a mouse.
+
+GitHub Issue #22. This is a FRONTEND-ONLY UX change confined to the
+`@mlb/frontend` workspace plus the docs/spec artifacts; there is no backend or
+infrastructure change. The theming core is pure and testable
+(`frontend/src/theme.ts`: the `ThemePreference`/`ResolvedTheme` types, the
+`mlb.theme` localStorage key, guarded `readStoredTheme`/`storeTheme`, the pure
+`resolveTheme`, and `getSystemPrefersDark`), the React glue applies it app-wide
+(`frontend/src/ThemeContext.tsx` sets `data-theme` on
+`document.documentElement`), the header exposes a `ThemeToggle`
+(`frontend/src/components/ThemeToggle.tsx`), the badge text color is computed by
+the pure `frontend/src/readableTextColor.ts`, the bracket uses a roving-tabindex
+keyboard model in `frontend/src/components/BracketView.tsx`, and the automated
+accessibility check runs via `@axe-core/playwright` in
+`frontend/e2e/a11y.spec.ts`.
+
+### Acceptance criteria
+
+1. WHEN the SPA loads THEN the system SHALL resolve a theme preference of
+   `system | light | dark` (default `system`), persisted to `localStorage` under
+   the key `mlb.theme`, and SHALL apply the resolved concrete theme
+   (`light | dark`) by setting `data-theme` on `document.documentElement` so
+   EVERY route (home, series detail, accuracy) inherits it. `localStorage` and
+   `matchMedia` access SHALL be guarded so a missing/throwing store or
+   environment (SSR/jsdom) does not break rendering.
+2. WHEN the preference is `system` THEN the resolved theme SHALL follow the OS
+   `prefers-color-scheme` via `matchMedia`, and WHEN the OS preference changes
+   live THEN the applied theme SHALL update without a page reload. WHEN the
+   preference is `light` or `dark` THEN that explicit choice SHALL win over the
+   OS preference.
+3. WHEN the user activates the header theme toggle (a `role="group"` of
+   System/Light/Dark buttons with `aria-pressed` marking the active choice) THEN
+   the system SHALL switch the theme live and persist the new preference to
+   `mlb.theme`.
+4. WHEN a team badge renders THEN its abbreviation text color SHALL be computed
+   from the badge's primary fill by the pure `readableTextColor` helper so the
+   text clears WCAG AA contrast on that disc, rather than being a hard-coded
+   white.
+5. WHEN any themeable surface renders THEN every foreground/background pair
+   SHALL clear WCAG AA (>= 4.5:1 for normal text, >= 3:1 for large text and UI
+   affordances) in BOTH the light and the dark palette. All themeable colors
+   SHALL be CSS custom properties declared on `:root` (light) and overridden
+   under `[data-theme="dark"]`; navy used as foreground text on surfaces
+   (headings, links, game numbers) SHALL use a dedicated `--heading` variable
+   that is brightened in dark mode so it clears AA, distinct from the `--navy`
+   fill used for backgrounds/gradients.
+6. WHEN a keyboard user reaches the bracket THEN the series cards SHALL use a
+   roving-tabindex model (exactly one card tabbable at a time) so Tab enters the
+   bracket once and the arrow keys move focus between cards within and across
+   round columns; a visible `:focus-visible` ring (theme-aware via
+   `--focus-ring`) SHALL show the focused card, and Enter/Space on a finished
+   series card SHALL open its detail route.
+7. WHEN a screen reader reaches a series card THEN the card SHALL expose an
+   accessible label announcing the two teams, the series status, and the score,
+   so the bracket is understandable without sight.
+8. WHEN the automated accessibility check runs (`@axe-core/playwright`,
+   `AxeBuilder` scoped to the WCAG 2.1 A/AA rule tags) over the home bracket, a
+   finished-series detail page, and the accuracy page in BOTH the light and the
+   dark theme THEN there SHALL be ZERO violations with impact `serious` or
+   `critical`. `@axe-core/playwright` SHALL be a `@mlb/frontend` devDependency.
+9. WHEN the bracket renders in dark mode THEN the SVG league marks/logos
+   (AL/NL/WS, brand, hero, baseball) and the bracket connectors/borders SHALL
+   remain legible; the league marks sit on their own colored discs so they
+   survive, and any border/connector/focus affordance that would otherwise
+   disappear SHALL be driven by a theme-aware CSS variable rather than a
+   hard-coded near-white value. The e2e SHALL capture a dark-mode home
+   screenshot (into the gitignored `frontend/test-results`) for visual review.
