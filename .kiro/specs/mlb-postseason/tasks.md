@@ -455,3 +455,71 @@ and an automated axe check across both themes. No backend or infra change.
         `.kiro/specs/mlb-postseason/design.md`,
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
 - _Requirements: 15_
+
+## Local game start times, today/tomorrow, and .ics (task-issue-20-game-times)
+
+GitHub Issue #20 under `.agents/tasks/task-issue-20-game-times/` (features
+FEAT-002 through FEAT-005): preserve each game's real first-pitch time end to
+end and display it in the viewer's own timezone (EN/JA), add a today/tomorrow
+section with a countdown, and let a fan export a game to their calendar as a
+client-side `.ics`. The shared contract change is additive and backward
+compatible; everything user-facing is frontend, built from pure helpers in the
+house style. No new backend endpoint and no infra/IAM change.
+
+### G1. Shared contract + backend aggregation of start time + TBD (task-issue-20 FEAT-002)
+
+- [x] Additive OPTIONAL `GameResult.startTime?` (full ISO UTC datetime verbatim
+      from `gameDate`) and `GameResult.timeTbd?`; the existing `date` (date-only
+      `YYYY-MM-DD`) is UNCHANGED for backward compatibility.
+      - `shared/src/types.ts`.
+- [x] `aggregateBracket` still sets `date = gameDate.slice(0, 10)` and
+      additionally sets `startTime` (verbatim `gameDate`) and derives `timeTbd`
+      (true when `status.startTimeTBD === true` OR `gameDate` is a
+      midnight-UTC/unparseable date-only placeholder; `startTime` omitted when
+      TBD); `RawGame.status` gains an optional `startTimeTBD`.
+      - `backend/src/mlb/aggregate.ts`, `backend/src/mlb/aggregate.test.ts`,
+        `backend/src/mlb/client.ts`.
+- _Requirements: 16_
+
+### G2. Pure frontend helpers: local-time format, today/tomorrow, .ics (task-issue-20 FEAT-003)
+
+- [x] Dependency-free, injected-input helpers with colocated EN/JA tests
+      mirroring `relativeTime.ts`: `formatStartTime` + `resolveTimeZone`
+      (localized `Intl.DateTimeFormat`, `ja-JP` 24h vs `en-US` 12h, localized
+      Time-TBD label), `bucketGameDay`/`selectUpcomingGames` + `countdownParts`
+      (today/tomorrow by LOCAL calendar day, TBD skipped, countdown clamped at
+      0), and `buildIcs` (deterministic single-VEVENT VCALENDAR, UTC
+      DTSTART/DTEND, RFC5545 escaping, default 180-min duration).
+      - `frontend/src/gameTime.ts`, `frontend/src/gameTime.test.ts`,
+        `frontend/src/upcomingGames.ts`, `frontend/src/upcomingGames.test.ts`,
+        `frontend/src/ics.ts`, `frontend/src/ics.test.ts`.
+- _Requirements: 16_
+
+### G3. UI wiring + i18n + e2e (task-issue-20 FEAT-004)
+
+- [x] Per-game local start time (or Time TBD) and a client-side "Add to
+      calendar" `.ics` download for timed games on the series card; local
+      time/Time TBD on the detail page; a "Today's and tomorrow's games" section
+      with a countdown on the home page that renders nothing when empty.
+      - `frontend/src/components/SeriesCard.tsx`,
+        `frontend/src/pages/SeriesDetailPage.tsx`,
+        `frontend/src/pages/HomePage.tsx`,
+        `frontend/src/components/UpcomingGames.tsx`.
+- [x] New EN/JA i18n keys (`gametime.*`, `ics.*`, `upcoming.*`) and a Playwright
+      e2e asserting the local time / Time TBD, the today/tomorrow section, and
+      the `.ics` affordance for a timed game.
+      - `frontend/src/i18n/messages.ts`, `frontend/e2e/*.spec.ts`,
+        `frontend/e2e/fixtures.ts`.
+- _Requirements: 16_
+
+### G4. Spec + README truthfulness (task-issue-20 FEAT-005)
+
+- [x] Keep the spec-driven-dev artifacts and both READMEs truthful to the
+      preserved `startTime`/`timeTbd` shared fields, the TBD-detection rule, the
+      local-timezone Intl EN/JA display, the today/tomorrow + countdown section,
+      and the client-side `.ics` download, without overstating (no new backend
+      endpoint, no infra change).
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
+- _Requirements: 16_

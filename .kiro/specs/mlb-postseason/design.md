@@ -781,3 +781,118 @@ logos/marks can be visually reviewed (criterion 3). The SVG league marks
 (AL/NL/WS), brand, hero, and baseball assets all sit on their own colored
 discs/gradient backgrounds, so they stay legible on the dark background without
 editing the SVG fills.
+
+## Local-timezone game start times, today/tomorrow, and calendar export (Issue #20)
+
+Preserve each game's real first-pitch time end to end and surface it in the
+viewer's own timezone, add a today/tomorrow section with a countdown, and let a
+fan export a game to their calendar. The backend change is a small additive
+aggregation tweak; everything user-facing is frontend, built from pure helpers
+in the established house style (injected `now`/`timeZone`/`locale`, colocated
+`*.test.ts` covering EN + JA, mirroring `relativeTime.ts`).
+
+### Additive optional shared fields (backward compatibility)
+
+`shared/src/types.ts` `GameResult` gains two OPTIONAL fields and leaves the
+existing `date` untouched:
+
+- `startTime?: string` - the full ISO UTC datetime, copied verbatim from the MLB
+  Stats API `gameDate`, preserving the time that `date` truncates away.
+- `timeTbd?: boolean` - true when the first pitch is not yet scheduled.
+- `date: string` - UNCHANGED (date-only `YYYY-MM-DD`, `gameDate.slice(0, 10)`).
+
+Both new fields are optional, matching the established additive pattern
+(`Bracket.integrityWarnings?`, `Prediction.metrics?`): older producers and the
+bundled 2024/2025 seed datasets - which carry neither field - keep parsing, and
+a consumer that only reads `date` is unaffected. When present, `startTime` and
+`timeTbd` are mutually exclusive in practice (a TBD game omits `startTime`).
+
+### TBD-detection rule (`backend/src/mlb/aggregate.ts`)
+
+`aggregateBracket` still sets `date = game.gameDate.slice(0, 10)`, then
+additionally derives the start time. A game's start is treated as TBD when:
+
+- the raw `status.startTimeTBD === true` (the live API's explicit flag;
+  `backend/src/mlb/client.ts` `RawGame.status` carries an optional
+  `startTimeTBD`), OR
+- `gameDate` has no meaningful time-of-day - an exact midnight-UTC
+  (`...T00:00:00Z`) placeholder the API uses for not-yet-scheduled games, or an
+  unparseable value (`hasNoTimeOfDay`).
+
+When TBD, the aggregator sets `timeTbd: true` and OMITS `startTime` (so the UI
+renders a localized "Time TBD" rather than a bogus midnight); otherwise it sets
+`timeTbd: false` and copies the full ISO `gameDate` into `startTime`. The
+aggregator stays pure and never looks a team up in `TEAMS`, consistent with the
+rest of the module.
+
+### Pure frontend helpers (injected now/timeZone/locale)
+
+All display logic is dependency-free and side-effect-free, with the clock,
+timezone, and locale injected so it is deterministic in the non-Japan
+sandbox/CI (the same discipline as `relativeTime.ts`). Each has a colocated
+`*.test.ts` covering EN and JA:
+
+- `frontend/src/gameTime.ts`:
+  - `formatStartTime(startTime, { lang, timeZone, timeTbd, tbdLabel })` renders
+    the UTC instant in the injected `timeZone` via `Intl.DateTimeFormat`, with a
+    per-language format - `en-US` 12-hour, `ja-JP` 24-hour, both including
+    weekday/month/day so the LOCAL date is unambiguous once converted (the
+    date-shift problem the issue calls out). It never throws: a `timeTbd`,
+    undefined, or unparseable start returns the caller-provided localized
+    `tbdLabel` (EN `Time TBD`, JA `時刻未定`).
+  - `resolveTimeZone()` resolves the browser's IANA zone
+    (`Intl.DateTimeFormat().resolvedOptions().timeZone`) with a safe `UTC`
+    fallback; the result is passed INTO the otherwise-pure helpers so they stay
+    testable.
+- `frontend/src/upcomingGames.ts`:
+  - `bucketGameDay(startTime, now, timeZone)` and `selectUpcomingGames(bracket,
+    now, timeZone)` bucket games into today/tomorrow by comparing the game's
+    LOCAL calendar day against `now`'s local calendar day, BOTH resolved in the
+    injected zone (an instant late on Oct 1 UTC is already Oct 2 in Asia/Tokyo,
+    so comparing raw UTC days would mis-bucket). `selectUpcomingGames` walks the
+    bracket in series order then game order and SKIPS time-TBD / undefined-start
+    games (they have no concrete local day to bucket).
+  - `countdownParts(startTime, now)` breaks the time to first pitch into whole
+    days/hours/minutes, clamping a past or unparseable instant to zero so the UI
+    never shows a negative countdown.
+- `frontend/src/ics.ts` `buildIcs(event)` builds a minimal, VALID single-VEVENT
+  VCALENDAR deterministically: `DTSTART`/`DTEND` in UTC "basic format"
+  (`YYYYMMDDTHHMMSSZ`), `DTSTAMP` from an injected stamp (or `start`, never
+  `Date.now()`), RFC5545 text escaping (`escapeText`), CRLF line joins, and a
+  default `DEFAULT_DURATION_MINUTES = 180` game length. It reads no ambient
+  clock or timezone, so it is a pure input -> output function; it throws only on
+  an unparseable `start`.
+
+### UI wiring
+
+- `frontend/src/components/SeriesCard.tsx` - each per-game row shows the
+  localized LOCAL start time (or the "Time TBD" label), and for a timed game an
+  "Add to calendar" affordance (`ics.add`) that triggers a purely client-side
+  `.ics` download (`downloadIcs` wraps the `buildIcs` text in a `text/calendar`
+  Blob, clicks a transient object-URL anchor, then revokes it - no network
+  call). The affordance is OMITTED for a time-TBD game.
+- `frontend/src/pages/SeriesDetailPage.tsx` - the per-game detail (`DetailGame`)
+  shows the same localized local start time / "Time TBD".
+- `frontend/src/pages/HomePage.tsx` + `frontend/src/components/UpcomingGames.tsx`
+  - the home page mounts a "Today's and tomorrow's games" section driven by
+  `selectUpcomingGames`, listing each upcoming game's bucket (today/tomorrow),
+  round, matchup, localized local start time, and a countdown. It is passed the
+  page's injectable `now` (`HomePage` already tracks `now` for auto-refresh) and
+  defaults `timeZone` to the resolved browser zone. The section renders NOTHING
+  when there are no upcoming games (results-only season, all-finished bracket,
+  or only TBD games), so the home page stays clean out of season.
+
+### i18n keys
+
+New flat dotted keys in both the EN and JA tables of `frontend/src/i18n/messages.ts`
+(enforced by the `MessageKey` union): `gametime.tbd` (`Time TBD` / `時刻未定`),
+`gametime.startLabel`, `ics.add` (`Add to calendar` / `カレンダーに追加`),
+`ics.ariaLabel`, and `upcoming.title`/`upcoming.region`/`upcoming.today`
+(`Today` / `今日`)/`upcoming.tomorrow` (`Tomorrow` / `明日`)/`upcoming.countdown`/`upcoming.vs`.
+
+### No new endpoint / no infra change
+
+The `.ics` is generated and downloaded entirely in the browser from code and
+data that already ship in the SPA bundle, so there is NO new Lambda, route, IAM,
+or DynamoDB access and the CDK/deploy story is unchanged - the same client-side
+rationale as the Model accuracy page.

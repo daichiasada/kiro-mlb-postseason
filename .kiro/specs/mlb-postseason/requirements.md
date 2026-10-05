@@ -615,3 +615,76 @@ accessibility check runs via `@axe-core/playwright` in
    disappear SHALL be driven by a theme-aware CSS variable rather than a
    hard-coded near-white value. The e2e SHALL capture a dark-mode home
    screenshot (into the gitignored `frontend/test-results`) for visual review.
+
+## Requirement 16 - Local-timezone game start times, today/tomorrow, and calendar export (Issue #20)
+
+**User story:** As a fan, I want each game's start time shown in my own
+timezone (not shifted to the wrong day), a quick view of what is on today and
+tomorrow with a countdown, and a way to add a game to my calendar, so that I
+know when to watch without doing timezone math.
+
+GitHub Issue #20. The MLB Stats API returns each game's first pitch as a full
+ISO UTC datetime (`gameDate`); the previous aggregation truncated it to a
+date-only string, which both lost the time and could display the wrong local
+day. This feature preserves the full start time end to end and surfaces it in
+the viewer's own timezone.
+
+The preserved start time is an ADDITIVE, backward-compatible change to the
+shared contract: `shared/src/types.ts` `GameResult` gains two OPTIONAL fields,
+`startTime?: string` (the full ISO UTC datetime copied verbatim from `gameDate`)
+and `timeTbd?: boolean`; the pre-existing `date: string` (date-only
+`YYYY-MM-DD`) is UNCHANGED so older producers and the bundled seed datasets
+(which carry neither new field) keep parsing. The backend derives the fields in
+`backend/src/mlb/aggregate.ts`; the display is entirely frontend, computed by
+pure, dependency-free helpers (`frontend/src/gameTime.ts`,
+`frontend/src/upcomingGames.ts`, `frontend/src/ics.ts`) that take an injected
+`now`/`timeZone`/`locale`, and rendered by `SeriesCard.tsx`,
+`SeriesDetailPage.tsx`, and a new `UpcomingGames.tsx` mounted on `HomePage.tsx`.
+There is NO new backend endpoint and NO infrastructure change: the `.ics` is
+generated client-side.
+
+### Acceptance criteria
+
+1. WHEN a game is aggregated THEN the system SHALL preserve its full start time:
+   `aggregateBracket` SHALL continue to set `date` as the date-only
+   `gameDate.slice(0, 10)` (unchanged, for backward compatibility) AND SHALL
+   additionally set `startTime` to the verbatim ISO UTC `gameDate` for a timed
+   game, so no time information is lost (Issue #20 criterion 1).
+2. WHEN the SPA shows a game's start time THEN it SHALL format the preserved UTC
+   instant in the VIEWER's timezone via `Intl.DateTimeFormat`
+   (`frontend/src/gameTime.ts` `formatStartTime`), with a localized format per
+   UI language - `en-US` 12-hour and `ja-JP` 24-hour, both including the
+   weekday/month/day so the local date is unambiguous once converted - so a game
+   late in the UTC day is never shown on the wrong local day (Issue #20
+   criterion 2). The timezone and locale SHALL be INJECTED into the pure helper
+   (the app resolves the browser zone via `resolveTimeZone()`,
+   `Intl.DateTimeFormat().resolvedOptions().timeZone`, defaulting to `UTC`) so
+   the formatter is deterministic in tests and in the non-Japan sandbox.
+3. WHEN a game's start time is undetermined THEN the system SHALL mark it
+   `timeTbd` and SHALL omit `startTime`, and the UI SHALL render a localized
+   "Time TBD" label (EN `Time TBD`, JA `時刻未定`) instead of a bogus midnight.
+   The backend TBD rule SHALL be: `timeTbd` is true WHEN the raw
+   `status.startTimeTBD === true` OR the `gameDate` has no meaningful
+   time-of-day (an exact midnight-UTC / unparseable placeholder the API uses for
+   not-yet-scheduled games); otherwise `timeTbd` is false and `startTime` is set
+   (Issue #20 criterion 3). `backend/src/mlb/client.ts` `RawGame.status`
+   accordingly carries an optional `startTimeTBD`.
+4. WHEN the home page renders for a bracket that has games today or tomorrow
+   THEN the system SHALL show a "Today's and tomorrow's games" section
+   (`UpcomingGames.tsx`) listing each such game with its matchup, its localized
+   local start time, and a countdown to first pitch (EN
+   `Starts in {days}d {hours}h {minutes}m`, JA `あと {days}日 {hours}時間 {minutes}分`,
+   clamped to zero for a past/unparseable instant). "Today" and "tomorrow" SHALL
+   be decided by the game's LOCAL calendar day in the viewer's timezone
+   (`frontend/src/upcomingGames.ts` `bucketGameDay`/`selectUpcomingGames`), and
+   time-TBD games (no concrete instant) SHALL be skipped. WHEN there are no such
+   games (a results-only season, an all-finished bracket, or only TBD games)
+   THEN the section SHALL render nothing.
+5. WHEN a game has a concrete start time THEN the system SHALL offer an "Add to
+   calendar" affordance (EN `Add to calendar`, JA `カレンダーに追加`) that
+   downloads a client-side-generated `.ics` file for that game; for a time-TBD
+   game the affordance SHALL be omitted. The `.ics` SHALL be built by the pure
+   `frontend/src/ics.ts` `buildIcs` (a deterministic single-VEVENT VCALENDAR
+   with UTC `DTSTART`/`DTEND`, RFC5545 text escaping, and a default 180-minute
+   duration) and delivered via an in-browser Blob download, with NO network
+   request, NO new backend endpoint, and NO infrastructure change.

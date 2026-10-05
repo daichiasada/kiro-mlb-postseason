@@ -313,6 +313,30 @@ The UI ships a **System / Light / Dark** theme toggle in the header (on every pa
   (into the gitignored `frontend/test-results`) for visual review of the connectors and
   logos.
 
+### Local game start times, today/tomorrow, and calendar export
+
+Each game's real first pitch is preserved end to end and shown in **your own timezone**,
+so a game late in the UTC day is never displayed on the wrong local day.
+
+- **Local-timezone start time (EN/JA).** The MLB Stats API returns each game's start as a
+  full ISO UTC datetime; aggregation keeps it verbatim in an additive, optional
+  `GameResult.startTime` (the pre-existing date-only `date` field is unchanged, so older
+  data and the bundled seeds still parse). The SPA formats that instant in the viewer's
+  timezone via `Intl.DateTimeFormat`, with a localized format per language (`en-US`
+  12-hour, `ja-JP` 24-hour, each including the weekday/month/day). When a game's start is
+  not yet scheduled it is flagged `timeTbd` and shown as a localized **Time TBD /
+  時刻未定** instead of a bogus midnight.
+- **Today's and tomorrow's games + countdown.** The home page shows a "Today's and
+  tomorrow's games" section listing each game happening today or tomorrow (by your local
+  calendar day) with its matchup, local start time, and a countdown to first pitch. It
+  renders nothing out of season or when every remaining game is time-TBD.
+- **Add to calendar (.ics).** Each timed game offers an **Add to calendar / カレンダーに追加**
+  download that generates a standard single-event `.ics` file **entirely in the browser**
+  (no network call, no new backend endpoint, and no infrastructure change); time-TBD games
+  omit the affordance. The display logic lives in dependency-free, unit-tested helpers
+  (`frontend/src/gameTime.ts`, `frontend/src/upcomingGames.ts`, `frontend/src/ics.ts`) that
+  take an injected clock/timezone/locale so they are deterministic in tests.
+
 ## Amazon Bedrock usage
 
 The win probability is computed by a transparent heuristic in `backend/src/predict/`
