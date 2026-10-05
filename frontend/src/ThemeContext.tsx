@@ -1,5 +1,6 @@
 /**
- * React theme context layered on top of the pure helpers in `./theme`.
+ * React theme context (the glue in `./ThemeContext.tsx`) layered on top of the
+ * pure helpers in `./theme`.
  *
  * The provider hydrates the preference from localStorage (defaulting to
  * `'system'`), resolves it to a concrete light/dark theme, applies it by

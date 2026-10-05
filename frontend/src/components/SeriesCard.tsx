@@ -95,6 +95,25 @@ export function SeriesCard({
    * Events that originate on an inner control (the toggle button, detail link,
    * or predict button) are ignored so those keep their native behavior and the
    * card never double-fires.
+   *
+   * Intentional keyboard/mouse asymmetry: the card <article> is deliberately
+   * keyboard-activatable (it holds the roving tabindex, so Enter/Space is the
+   * keyboard user's single entry point to the same destination the visible
+   * controls reach). Mouse users are NOT given a card-body click handler on
+   * purpose: they click the explicit inner "View detail" link (final series)
+   * or "Predict winner" button (predictable series), which stay the sole,
+   * unambiguous pointer targets. Adding a card-body onClick would risk
+   * double-activating alongside those inner controls and muddy the hit target,
+   * so the two activation paths (keyboard = whole card, mouse = inner control)
+   * are kept distinct by design.
+   *
+   * Focusable-but-inert state: a card that is neither final nor predictable
+   * (canPredict === false) still carries a roving tabindex, so it is focusable
+   * yet Enter/Space is a no-op. In practice this means an in-progress series in
+   * a results-only (non-predictable, i.e. past) season. On a current/predictable
+   * season every non-final card is selectable, and historical brackets are
+   * final, so this state is effectively unreachable on a rendered bracket; the
+   * no-op is the correct fallback rather than dead UI if such data ever appears.
    */
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.target !== event.currentTarget) {

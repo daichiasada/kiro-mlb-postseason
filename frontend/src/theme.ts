@@ -4,7 +4,7 @@
  * This module holds the small, testable core of the dark-mode feature: the
  * preference/resolved types, the localStorage key, guarded read/store helpers
  * (mirroring {@link readStoredLang}/{@link storeLang} in `./i18n`), and a PURE
- * {@link resolveTheme} resolver. The React glue lives in `./theme.tsx`.
+ * {@link resolveTheme} resolver. The React glue lives in `./ThemeContext.tsx`.
  */
 
 /** What the user has chosen. `'system'` defers to the OS color scheme. */
