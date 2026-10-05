@@ -43,6 +43,18 @@ export function parseSeason(value: string | undefined): number | undefined {
 }
 
 /**
+ * Parses a `gamePk` from a query string value. Returns a positive integer or
+ * `undefined` when the input is missing, non-numeric, or not a positive integer
+ * (the handler rejects `undefined` with a 400).
+ */
+export function parseGamePk(value: string | undefined): number | undefined {
+  if (value === undefined || value === null || value.trim() === '') return undefined;
+  if (!/^\d+$/.test(value.trim())) return undefined;
+  const gamePk = Number(value);
+  return Number.isInteger(gamePk) && gamePk > 0 ? gamePk : undefined;
+}
+
+/**
  * Parses the optional prediction `accuracy` control from a request value
  * (query string or JSON body, either a string or number). Returns `undefined`
  * for a missing value so the service/model default applies, and for any

@@ -11,12 +11,25 @@ import {
   resolveModelId,
   DEFAULT_NARRATIVE_LANGUAGE,
   type Bracket,
+  type GameDetailResponse,
   type NarrativeLanguage,
   type PredictionResponse,
   type Series,
 } from '@mlb/shared';
 import { aggregateBracket } from '../mlb/aggregate.js';
-import { fetchPostseasonSchedule, fetchStandings } from '../mlb/client.js';
+import {
+  fetchGameContent,
+  fetchGameFeedLive,
+  fetchGameLinescore,
+  fetchPostseasonSchedule,
+  fetchStandings,
+} from '../mlb/client.js';
+import {
+  buildGameDetail,
+  parseGameMeta,
+  parseHighlight,
+  parseLinescore,
+} from '../mlb/gameDetail.js';
 import { predict, type WinPctMap } from '../predict/model.js';
 import { winPctFromStandings, teamMetric } from '../predict/standings.js';
 import {
@@ -24,15 +37,33 @@ import {
   RealBedrockInvoker,
   type BedrockInvoker,
 } from '../bedrock/narrative.js';
-import { DynamoBracketStore, type BracketStore } from '../store/dynamo.js';
+import {
+  DynamoBracketStore,
+  GAME_DETAIL_FINAL_TTL_SECONDS,
+  GAME_DETAIL_LIVE_TTL_SECONDS,
+  type BracketStore,
+} from '../store/dynamo.js';
 
 export interface BracketServiceDeps {
   store?: BracketStore;
   fetchSchedule?: typeof fetchPostseasonSchedule;
   fetchStandings?: typeof fetchStandings;
+  fetchGameLinescore?: typeof fetchGameLinescore;
+  fetchGameFeedLive?: typeof fetchGameFeedLive;
+  fetchGameContent?: typeof fetchGameContent;
   bedrockInvoker?: BedrockInvoker;
   /** Optional regular-season win pct per team id for the prediction model. */
   winPct?: WinPctMap;
+}
+
+/**
+ * Whether a game state (MLB `abstractGameState`) represents a completed game.
+ * Completed games are cached with the LONG TTL; everything else uses the SHORT
+ * (live) TTL.
+ */
+function isCompletedGameState(gameState: string): boolean {
+  const normalized = gameState.trim().toLowerCase();
+  return normalized === 'final' || normalized === 'completed early' || normalized === 'game over';
 }
 
 /** Error thrown when a requested series cannot be found in the bracket. */
@@ -138,6 +169,9 @@ export class BracketService {
   private readonly store: BracketStore;
   private readonly fetchSchedule: typeof fetchPostseasonSchedule;
   private readonly fetchStandings: typeof fetchStandings;
+  private readonly fetchGameLinescore: typeof fetchGameLinescore;
+  private readonly fetchGameFeedLive: typeof fetchGameFeedLive;
+  private readonly fetchGameContent: typeof fetchGameContent;
   private readonly bedrockInvoker: BedrockInvoker;
   private readonly winPct: WinPctMap;
 
@@ -145,6 +179,9 @@ export class BracketService {
     this.store = deps.store ?? new DynamoBracketStore();
     this.fetchSchedule = deps.fetchSchedule ?? fetchPostseasonSchedule;
     this.fetchStandings = deps.fetchStandings ?? fetchStandings;
+    this.fetchGameLinescore = deps.fetchGameLinescore ?? fetchGameLinescore;
+    this.fetchGameFeedLive = deps.fetchGameFeedLive ?? fetchGameFeedLive;
+    this.fetchGameContent = deps.fetchGameContent ?? fetchGameContent;
     this.bedrockInvoker = deps.bedrockInvoker ?? new RealBedrockInvoker();
     this.winPct = deps.winPct ?? {};
   }
@@ -319,5 +356,60 @@ export class BracketService {
         underdog: teamMetric(winPct, underdogId),
       },
     };
+  }
+
+  /**
+   * Returns the per-game detail (inning-by-inning line score, totals, pitcher
+   * decisions, venue/state, optional recap highlight) for a game. Resolution:
+   *   1. DynamoDB cache (hit) - RETURNS WITHOUT FETCHING (Issue #19 criterion 1).
+   *   2. On a miss, fetch the linescore + feed/live in parallel, parse them with
+   *      the pure parsers, best-effort fetch+parse the content highlight (a
+   *      content failure NEVER fails the overall call), and assemble the `ok`
+   *      response.
+   *   3. Write the result back with a TTL chosen by game state: a completed game
+   *      uses the LONG TTL, anything else the SHORT (live) TTL (criterion 1).
+   *   4. On ANY linescore/feed-live upstream failure, RETURN the documented
+   *      `{ status: 'unavailable', gamePk }` fallback WITHOUT throwing and
+   *      WITHOUT caching it, so the frontend can fall back to the final score
+   *      (criterion 2).
+   */
+  async getGameDetail(gamePk: number): Promise<GameDetailResponse> {
+    const cached = await this.store.getCachedGameDetail(gamePk);
+    if (cached) {
+      return cached;
+    }
+
+    let detail: GameDetailResponse;
+    try {
+      const [rawLinescore, rawFeedLive] = await Promise.all([
+        this.fetchGameLinescore(gamePk),
+        this.fetchGameFeedLive(gamePk),
+      ]);
+      const linescore = parseLinescore(rawLinescore);
+      const meta = parseGameMeta(rawFeedLive);
+
+      // Best-effort recap highlight: a content fetch/parse failure must still
+      // yield an `ok` response without a highlight (never fail the whole call).
+      let highlight;
+      try {
+        const rawContent = await this.fetchGameContent(gamePk);
+        highlight = parseHighlight(rawContent);
+      } catch {
+        highlight = undefined;
+      }
+
+      detail = buildGameDetail(gamePk, linescore, meta, highlight);
+    } catch {
+      // Upstream linescore/feed-live failure: documented fallback, not cached.
+      return { status: 'unavailable', gamePk };
+    }
+
+    const ttlSeconds =
+      detail.status === 'ok' && isCompletedGameState(detail.gameState)
+        ? GAME_DETAIL_FINAL_TTL_SECONDS
+        : GAME_DETAIL_LIVE_TTL_SECONDS;
+    await this.store.putCachedGameDetail(detail, ttlSeconds);
+
+    return detail;
   }
 }

@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getSeedBracket, type Bracket } from '@mlb/shared';
+import { getSeedBracket, type Bracket, type GameDetailResponse } from '@mlb/shared';
 import { BracketService } from './bracketService.js';
-import type { BracketStore } from '../store/dynamo.js';
+import {
+  GAME_DETAIL_FINAL_TTL_SECONDS,
+  GAME_DETAIL_LIVE_TTL_SECONDS,
+  type BracketStore,
+} from '../store/dynamo.js';
 import type { BedrockInvoker } from '../bedrock/narrative.js';
 import type { WinPctMap } from '../predict/model.js';
 
@@ -22,9 +26,14 @@ const sampleBracket: Bracket = {
   ],
 };
 
-function memoryStore(initial?: Bracket, initialStandings?: WinPctMap): BracketStore {
+function memoryStore(
+  initial?: Bracket,
+  initialStandings?: WinPctMap,
+  initialGameDetail?: GameDetailResponse,
+): BracketStore {
   let stored = initial;
   let storedStandings = initialStandings;
+  let storedGameDetail = initialGameDetail;
   return {
     getCachedBracket: vi.fn(async () => stored),
     putCachedBracket: vi.fn(async (b: Bracket) => {
@@ -33,6 +42,10 @@ function memoryStore(initial?: Bracket, initialStandings?: WinPctMap): BracketSt
     getCachedStandings: vi.fn(async () => storedStandings),
     putCachedStandings: vi.fn(async (_season: number, winPct: WinPctMap) => {
       storedStandings = winPct;
+    }),
+    getCachedGameDetail: vi.fn(async () => storedGameDetail),
+    putCachedGameDetail: vi.fn(async (detail: GameDetailResponse) => {
+      storedGameDetail = detail;
     }),
   };
 }
@@ -708,5 +721,173 @@ describe('BracketService.getPrediction (regular-season win pct wiring)', () => {
     expect(fetchStandings).not.toHaveBeenCalled();
     expect(store.getCachedStandings).toHaveBeenCalledWith(2026);
     expect(store.putCachedStandings).not.toHaveBeenCalled();
+  });
+});
+
+/** A small captured linescore fixture used by the getGameDetail tests. */
+const linescoreRaw = {
+  innings: [
+    { num: 1, ordinalNum: '1st', away: { runs: 1, hits: 2, errors: 0 }, home: { runs: 0, hits: 1, errors: 0 } },
+  ],
+  teams: {
+    away: { runs: 1, hits: 2, errors: 0 },
+    home: { runs: 0, hits: 1, errors: 0 },
+  },
+};
+
+/** feed/live for a FINAL game (completed -> long TTL). */
+const finalFeedLiveRaw = {
+  gameData: { venue: { name: 'Yankee Stadium' }, status: { abstractGameState: 'Final' } },
+  liveData: {
+    decisions: { winner: { fullName: 'Gerrit Cole' }, loser: { fullName: 'Tarik Skubal' } },
+  },
+};
+
+/** feed/live for an IN-PROGRESS game (live -> short TTL). */
+const liveFeedLiveRaw = {
+  gameData: { venue: { name: 'Dodger Stadium' }, status: { abstractGameState: 'Live' } },
+  liveData: { decisions: {} },
+};
+
+const contentRaw = {
+  editorial: { recap: { mlb: { url: 'https://mlb.com/recap/900001', headline: 'Walk-off win' } } },
+};
+
+describe('BracketService.getGameDetail', () => {
+  it('returns the cached detail on a hit WITHOUT calling the fetchers (criterion 1)', async () => {
+    const cached: GameDetailResponse = {
+      status: 'ok',
+      gamePk: 900001,
+      gameState: 'Final',
+      venue: 'Yankee Stadium',
+      innings: [],
+      totals: {
+        away: { runs: 1, hits: 2, errors: 0 },
+        home: { runs: 0, hits: 1, errors: 0 },
+      },
+      pitchers: { winner: 'Gerrit Cole' },
+    };
+    const store = memoryStore(undefined, undefined, cached);
+    const fetchGameLinescore = vi.fn();
+    const fetchGameFeedLive = vi.fn();
+    const fetchGameContent = vi.fn();
+    const service = new BracketService({
+      store,
+      fetchGameLinescore,
+      fetchGameFeedLive,
+      fetchGameContent,
+      bedrockInvoker: invoker,
+    });
+
+    const detail = await service.getGameDetail(900001);
+
+    expect(detail).toEqual(cached);
+    expect(fetchGameLinescore).not.toHaveBeenCalled();
+    expect(fetchGameFeedLive).not.toHaveBeenCalled();
+    expect(fetchGameContent).not.toHaveBeenCalled();
+    expect(store.putCachedGameDetail).not.toHaveBeenCalled();
+  });
+
+  it('fetches, parses, and writes back with the LONG TTL for a Final game (criterion 1)', async () => {
+    const store = memoryStore();
+    const fetchGameLinescore = vi.fn().mockResolvedValue(linescoreRaw);
+    const fetchGameFeedLive = vi.fn().mockResolvedValue(finalFeedLiveRaw);
+    const fetchGameContent = vi.fn().mockResolvedValue(contentRaw);
+    const service = new BracketService({
+      store,
+      fetchGameLinescore,
+      fetchGameFeedLive,
+      fetchGameContent,
+      bedrockInvoker: invoker,
+    });
+
+    const detail = await service.getGameDetail(900001);
+
+    expect(detail.status).toBe('ok');
+    if (detail.status === 'ok') {
+      expect(detail.gamePk).toBe(900001);
+      expect(detail.gameState).toBe('Final');
+      expect(detail.venue).toBe('Yankee Stadium');
+      expect(detail.innings).toHaveLength(1);
+      expect(detail.pitchers).toEqual({ winner: 'Gerrit Cole', loser: 'Tarik Skubal' });
+      expect(detail.highlight).toEqual({ title: 'Walk-off win', url: 'https://mlb.com/recap/900001' });
+    }
+    expect(fetchGameLinescore).toHaveBeenCalledWith(900001);
+    expect(fetchGameFeedLive).toHaveBeenCalledWith(900001);
+    // A completed game is cached with the LONG TTL.
+    expect(store.putCachedGameDetail).toHaveBeenCalledOnce();
+    const [, ttlSeconds] = (store.putCachedGameDetail as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(ttlSeconds).toBe(GAME_DETAIL_FINAL_TTL_SECONDS);
+  });
+
+  it('writes back with the SHORT TTL for an in-progress game (criterion 1)', async () => {
+    const store = memoryStore();
+    const fetchGameLinescore = vi.fn().mockResolvedValue(linescoreRaw);
+    const fetchGameFeedLive = vi.fn().mockResolvedValue(liveFeedLiveRaw);
+    const fetchGameContent = vi.fn().mockResolvedValue({});
+    const service = new BracketService({
+      store,
+      fetchGameLinescore,
+      fetchGameFeedLive,
+      fetchGameContent,
+      bedrockInvoker: invoker,
+    });
+
+    const detail = await service.getGameDetail(900002);
+
+    expect(detail.status).toBe('ok');
+    if (detail.status === 'ok') {
+      expect(detail.gameState).toBe('Live');
+      expect(detail.highlight).toBeUndefined();
+    }
+    expect(store.putCachedGameDetail).toHaveBeenCalledOnce();
+    const [, ttlSeconds] = (store.putCachedGameDetail as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(ttlSeconds).toBe(GAME_DETAIL_LIVE_TTL_SECONDS);
+    // The LONG and SHORT TTLs genuinely differ by game state.
+    expect(GAME_DETAIL_LIVE_TTL_SECONDS).not.toBe(GAME_DETAIL_FINAL_TTL_SECONDS);
+  });
+
+  it('returns {status:unavailable} on an upstream failure without throwing or caching (criterion 2)', async () => {
+    const store = memoryStore();
+    const fetchGameLinescore = vi.fn().mockRejectedValue(new Error('mlb down'));
+    const fetchGameFeedLive = vi.fn().mockResolvedValue(finalFeedLiveRaw);
+    const fetchGameContent = vi.fn();
+    const service = new BracketService({
+      store,
+      fetchGameLinescore,
+      fetchGameFeedLive,
+      fetchGameContent,
+      bedrockInvoker: invoker,
+    });
+
+    const detail = await service.getGameDetail(900003);
+
+    expect(detail).toEqual({ status: 'unavailable', gamePk: 900003 });
+    // The unavailable fallback is NEVER cached.
+    expect(store.putCachedGameDetail).not.toHaveBeenCalled();
+  });
+
+  it('still yields an ok response (no highlight) when the content fetch fails', async () => {
+    const store = memoryStore();
+    const fetchGameLinescore = vi.fn().mockResolvedValue(linescoreRaw);
+    const fetchGameFeedLive = vi.fn().mockResolvedValue(finalFeedLiveRaw);
+    const fetchGameContent = vi.fn().mockRejectedValue(new Error('content down'));
+    const service = new BracketService({
+      store,
+      fetchGameLinescore,
+      fetchGameFeedLive,
+      fetchGameContent,
+      bedrockInvoker: invoker,
+    });
+
+    const detail = await service.getGameDetail(900004);
+
+    expect(detail.status).toBe('ok');
+    if (detail.status === 'ok') {
+      expect(detail.highlight).toBeUndefined();
+      expect(detail.gameState).toBe('Final');
+    }
+    // A content failure does not prevent the write-back of the ok detail.
+    expect(store.putCachedGameDetail).toHaveBeenCalledOnce();
   });
 });

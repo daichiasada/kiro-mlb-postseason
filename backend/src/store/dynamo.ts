@@ -12,17 +12,31 @@ import {
   GetCommand,
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
-import type { Bracket } from '@mlb/shared';
+import type { Bracket, GameDetailResponse } from '@mlb/shared';
 import type { WinPctMap } from '../predict/model.js';
 
 /** Default cache lifetime for a cached bracket item. */
 const DEFAULT_TTL_SECONDS = 60 * 15; // 15 minutes
+
+/**
+ * Cache lifetime for a COMPLETED game's detail. A finished game is immutable,
+ * so it is cached for a long time (one week) to avoid refetching.
+ */
+export const GAME_DETAIL_FINAL_TTL_SECONDS = 60 * 60 * 24 * 7; // 1 week
+
+/**
+ * Cache lifetime for an IN-PROGRESS game's detail. A live game changes
+ * constantly, so it is cached briefly (one minute) so the UI stays fresh.
+ */
+export const GAME_DETAIL_LIVE_TTL_SECONDS = 60; // 1 minute
 
 export interface BracketStore {
   getCachedBracket(season: number): Promise<Bracket | undefined>;
   putCachedBracket(bracket: Bracket, ttlSeconds?: number): Promise<void>;
   getCachedStandings(season: number): Promise<WinPctMap | undefined>;
   putCachedStandings(season: number, winPct: WinPctMap, ttlSeconds?: number): Promise<void>;
+  getCachedGameDetail(gamePk: number): Promise<GameDetailResponse | undefined>;
+  putCachedGameDetail(detail: GameDetailResponse, ttlSeconds: number): Promise<void>;
 }
 
 function partitionKey(season: number): string {
@@ -31,6 +45,10 @@ function partitionKey(season: number): string {
 
 function standingsPartitionKey(season: number): string {
   return `STANDINGS#${season}`;
+}
+
+function gamePartitionKey(gamePk: number): string {
+  return `GAME#${gamePk}`;
 }
 
 /** DynamoDB-backed implementation of {@link BracketStore}. */
@@ -100,6 +118,38 @@ export class DynamoBracketStore implements BracketStore {
           pk: standingsPartitionKey(season),
           season,
           winPct,
+          ttl,
+        },
+      }),
+    );
+  }
+
+  async getCachedGameDetail(gamePk: number): Promise<GameDetailResponse | undefined> {
+    if (!this.tableName) return undefined;
+    const result = await this.doc.send(
+      new GetCommand({
+        TableName: this.tableName,
+        Key: { pk: gamePartitionKey(gamePk) },
+      }),
+    );
+    const item = result.Item;
+    if (!item || !item.detail) return undefined;
+    return item.detail as GameDetailResponse;
+  }
+
+  async putCachedGameDetail(
+    detail: GameDetailResponse,
+    ttlSeconds: number,
+  ): Promise<void> {
+    if (!this.tableName) return;
+    const ttl = Math.floor(Date.now() / 1000) + ttlSeconds;
+    await this.doc.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          pk: gamePartitionKey(detail.gamePk),
+          gamePk: detail.gamePk,
+          detail,
           ttl,
         },
       }),

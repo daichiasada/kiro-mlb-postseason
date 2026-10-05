@@ -181,6 +181,79 @@ export type PredictionResponse =
   | UpcomingPrediction;
 
 /**
+ * One side (away/home) of a single inning's or the game's run/hit/error line.
+ * Each value is `null` when the MLB Stats API omits it (e.g. an inning not yet
+ * played, or a missing field), so consumers can distinguish "0" from "unknown".
+ */
+export interface LineScoreSide {
+  runs: number | null;
+  hits: number | null;
+  errors: number | null;
+}
+
+/** A single inning's line (away + home run/hit/error splits). */
+export interface InningLine {
+  /** 1-based inning number (MLB `innings[].num`). */
+  inning: number;
+  /** Optional ordinal label from the MLB API (e.g. "1st"); omitted when absent. */
+  ordinal?: string;
+  away: LineScoreSide;
+  home: LineScoreSide;
+}
+
+/** The game totals row (away + home run/hit/error splits). */
+export interface LineScoreTotals {
+  away: LineScoreSide;
+  home: LineScoreSide;
+}
+
+/**
+ * The winning/losing/save pitcher decisions for a completed game. Each is the
+ * pitcher's full name; all are optional because the MLB `liveData.decisions`
+ * block is absent for games that have not finished, and `save` is frequently
+ * absent even for finished games.
+ */
+export interface GamePitchers {
+  winner?: string;
+  loser?: string;
+  save?: string;
+}
+
+/** An optional recap/highlight link for a game (from the MLB content endpoint). */
+export interface GameHighlight {
+  title: string;
+  url: string;
+}
+
+/**
+ * The per-game detail contract returned by the GET /game endpoint. A
+ * discriminated union on `status`:
+ *   - `status: 'ok'` carries the inning-by-inning line score, totals, pitcher
+ *     decisions, the venue + game state, and an optional recap highlight.
+ *   - `status: 'unavailable'` is the DOCUMENTED fallback returned (with HTTP
+ *     200) when the upstream MLB linescore/feed-live fetch fails. The frontend
+ *     branches on this to keep showing the already-known final score instead of
+ *     surfacing an error. It is never cached.
+ */
+export type GameDetailResponse =
+  | {
+      status: 'ok';
+      gamePk: number;
+      /** MLB `abstractGameState` (e.g. "Final", "Live", "Preview"). */
+      gameState: string;
+      /** Venue name when available (MLB `gameData.venue.name`). */
+      venue?: string;
+      innings: InningLine[];
+      totals: LineScoreTotals;
+      pitchers: GamePitchers;
+      highlight?: GameHighlight;
+    }
+  | {
+      status: 'unavailable';
+      gamePk: number;
+    };
+
+/**
  * Teams appearing in the 2024 and 2025 MLB postseasons, keyed by MLB Stats API
  * team id. Ids and names are sourced from
  * https://statsapi.mlb.com/api/v1/schedule/postseason.

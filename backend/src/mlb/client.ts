@@ -5,6 +5,11 @@
  * no `node-fetch` dependency. The response is narrowed to the subset of fields
  * the aggregator consumes.
  */
+import type {
+  RawContentResponse,
+  RawFeedLiveResponse,
+  RawLinescoreResponse,
+} from './gameDetail.js';
 
 /** One side (away/home) of a raw MLB Stats API game. */
 export interface RawTeamSide {
@@ -64,6 +69,11 @@ const BASE_URL = 'https://statsapi.mlb.com/api/v1/schedule/postseason';
 
 const STANDINGS_URL = 'https://statsapi.mlb.com/api/v1/standings';
 
+const GAME_BASE_URL = 'https://statsapi.mlb.com/api/v1/game';
+
+/** feed/live lives under the v1.1 API, unlike the other game endpoints. */
+const GAME_FEED_LIVE_BASE_URL = 'https://statsapi.mlb.com/api/v1.1/game';
+
 /**
  * Fetches the full postseason schedule for a season and returns the flat list
  * of games across every date. Throws {@link MlbApiError} on a non-200 response.
@@ -101,4 +111,64 @@ export async function fetchStandings(season: number): Promise<RawStandingsRespon
   }
 
   return (await response.json()) as RawStandingsResponse;
+}
+
+/**
+ * Fetches the inning-by-inning linescore for a game. Throws {@link MlbApiError}
+ * on a non-200 response. The response is narrowed to the subset consumed by
+ * {@link import('./gameDetail.js').parseLinescore}.
+ */
+export async function fetchGameLinescore(gamePk: number): Promise<RawLinescoreResponse> {
+  const url = `${GAME_BASE_URL}/${gamePk}/linescore`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new MlbApiError(
+      response.status,
+      `MLB Stats API request failed with status ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as RawLinescoreResponse;
+}
+
+/**
+ * Fetches the feed/live payload for a game (v1.1 API), which carries the game
+ * state, venue, and the W/L/S pitcher decisions. Throws {@link MlbApiError} on a
+ * non-200 response. The response is narrowed to the subset consumed by
+ * {@link import('./gameDetail.js').parseGameMeta}.
+ */
+export async function fetchGameFeedLive(gamePk: number): Promise<RawFeedLiveResponse> {
+  const url = `${GAME_FEED_LIVE_BASE_URL}/${gamePk}/feed/live`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new MlbApiError(
+      response.status,
+      `MLB Stats API request failed with status ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as RawFeedLiveResponse;
+}
+
+/**
+ * Fetches the content payload for a game, which may carry a recap/highlight
+ * link. This is BEST-EFFORT: callers tolerate its failure (highlights are
+ * optional per the issue), so a non-200 still throws {@link MlbApiError} and the
+ * caller decides to ignore it. The response is narrowed to the subset consumed
+ * by {@link import('./gameDetail.js').parseHighlight}.
+ */
+export async function fetchGameContent(gamePk: number): Promise<RawContentResponse> {
+  const url = `${GAME_BASE_URL}/${gamePk}/content`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new MlbApiError(
+      response.status,
+      `MLB Stats API request failed with status ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as RawContentResponse;
 }
