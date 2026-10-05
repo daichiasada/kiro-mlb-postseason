@@ -1,9 +1,15 @@
 {
   "task_id": "task-issue-21-share-ogp",
   "task_description": "Implement GitHub Issue #21: share a series/prediction via a localized Web-Share/copy-link button with a language-aware permalink; generate per-series OGP images (team colors, series score, win probability) via a cached Lambda; serve crawler-readable per-series OpenGraph/Twitter meta tags for the SPA via a dedicated /share HTML Lambda; and include the 'predictions are reference values, not betting advice' disclaimer in all shared content. Keep all prior features (#15-#24) green. No push/PR/deploy.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
   "blocked_reason": null,
+  "review": {
+    "v1": "NEEDS_CHANGES - share HTML emitted the API/execute-api origin into og:url/canonical/og:image/redirect; copy fallback dropped the disclaimer.",
+    "v2": "APPROVED - fixed via a viewer-request CloudFront Function (ShareSiteOriginFn) copying viewer Host into x-site-origin header that getShareHtml reads; copy fallback now carries title+disclaimer+URL. One non-blocking observation (origin-agnostic share-HTML cache key) not reachable in the single-distribution topology.",
+    "commits_reviewed": ["cbbd3ce", "5125e8d", "b32cc64", "ab85bf5", "b0dd5eb"]
+  },
+  "commits": ["cbbd3ce", "5125e8d", "b32cc64", "ab85bf5", "b0dd5eb"],
   "verification": {
     "build": "pass",
     "tests": "pass",
