@@ -1,0 +1,7 @@
+{
+  "task_id": "task-issue-15-regular-season-winpct",
+  "task_description": "GitHub Issue #15: feed real regular-season win pct into the prediction model. Fetch MLB Stats API standings, aggregate to a WinPctMap via a pure function, cache per season in DynamoDB (STANDINGS#<season>), wire it into BracketService.getPrediction, fall back to neutral 0.5 on failure while always returning a prediction, and surface the metrics used in the PredictionPanel (localized EN/JA). Update specs and both READMEs. Backend-first, then frontend, then docs.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

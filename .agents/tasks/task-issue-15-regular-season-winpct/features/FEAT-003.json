@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-003",
+  "type": "docs",
+  "description": "Update the spec set and both READMEs to describe the system as actually built after FEAT-001/002: predictions now incorporate real regular-season win pct from the MLB Stats API standings endpoint, cached per season in DynamoDB (STANDINGS#<season>), with a neutral fallback and an explainable 'prediction basis' in the UI. Spec-driven development is a graded Kiro University lesson, so the specs and READMEs must stay truthful and in sync. Depends on FEAT-001 and FEAT-002.",
+  "status": "pending",
+  "steps": [
+    "Update .kiro/specs/mlb-postseason/requirements.md: add/adjust a requirement capturing that the prediction consumes regular-season win pct from MLB standings, with the three Issue #15 acceptance criteria (neutral fallback always returns a prediction; pure, mocked metric-weighting unit test; UI explains the metrics used). Keep the existing EARS/requirement style used in the file.",
+    "Update .kiro/specs/mlb-postseason/design.md: document the standings fetch (endpoint https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=YYYY), the PURE winPctFromStandings aggregation (backend/src/predict/standings.ts), the STANDINGS#<season> DynamoDB cache (same TTL as the bracket cache, no infra change because the table is single-pk), the BracketService.resolveWinPct resolution order (injected winPct -> cache hit -> fetch+write-back -> neutral {} on any failure), and the additive Prediction.metrics field surfaced in the PredictionPanel. Match the existing design.md structure and module-reference style.",
+    "Update .kiro/specs/mlb-postseason/tasks.md: mark the Issue #15 work as a completed/represented task consistent with how prior issues (#12, #13, #14) are recorded in that file, referencing the real modules added/changed.",
+    "Update README.md and README.ja.md: in the prediction/model section, state that predictions now blend series progress with real regular-season win pct from the MLB standings API (cached per season, neutral fallback when unavailable) and that the UI shows the metrics used. Keep README.md and README.ja.md in sync (same facts, each in its language). Do NOT use em dashes.",
+    "Sanity-check that no doc claims anything the code does not do (e.g. do not claim Pythagorean/last-10 signals unless FEAT-001 actually implemented them; by default only win pct is wired)."
+  ],
+  "acceptance_criteria": [
+    ".kiro/specs/mlb-postseason/{requirements,design,tasks}.md describe the win-pct wiring, caching, fallback, and explainable-metrics UI as actually implemented.",
+    "README.md and README.ja.md both mention the standings-driven prediction and the metrics-used UI, in sync and language-appropriate.",
+    "No doc overstates the implementation (optional Pythagorean/last-10 signals are only described if actually added)."
+  ],
+  "verification": [
+    "Manual read-through: grep for 'standings' / '勝率' / 'win pct' in the specs and READMEs to confirm the new content is present and consistent.",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build (docs change must not break the build)."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
