@@ -1,7 +1,25 @@
 {
   "task_id": "task-issue-15-regular-season-winpct",
   "task_description": "GitHub Issue #15: feed real regular-season win pct into the prediction model. Fetch MLB Stats API standings, aggregate to a WinPctMap via a pure function, cache per season in DynamoDB (STANDINGS#<season>), wire it into BracketService.getPrediction, fall back to neutral 0.5 on failure while always returning a prediction, and surface the metrics used in the PredictionPanel (localized EN/JA). Update specs and both READMEs. Backend-first, then frontend, then docs.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "review": {
+    "verdict": "APPROVED",
+    "pass": "v1",
+    "file": ".agents/tasks/task-issue-15-regular-season-winpct/2026-10-05-071759-review.md",
+    "non_blocking_notes": [
+      "fetchStandings non-200/network error path has no direct fetch-mocked unit test (only transitively via the service reject test); consistent with the pre-existing untested fetchPostseasonSchedule.",
+      "resolveWinPct guards the injected branch with Object.keys(...).length > 0, so an injected empty {} falls through to cache/fetch (intended/documented)."
+    ]
+  },
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "e2e": "pass",
+    "synth": "pass",
+    "summary": "npm run build green (shared->backend->frontend->infra). npm test green: shared 22, backend 92 (incl. 7 new pure standings tests + 3 service tests for real-winPct metrics, neutral fallback still returns mode:'prediction', and cache-hit-skips-fetch), frontend 41 (incl. metrics-basis render + null->'not available' + backward-compat no-metrics), infra 8. Playwright e2e 20/20 pass (prediction basis '予測の根拠' + 60.5%/58.0% asserted). cdk synth OK, no AWS calls. Test quality reviewed: new tests exercise the new code paths and would fail if the wiring were reverted. No Dockerfile in repo so docker_build skipped."
+  }
 }
