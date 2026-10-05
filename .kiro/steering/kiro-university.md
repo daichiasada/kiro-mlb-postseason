@@ -64,7 +64,7 @@ Required lessons:
    `backend/src/predict/model.property.test.ts` and
    `backend/src/mlb/aggregate.property.test.ts`.
 5. **Powers:** the agent-browser / Playwright and github-cli powers were used during the
-   build, and a self-contained power is packaged at `powers/mlb-postseason/` (see Bonus 2).
+   build, and a self-contained power is packaged at `.kiro/powers/mlb-postseason/` (see Bonus 2).
 6. **Model Context Protocol (MCP):** `.kiro/settings/mcp.json` configures the public
    `aws-docs` and `fetch` MCP servers (no secrets).
 7. **Custom agents:** `.kiro/agents/mlb-postseason-dev.json` defines the
@@ -76,7 +76,7 @@ Bonus lessons:
 - **Bonus 1 - Kiro Web, cloud sessions, cloud configuration:** `docs/kiro-web-cloud.md`
   explains how the project was built on Kiro Web with cloud sessions and how AWS cloud
   configuration activates for `cdk bootstrap` + `cdk deploy`.
-- **Bonus 2 - Package a Kiro Power:** `powers/mlb-postseason/` is a self-contained,
+- **Bonus 2 - Package a Kiro Power:** `.kiro/powers/mlb-postseason/` is a self-contained,
   installable power (manifest + bundled steering + skill + `mlb-fetch` MCP server + README)
   that sits outside the npm workspaces so it adds no build surface.
 

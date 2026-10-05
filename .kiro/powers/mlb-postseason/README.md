@@ -11,7 +11,7 @@ and does not affect the root `npm run build` / `npm test` / `npm run synth`.
 ## Contents
 
 ```
-powers/mlb-postseason/
+.kiro/powers/mlb-postseason/
   power.json                     # power manifest (name, version, steering, skills, MCP)
   steering/mlb-stats-api.md      # bundled steering: MLB Stats API usage + mapping rules
   skills/aggregate-bracket.md    # bundled skill: how to aggregate schedule -> bracket

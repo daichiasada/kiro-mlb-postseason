@@ -86,7 +86,7 @@ piece. It is kept consistent with `requirements.md` and `design.md`.
       structure, testing).
 - [x] Agent hooks: `.kiro/hooks/*.kiro.hook`.
 - [x] Property-based tests (IDE-only): `backend/src/**/*.property.test.ts`.
-- [x] Powers writeup + packaged power: `powers/mlb-postseason/`.
+- [x] Powers writeup + packaged power: `.kiro/powers/mlb-postseason/`.
 - [x] MCP config: `.kiro/settings/mcp.json`.
 - [x] Custom agent: `.kiro/agents/mlb-postseason-dev.json`.
 - [x] Judge-facing summary: `DEMONSTRATED_LESSONS.md`.

@@ -99,14 +99,14 @@ BONUS B below).
   [prediction.spec.ts](./frontend/e2e/prediction.spec.ts)), and the
   **github-cli** power for repository, PR, and issue workflows (the tracked
   issue registry is [ISSUES.md](./ISSUES.md)).
-- Packaged power (BONUS B): [powers/mlb-postseason/](./powers/mlb-postseason/) -
+- Packaged power (BONUS B): [.kiro/powers/mlb-postseason/](./.kiro/powers/mlb-postseason/) -
   a self-contained power with a manifest
-  ([power.json](./powers/mlb-postseason/power.json)), bundled steering
-  ([steering/mlb-stats-api.md](./powers/mlb-postseason/steering/mlb-stats-api.md)),
+  ([power.json](./.kiro/powers/mlb-postseason/power.json)), bundled steering
+  ([steering/mlb-stats-api.md](./.kiro/powers/mlb-postseason/steering/mlb-stats-api.md)),
   a skill
-  ([skills/aggregate-bracket.md](./powers/mlb-postseason/skills/aggregate-bracket.md)),
+  ([skills/aggregate-bracket.md](./.kiro/powers/mlb-postseason/skills/aggregate-bracket.md)),
   an `mlb-fetch` MCP server, and a
-  [README](./powers/mlb-postseason/README.md).
+  [README](./.kiro/powers/mlb-postseason/README.md).
 
 ---
 
@@ -149,7 +149,7 @@ A project-specific custom agent encodes the stack and conventions.
 
 ## 【ボーナス】キロパワーをパッケージ化 / Bonus B - Package a Kiro Power
 
-- [powers/mlb-postseason/](./powers/mlb-postseason/) is a self-contained,
+- [.kiro/powers/mlb-postseason/](./.kiro/powers/mlb-postseason/) is a self-contained,
   documented, installable Kiro Power (manifest + bundled steering + skill + MCP
   server + README). It lives outside the npm workspaces as a non-built asset, so
   it does not affect the root build.
@@ -165,5 +165,6 @@ From the repo root, all of the following pass:
 - `npm run synth`
 
 Every `.kiro` JSON artifact (each `.kiro/hooks/*.kiro.hook`,
-`.kiro/settings/mcp.json`, and `.kiro/agents/mlb-postseason-dev.json`) parses as
+`.kiro/settings/mcp.json`, `.kiro/agents/mlb-postseason-dev.json`, and
+`.kiro/powers/mlb-postseason/power.json`) parses as
 valid JSON.
