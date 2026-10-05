@@ -889,3 +889,62 @@ Lambdas and routes (`GET /bracket`, `GET`/`POST /prediction`, `GET /game`).
    `BEDROCK_MODEL_ID`), SHALL be granted DynamoDB read/write but NO
    `bedrock:InvokeModel` IAM, and SHALL be wired to a `GET /game` HTTP API route,
    so the API exposes exactly three app Lambdas and three route paths.
+
+## Requirement 20 - Prediction cache and Bedrock cost control (Issue #23)
+
+**User story:** As an operator, I want repeat prediction requests for the same
+series situation to reuse a cached result instead of calling Amazon Bedrock
+again, the public no-auth endpoint's request rate to be bounded, and cache / cost
+metrics to be visible, so that the billable Bedrock path cannot be driven into
+runaway cost and I can observe how often the cache saves a call.
+
+GitHub Issue #23. `/prediction` is a public endpoint whose only billable branch
+invokes Bedrock. The backend now caches a produced `mode: 'prediction'` response
+in DynamoDB keyed by the series situation and the narrative knobs, serves a
+repeat same-situation request from the cache WITHOUT calling Bedrock, and emits
+cache / Bedrock metrics via CloudWatch Embedded Metric Format (EMF) log lines so
+no `cloudwatch:PutMetricData` IAM or extra AWS SDK call is added. The HTTP API
+default stage is throttled to bound the request rate. The cache key is a pure
+tested function (`backend/src/service/predictionCacheKey.ts`), the cache storage
+lives on the existing single-`pk` table (`backend/src/store/dynamo.ts`), the
+cache-first wiring is in `backend/src/service/bracketService.ts`, the EMF helper
+is `backend/src/metrics/emf.ts`, and the throttling is in
+`infra/lib/mlb-postseason-stack.ts`.
+
+### Acceptance criteria
+
+1. WHEN a `mode: 'prediction'` response is produced THEN the system SHALL cache
+   it in DynamoDB under the partition key
+   `PREDICTION#<seriesId>#<highWins>-<lowWins>#<language>#<modelId>#<accuracy>`,
+   where an undefined `accuracy` is resolved to the model default
+   (`DEFAULT_ACCURACY = 0.5`) BEFORE the key is built so the same logical
+   situation maps to one stable key. Only `mode: 'prediction'` responses SHALL
+   be cached; the results-only / final / not-started short-circuits SHALL NOT be
+   cached. The cache SHALL be a no-op when `TABLE_NAME` is unset.
+2. WHEN a second prediction request arrives for the same situation (same series
+   id, win counts, language, model, and accuracy) THEN the system SHALL return
+   the cached `PredictionResponse` from the cache lookup WITHOUT running
+   `predict()` or `generateNarrative()` / Bedrock (Issue #23 acceptance
+   criterion 1). The cache lookup SHALL sit AFTER the three Bedrock-free
+   short-circuits (results-only season, `final` series, unresolvable /
+   not-started series).
+3. WHEN a game result changes a series' win counts (`high.wins` / `low.wins`)
+   THEN the request SHALL map to a DIFFERENT cache key, which effectively
+   invalidates the cache and produces a fresh prediction and a new Bedrock call
+   (Issue #23 acceptance criterion 2). A numeric `ttl` of 15 minutes
+   (`PREDICTION_TTL_SECONDS`) SHALL be written as a backstop only; the
+   win-count-in-key design SHALL be the primary invalidation mechanism.
+4. WHEN the stack is synthesized THEN the HTTP API implicit `$default` stage
+   SHALL carry `DefaultRouteSettings` with `ThrottlingRateLimit = 20`
+   (requests/second steady state) and `ThrottlingBurstLimit = 40`, bounding the
+   public no-auth `/prediction` endpoint's Bedrock cost, and
+   `infra/test/stack.test.ts` SHALL assert these exact values (Issue #23
+   acceptance criterion 3). CORS and the existing routes (`GET /bracket`,
+   `GET`/`POST /prediction`, `GET /game`) SHALL be unchanged.
+5. WHEN a prediction request is served THEN the system SHALL emit CloudWatch
+   metrics via Embedded Metric Format (EMF) stdout log lines (NO
+   `cloudwatch:PutMetricData` IAM, NO extra AWS SDK call) in the namespace
+   `MlbPostseason/Prediction` with the metric names `PredictionCacheHit`,
+   `PredictionCacheMiss`, and `BedrockInvokeCount` (value `0` on a cache hit, `1`
+   on a miss). The emission SHALL carry NO high-cardinality dimension; the series
+   id SHALL be a plain log property, not a dimension.

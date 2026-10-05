@@ -162,6 +162,54 @@ regular-season win pct (or "Not available" when unknown), so the basis is
 explainable. Only the win-pct signal is wired today; there is no Pythagorean
 (run-differential) or last-10 signal.
 
+### Prediction cache and cost control (Issue #23)
+
+`/prediction` is a public, no-auth endpoint whose billable branch invokes Amazon
+Bedrock, so repeat requests for the same situation are cached and the request
+rate is bounded.
+
+- **What is cached.** Only a `mode: 'prediction'` response is stored. The three
+  short-circuits that never call Bedrock (a results-only season, a `final`
+  series, and an unresolvable or not-yet-started series) sit BEFORE the cache
+  and are not cached.
+- **Cache key.** The DynamoDB partition key is
+  `PREDICTION#<seriesId>#<highWins>-<lowWins>#<language>#<modelId>#<accuracy>`,
+  so the cache is keyed by the series situation and the narrative knobs. An
+  undefined `accuracy` is resolved to the model default (`0.5`) before the key
+  is built, so a bare request and an explicit `0.5` map to one stable key. The
+  cache lives on the same single-`pk` DynamoDB table as the bracket cache, so no
+  infra schema change was needed; it is a no-op when `TABLE_NAME` is unset.
+- **Repeat request skips Bedrock.** A second request for the same situation is a
+  cache hit and returns the stored response WITHOUT running the prediction model
+  or calling Bedrock.
+- **Invalidation on series progress.** Because `highWins-lowWins` is part of the
+  key, a game result (a change in either team's win count) produces a different
+  key, which effectively invalidates the cache and yields a fresh prediction and
+  a new Bedrock call.
+- **TTL backstop.** Each cached prediction carries a numeric `ttl` of
+  **15 minutes** (`PREDICTION_TTL_SECONDS`) as a backstop; the win-count-in-key
+  design is the primary invalidation mechanism.
+- **Request throttling.** The HTTP API default (`$default`) stage is throttled to
+  a steady-state **20 requests/second** with a **burst of 40**
+  (`ThrottlingRateLimit` / `ThrottlingBurstLimit`), bounding how fast the public
+  endpoint can be driven into runaway Bedrock cost while staying well above any
+  normal browsing pattern. `infra/test/stack.test.ts` asserts these exact
+  values.
+- **CloudWatch metrics (EMF).** Cache and cost metrics are emitted via Embedded
+  Metric Format (EMF) stdout log lines, so there is no `cloudwatch:PutMetricData`
+  IAM grant and no extra AWS SDK call on the request path. Namespace
+  **`MlbPostseason/Prediction`**; metric names **`PredictionCacheHit`**,
+  **`PredictionCacheMiss`**, and **`BedrockInvokeCount`** (0 on a hit, 1 on a
+  miss). The series id is carried as a plain log property, never a
+  high-cardinality dimension.
+
+The implementation lives in `backend/src/service/predictionCacheKey.ts` (the
+pure key function), `backend/src/store/dynamo.ts`
+(`getCachedPrediction` / `putCachedPrediction` + `PREDICTION_TTL_SECONDS`),
+`backend/src/service/bracketService.ts` (cache-first wiring),
+`backend/src/metrics/emf.ts` (the EMF helper), and
+`infra/lib/mlb-postseason-stack.ts` (the throttling).
+
 ### Model accuracy / backtest
 
 A client-side **Model accuracy** page (at `/accuracy`, reachable from a nav link

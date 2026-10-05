@@ -153,6 +153,46 @@ diagrams.net で開けます）です。ベクター形式のエクスポート
 レギュラーシーズン勝率（不明な場合は「データなし」）を表示するため、根拠を説明できます。現時点で
 配線されているのは勝率シグナルのみで、ピタゴラス（得失点差）や直近 10 試合のシグナルはありません。
 
+### 予測キャッシュとコスト制御（Issue #23）
+
+`/prediction` は認証なしの公開エンドポイントで、課金対象の分岐が Amazon Bedrock を
+呼び出すため、同じ状況に対する再リクエストはキャッシュし、リクエストレートに上限を設けています。
+
+- **キャッシュ対象。** 保存されるのは `mode: 'prediction'` レスポンスのみです。Bedrock を
+  呼ばない 3 つのショートサーキット（結果のみシーズン、`final` のシリーズ、未解決または
+  未開始のシリーズ）はキャッシュより前に位置し、キャッシュされません。
+- **キャッシュキー。** DynamoDB のパーティションキーは
+  `PREDICTION#<seriesId>#<highWins>-<lowWins>#<language>#<modelId>#<accuracy>` で、
+  シリーズの状況とナラティブの各設定でキー管理されます。未指定の `accuracy` はキー生成前に
+  モデルのデフォルト（`0.5`）に解決されるため、省略リクエストと明示的な `0.5` は同一の安定した
+  キーに対応します。キャッシュはブラケットキャッシュと同じ単一 `pk` の DynamoDB テーブル上に
+  あるためインフラのスキーマ変更は不要で、`TABLE_NAME` が未設定のときは no-op です。
+- **再リクエストは Bedrock をスキップ。** 同じ状況に対する 2 回目のリクエストはキャッシュ
+  ヒットとなり、予測モデルの実行や Bedrock の呼び出しをせずに保存済みレスポンスを返します。
+- **シリーズ進行による無効化。** `highWins-lowWins` がキーの一部であるため、試合結果（いずれ
+  かのチームの勝利数の変化）によって異なるキーが生成され、実質的にキャッシュが無効化されて、
+  新しい予測と新たな Bedrock 呼び出しが行われます。
+- **TTL のバックストップ。** 各キャッシュ済み予測は数値の `ttl` として **15 分**
+  （`PREDICTION_TTL_SECONDS`）を持ちバックストップとして機能します。主たる無効化メカニズムは
+  勝利数をキーに含める設計です。
+- **リクエストのスロットリング。** HTTP API のデフォルト（`$default`）ステージは、定常
+  **毎秒 20 リクエスト**、バースト **40**（`ThrottlingRateLimit` / `ThrottlingBurstLimit`）に
+  スロットリングされており、公開エンドポイントが暴走した Bedrock コストに陥る速度に上限を設け
+  つつ、通常の閲覧パターンを十分に上回る水準に保ちます。`infra/test/stack.test.ts` がこの正確な
+  値をアサートします。
+- **CloudWatch メトリクス（EMF）。** キャッシュとコストのメトリクスは Embedded Metric
+  Format（EMF）の標準出力ログ行で出力されるため、`cloudwatch:PutMetricData` の IAM 付与も、
+  リクエスト経路での追加の AWS SDK 呼び出しもありません。名前空間は
+  **`MlbPostseason/Prediction`**、メトリクス名は **`PredictionCacheHit`**・
+  **`PredictionCacheMiss`**・**`BedrockInvokeCount`**（ヒット時は 0、ミス時は 1）です。
+  seriesId は高カーディナリティのディメンションではなく、通常のログプロパティとして保持します。
+
+実装は `backend/src/service/predictionCacheKey.ts`（純粋なキー関数）・
+`backend/src/store/dynamo.ts`（`getCachedPrediction` / `putCachedPrediction` と
+`PREDICTION_TTL_SECONDS`）・`backend/src/service/bracketService.ts`
+（キャッシュ優先の配線）・`backend/src/metrics/emf.ts`（EMF ヘルパー）・
+`infra/lib/mlb-postseason-stack.ts`（スロットリング）にあります。
+
 ### モデル精度 / バックテスト
 
 クライアントサイドの**モデル精度**ページ（`/accuracy`。すべてのシーズンでヘッダーの

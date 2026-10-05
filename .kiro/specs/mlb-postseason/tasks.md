@@ -729,3 +729,61 @@ long-vs-short TTL by game state, and is served by a third Lambda with no Bedrock
         `.kiro/specs/mlb-postseason/design.md`,
         `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
 - _Requirements: 19_
+
+## Prediction cache + Bedrock cost control (task-issue-23-prediction-cache)
+
+GitHub Issue #23 under `.agents/tasks/task-issue-23-prediction-cache/` (features
+FEAT-002 through FEAT-004): cache a produced `mode: 'prediction'` response in
+DynamoDB keyed by the series situation + narrative knobs so a repeat
+same-situation request skips Amazon Bedrock, invalidate on a win-count change via
+the key, emit cache / Bedrock metrics via CloudWatch EMF logs (no new IAM), and
+throttle the public HTTP API default stage to bound Bedrock cost.
+
+### C1. Backend: prediction cache + EMF metrics (task-issue-23 FEAT-002)
+
+- [x] Pure `predictionCacheKey` building
+      `PREDICTION#<seriesId>#<highWins>-<lowWins>#<language>#<modelId>#<accuracy>`
+      (an undefined `accuracy` resolved to `DEFAULT_ACCURACY = 0.5` before the
+      key is built), with a stability + per-component-variation unit test.
+      - `backend/src/service/predictionCacheKey.ts`,
+        `backend/src/service/predictionCacheKey.test.ts`.
+- [x] `getCachedPrediction` / `putCachedPrediction` on the single-`pk` DynamoDB
+      table (full `PREDICTION#...` key, numeric `ttl`), `PREDICTION_TTL_SECONDS`
+      (15 min) backstop TTL, caching only `mode: 'prediction'` responses, no-op
+      when `TABLE_NAME` unset.
+      - `backend/src/store/dynamo.ts`.
+- [x] Cache-first wiring in `getPrediction` AFTER the results-only / final /
+      not-started short-circuits: a HIT returns the cached response without
+      `predict()` or `generateNarrative()` / Bedrock (criterion 1); a win-count
+      change yields a different key => fresh Bedrock (criterion 2). EMF metric
+      helper in namespace `MlbPostseason/Prediction` with `PredictionCacheHit`,
+      `PredictionCacheMiss`, `BedrockInvokeCount` (0 on hit, 1 on miss), empty
+      dimensions, series id as a plain log property; no `PutMetricData` IAM.
+      - `backend/src/service/bracketService.ts`, `backend/src/metrics/emf.ts`,
+        `backend/src/metrics/emf.test.ts`,
+        `backend/src/service/bracketService.test.ts`.
+
+### C2. Infra: HTTP API default-stage throttling (task-issue-23 FEAT-003)
+
+- [x] `DefaultRouteSettings` on the implicit `$default` stage with
+      `ThrottlingRateLimit = 20` and `ThrottlingBurstLimit = 40` (via the L1
+      `CfnStage` escape hatch), bounding the public `/prediction` endpoint's
+      Bedrock cost; CORS and all routes unchanged. Stack test asserts the exact
+      rate / burst (criterion 3).
+      - `infra/lib/mlb-postseason-stack.ts`, `infra/test/stack.test.ts`.
+
+### C3. Spec + README truthfulness (task-issue-23 FEAT-004)
+
+- [x] Keep the spec-driven-dev artifacts and both READMEs truthful to the
+      prediction cache (key format, where it sits relative to the
+      short-circuits, the 15-min TTL backstop, the win-count-in-key
+      invalidation), the HTTP API throttling (20 req/s, burst 40), and the EMF
+      metrics (namespace `MlbPostseason/Prediction` + metric names). Verification
+      cross-checked the docs against `backend/src/service/predictionCacheKey.ts`,
+      `backend/src/store/dynamo.ts`, `backend/src/service/bracketService.ts`,
+      `backend/src/metrics/emf.ts`, and `infra/lib/mlb-postseason-stack.ts`, plus
+      a `npm run build` sanity check.
+      - `.kiro/specs/mlb-postseason/requirements.md`,
+        `.kiro/specs/mlb-postseason/design.md`,
+        `.kiro/specs/mlb-postseason/tasks.md`, `README.md`, `README.ja.md`.
+- _Requirements: 20_

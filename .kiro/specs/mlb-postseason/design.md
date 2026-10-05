@@ -339,14 +339,24 @@ undefined the model default (`0.5`) applies:
    `scheduled` OR has no decided game (no game with a real winner and no
    recorded win) - this catches the real preview-game shape, where the
    aggregator classifies a games-but-no-results series as `scheduled`.
-6. Otherwise resolve the regular-season win-pct map with `resolveWinPct(season)`
+6. Otherwise resolve the model (`resolveModelId`), language
+   (`DEFAULT_NARRATIVE_LANGUAGE` when unset), and accuracy (`DEFAULT_ACCURACY =
+   0.5` when unset), build the prediction cache key with `predictionCacheKey`
+   (see "Prediction cache and cost control" below), and read
+   `store.getCachedPrediction(cacheKey)`. On a HIT, emit a `PredictionCacheHit`
+   / `BedrockInvokeCount = 0` metric and RETURN the cached `PredictionResponse`
+   WITHOUT running `predict()` or `generateNarrative()` / Bedrock (Issue #23
+   acceptance criterion 1).
+7. On a cache MISS, emit a `PredictionCacheMiss` / `BedrockInvokeCount = 1`
+   metric, resolve the regular-season win-pct map with `resolveWinPct(season)`
    (see "Standings win pct" below), call
    `predict(series, bracket, winPct, accuracy)` to compute the favorite and
    probability (honoring the accuracy control and the real win-pct strength
    signal), then `generateNarrative(series, result, invoker)` for the prose
-   (deterministic fallback on any Bedrock error), and attach the additive
-   `metrics` object (favorite + underdog win pct) built with
-   `teamMetric(winPct, teamId)`, returning `{ mode: 'prediction', ... }`.
+   (deterministic fallback on any Bedrock error), attach the additive `metrics`
+   object (favorite + underdog win pct) built with `teamMetric(winPct, teamId)`,
+   `store.putCachedPrediction(cacheKey, response)`, and return
+   `{ mode: 'prediction', ... }`.
 
 ### resolveWinPct(season) - standings resolution order
 
@@ -592,10 +602,93 @@ keyed by `GAME#<gamePk>` via `getCachedGameDetail` / `putCachedGameDetail`
 (Issue #19). The game-detail TTL is caller-chosen by game state: a COMPLETED
 game uses `GAME_DETAIL_FINAL_TTL_SECONDS` (one week, `604800`) because a finished
 game is immutable, while an in-progress game uses `GAME_DETAIL_LIVE_TTL_SECONDS`
-(one minute, `60`) so a live score stays fresh. All three key families share the
-single `pk` partition key, so NO infra schema change was needed to add either the
-standings or the game-detail cache. All methods are no-ops / return `undefined`
-when `TABLE_NAME` is unset, so the service runs locally and in tests without AWS.
+(one minute, `60`) so a live score stays fresh. The store also caches a produced
+prediction keyed by the full `PREDICTION#...` string (Issue #23) via
+`getCachedPrediction` / `putCachedPrediction`, with `PREDICTION_TTL_SECONDS` (15
+minutes) as a backstop TTL; `putCachedPrediction` only stores a `mode:
+'prediction'` response (the results / upcoming short-circuits never reach it).
+All four key families (`BRACKET#`, `STANDINGS#`, `GAME#`, `PREDICTION#`) share
+the single `pk` partition key, so NO infra schema change was needed to add any of
+the standings, game-detail, or prediction caches. All methods are no-ops / return
+`undefined` when `TABLE_NAME` is unset, so the service runs locally and in tests
+without AWS.
+
+## Prediction cache and cost control (Issue #23)
+
+`/prediction` is a public, no-auth endpoint whose only billable branch invokes
+Amazon Bedrock, so Issue #23 adds a prediction cache, request throttling, and
+cache / cost metrics without new IAM.
+
+### Cache key (`backend/src/service/predictionCacheKey.ts`)
+
+`predictionCacheKey` is a PURE, side-effect-free function that builds the
+DynamoDB partition key
+`PREDICTION#<seriesId>#<highWins>-<lowWins>#<language>#<modelId>#<accuracy>`. The
+key encodes everything a prediction depends on: the series id, the current win
+counts, the narrative language, the resolved (allowlisted) model id, and the
+accuracy knob. Two consequences follow directly from putting the win counts in
+the key:
+
+- Two requests that share the whole situation map to the SAME key, so the second
+  is served from cache and skips Bedrock.
+- A game result (a change in `high.wins` or `low.wins`) yields a DIFFERENT key,
+  which effectively invalidates the cache and forces a fresh prediction and a
+  new Bedrock call. This win-count-in-key design is the PRIMARY invalidation
+  mechanism.
+
+Callers resolve an undefined `accuracy` to the model default (`DEFAULT_ACCURACY =
+0.5`) BEFORE building the key, so a bare request and an explicit `0.5` map to one
+stable key. The function has no I/O, so it is unit-tested in isolation
+(`predictionCacheKey.test.ts`: key stability plus per-component variation).
+
+### Where the cache sits (`bracketService.ts getPrediction`)
+
+The cache lookup / write wraps ONLY the final billable branch. It sits AFTER the
+three Bedrock-free short-circuits (results-only season, `final` series,
+unresolvable / not-started series), which return their results / upcoming
+contract and are never cached. On a cache HIT the full cached
+`PredictionResponse` is returned WITHOUT calling `predict()` or
+`generateNarrative()` / Bedrock (Issue #23 acceptance criterion 1); on a MISS the
+billable path runs and the produced `mode: 'prediction'` response is written back
+via `store.putCachedPrediction`.
+
+### TTL backstop (`PREDICTION_TTL_SECONDS`)
+
+Each cached prediction carries a numeric `ttl` of 15 minutes
+(`PREDICTION_TTL_SECONDS`, `backend/src/store/dynamo.ts`) as a BACKSTOP only, so
+a stale entry eventually expires even if nothing else changes. The win-count-in-
+key design, not the TTL, is what makes a prediction refresh as soon as the series
+progresses.
+
+### Metrics via Embedded Metric Format (`backend/src/metrics/emf.ts`)
+
+Cache and cost metrics are emitted via CloudWatch Embedded Metric Format (EMF):
+the Lambda writes ONE structured JSON line to stdout and the CloudWatch agent
+extracts the metrics from the log group. This avoids a `cloudwatch:PutMetricData`
+IAM grant AND an extra AWS SDK call on the request path. The namespace is
+`MlbPostseason/Prediction` (`METRIC_NAMESPACE`) and the metric names are
+`PredictionCacheHit`, `PredictionCacheMiss`, and `BedrockInvokeCount`
+(`BedrockInvokeCount` is `0` on a hit, `1` on a miss). The `Dimensions` array is
+deliberately EMPTY so the metrics stay low-cardinality; the series id, when
+present, is carried as a plain log property, NOT a dimension. The emitter never
+throws (a logging failure must not break the response). `emf.test.ts` asserts the
+emitted EMF shape; the criterion-1 (second same-situation request => no Bedrock)
+and criterion-2 (changed win counts => fresh Bedrock) tests live in
+`bracketService.test.ts`.
+
+### HTTP API throttling (`infra/lib/mlb-postseason-stack.ts`)
+
+The HTTP API implicit `$default` stage is given `DefaultRouteSettings` with
+`ThrottlingRateLimit = 20` (requests/second steady state) and
+`ThrottlingBurstLimit = 40`, reached via the L1 `CfnStage` escape hatch because
+`apigwv2.HttpApi` creates the default stage implicitly. These values bound how
+fast the public `/prediction` endpoint can be driven into runaway Bedrock cost
+while staying well above any normal browsing pattern, so legitimate traffic is
+unaffected. CORS and the existing routes (`GET /bracket`, `GET`/`POST
+/prediction`, `GET /game`) are unchanged. `infra/test/stack.test.ts` asserts the
+exact `ThrottlingRateLimit = 20` and `ThrottlingBurstLimit = 40` (Issue #23
+acceptance criterion 3). No `cloudwatch:PutMetricData` IAM is added, because the
+metrics use EMF logs.
 
 ## Seed fallback
 
@@ -619,9 +712,11 @@ seed if a bracket request fails, so the demo renders offline.
 
 `infra/` provisions the whole stack in TypeScript: S3 + CloudFront (OAC), the
 HTTP API + the three Lambdas (`getBracket`, `getPrediction`, `getGameDetail`),
-the DynamoDB table (TTL enabled), and Bedrock IAM permissions. `npm run synth`
-produces the template; `npm run deploy` builds and deploys in one command
-(requires active AWS credentials).
+the DynamoDB table (TTL enabled), and Bedrock IAM permissions. The HTTP API
+`$default` stage is throttled (20 req/s, burst 40) to bound Bedrock cost (Issue
+#23, see "Prediction cache and cost control" above). `npm run synth` produces the
+template; `npm run deploy` builds and deploys in one command (requires active AWS
+credentials).
 
 ### Game-detail Lambda + route (Issue #19)
 
