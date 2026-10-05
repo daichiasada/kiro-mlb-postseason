@@ -124,6 +124,48 @@ body {
   color: #8a2a1b;
 }
 
+.app__notice--refresh {
+  background: #fdecea;
+  border-color: #f1b0a8;
+  color: #8a2a1b;
+}
+
+/* Last-updated line + manual refresh button (in-progress auto-refresh) */
+.app__refresh {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.app__refresh-updated {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.app__refresh-button {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--navy);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.app__refresh-button:hover:not(:disabled) {
+  background: var(--navy);
+  color: #fff;
+}
+
+.app__refresh-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .app__status--upcoming {
   margin: 1.25rem 0 0;
   padding: 1.25rem;

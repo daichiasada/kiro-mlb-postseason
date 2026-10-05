@@ -75,6 +75,10 @@ export type MessageKey =
   | 'prediction.metrics.unknown'
   | 'prediction.metrics.team'
   | 'integrity.banner'
+  | 'refresh.lastUpdated'
+  | 'refresh.button'
+  | 'refresh.updating'
+  | 'refresh.error'
   | 'detail.breadcrumb'
   | 'detail.back'
   | 'detail.return'
@@ -164,6 +168,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.metrics.team': '{team}: {pct}',
     'integrity.banner':
       'Data integrity: {count} finished matchup(s) still reference an undetermined team.',
+    'refresh.lastUpdated': 'Last updated: {relative}',
+    'refresh.button': 'Refresh',
+    'refresh.updating': 'Updating…',
+    'refresh.error': 'Could not refresh - showing the last loaded data.',
     'detail.breadcrumb': 'Breadcrumb',
     'detail.back': '← Back to the {season} bracket',
     'detail.return': 'Return to the {season} bracket',
@@ -255,6 +263,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'prediction.metrics.team': '{team}: {pct}',
     'integrity.banner':
       'データ整合性: 終了した{count}件の対戦が未確定のチームを参照しています。',
+    'refresh.lastUpdated': '最終更新: {relative}',
+    'refresh.button': '更新',
+    'refresh.updating': '更新中…',
+    'refresh.error': '更新できませんでした。直前のデータを表示しています。',
     'detail.breadcrumb': 'パンくずリスト',
     'detail.back': '← {season}年のトーナメント表に戻る',
     'detail.return': '{season}年のトーナメント表に戻る',
