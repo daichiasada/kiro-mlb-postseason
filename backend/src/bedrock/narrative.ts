@@ -14,8 +14,10 @@
 import {
   DEFAULT_NARRATIVE_MODEL_ID,
   DEFAULT_NARRATIVE_LANGUAGE,
+  NARRATIVE_MODEL_OPTIONS,
   TEAMS,
   type NarrativeLanguage,
+  type NarrativeModelProvider,
   type Series,
 } from '@mlb/shared';
 import {
@@ -162,6 +164,11 @@ const anthropicStrategy: ModelStrategy = {
 const amazonNovaStrategy: ModelStrategy = {
   buildBody(prompt: string): string {
     return JSON.stringify({
+      // Nova's native InvokeModel request schema REQUIRES this top-level
+      // discriminator as a sibling to `messages`/`inferenceConfig`; without it
+      // Nova rejects the call and every Nova selection silently degrades to the
+      // deterministic fallback.
+      schemaVersion: 'messages-v1',
       messages: [{ role: 'user', content: [{ text: prompt }] }],
       inferenceConfig: { maxTokens: MAX_TOKENS, temperature: TEMPERATURE },
     });
@@ -178,19 +185,55 @@ const amazonNovaStrategy: ModelStrategy = {
   },
 };
 
+/** Maps a provider discriminator to its request/response adapter. */
+const STRATEGY_BY_PROVIDER: Record<NarrativeModelProvider, ModelStrategy> = {
+  anthropic: anthropicStrategy,
+  amazon: amazonNovaStrategy,
+};
+
+/** Looks up the shared allowlist `provider` for a model id, if the id is known. */
+const PROVIDER_BY_MODEL_ID: ReadonlyMap<string, NarrativeModelProvider> = new Map(
+  NARRATIVE_MODEL_OPTIONS.map((option) => [option.id, option.provider]),
+);
+
 /**
- * Selects the request/response adapter from the model id: an `amazon.` id uses
- * the Nova strategy, an `anthropic.` id uses the Anthropic strategy. Defaults to
- * the Amazon Nova strategy (the default model family) for anything else.
+ * Resolves the provider from the model id using the id-substring heuristic.
+ * Only called for ids absent from the shared allowlist (the allowlist's
+ * `provider` discriminator is the primary source of truth); callers reach here
+ * only via `BEDROCK_MODEL_ID` overrides outside the allowlist.
  */
-export function strategyForModel(modelId: string): ModelStrategy {
+function providerFromIdHeuristic(modelId: string): NarrativeModelProvider | undefined {
   if (modelId.includes('anthropic.')) {
-    return anthropicStrategy;
+    return 'anthropic';
   }
   if (modelId.includes('amazon.')) {
+    return 'amazon';
+  }
+  return undefined;
+}
+
+/**
+ * Selects the request/response adapter for a model id. Resolution is driven by
+ * the shared {@link NARRATIVE_MODEL_OPTIONS} `provider` discriminator (the
+ * single source of truth), so a future third-provider allowlist entry can never
+ * be silently mis-shaped as Nova: it would resolve to that provider and, with
+ * no adapter registered here, throw loudly rather than degrade. For ids not in
+ * the allowlist (e.g. a raw `BEDROCK_MODEL_ID` override) the id-substring
+ * heuristic applies; a wholly unrecognized provider defaults to the Amazon Nova
+ * strategy (the default model family), matching the shared default resolution.
+ */
+export function strategyForModel(modelId: string): ModelStrategy {
+  const provider = PROVIDER_BY_MODEL_ID.get(modelId) ?? providerFromIdHeuristic(modelId);
+  if (provider === undefined) {
     return amazonNovaStrategy;
   }
-  return amazonNovaStrategy;
+  const strategy = STRATEGY_BY_PROVIDER[provider];
+  if (strategy === undefined) {
+    // An allowlist entry declared a provider with no adapter here. Fail loudly
+    // so the mismatch is observable rather than silently mis-shaped as Nova.
+    throw new Error(`No Bedrock request/response adapter for provider '${provider}'`);
+  }
+  return strategy;
 }
 
 /** Production invoker backed by the real Bedrock Runtime client. */

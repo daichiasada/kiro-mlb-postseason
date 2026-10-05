@@ -12,6 +12,7 @@ import {
   fallbackNarrative,
   generateNarrative,
   RealBedrockInvoker,
+  strategyForModel,
   type BedrockInvoker,
 } from './narrative.js';
 import type { PredictionResult } from '../predict/model.js';
@@ -176,6 +177,72 @@ describe('shared model allowlist (resolveModelId)', () => {
   });
 });
 
+describe('strategyForModel provider selection', () => {
+  // The adapter is driven by the shared allowlist `provider` discriminator, not
+  // just an id substring, so a future third-provider entry can never be
+  // silently mis-shaped as Nova. We identify the chosen strategy by the request
+  // body it produces: Nova carries `schemaVersion`/`inferenceConfig`; Anthropic
+  // carries `anthropic_version`.
+  function isNovaBody(modelId: string): boolean {
+    const body = JSON.parse(strategyForModel(modelId).buildBody('p')) as {
+      schemaVersion?: string;
+      inferenceConfig?: unknown;
+      anthropic_version?: string;
+    };
+    return (
+      body.schemaVersion === 'messages-v1' &&
+      body.inferenceConfig !== undefined &&
+      body.anthropic_version === undefined
+    );
+  }
+
+  function isAnthropicBody(modelId: string): boolean {
+    const body = JSON.parse(strategyForModel(modelId).buildBody('p')) as {
+      anthropic_version?: string;
+      inferenceConfig?: unknown;
+    };
+    return body.anthropic_version === 'bedrock-2023-05-31' && body.inferenceConfig === undefined;
+  }
+
+  it('uses the Nova strategy for every Amazon allowlist id', () => {
+    const amazonIds = NARRATIVE_MODEL_OPTIONS.filter((o) => o.provider === 'amazon').map(
+      (o) => o.id,
+    );
+    expect(amazonIds.length).toBeGreaterThan(0);
+    for (const id of amazonIds) {
+      expect(isNovaBody(id)).toBe(true);
+    }
+  });
+
+  it('uses the Anthropic strategy for the Claude allowlist id', () => {
+    const anthropicIds = NARRATIVE_MODEL_OPTIONS.filter((o) => o.provider === 'anthropic').map(
+      (o) => o.id,
+    );
+    expect(anthropicIds.length).toBeGreaterThan(0);
+    for (const id of anthropicIds) {
+      expect(isAnthropicBody(id)).toBe(true);
+    }
+  });
+
+  it('resolves provider from the allowlist discriminator, not the id substring', () => {
+    // Every allowlist id maps to the strategy its declared `provider` names,
+    // proving selection is driven by `provider` and not an incidental substring.
+    for (const option of NARRATIVE_MODEL_OPTIONS) {
+      if (option.provider === 'amazon') {
+        expect(isNovaBody(option.id)).toBe(true);
+      } else {
+        expect(isAnthropicBody(option.id)).toBe(true);
+      }
+    }
+  });
+
+  it('falls back to the Nova strategy for a non-allowlisted, unrecognized id', () => {
+    // A raw BEDROCK_MODEL_ID override outside the allowlist with no recognizable
+    // provider substring still resolves to the default family (Nova).
+    expect(isNovaBody('made-up-model')).toBe(true);
+  });
+});
+
 describe('RealBedrockInvoker request/response shaping (ISSUE-2)', () => {
   // Guards the real InvokeModel body/parse path that higher-level tests only
   // exercise through a mocked `invoke`. The BedrockRuntimeClient is injected
@@ -249,11 +316,15 @@ describe('RealBedrockInvoker request/response shaping (ISSUE-2)', () => {
     expect(command.input.contentType).toBe('application/json');
 
     const sentBody = JSON.parse(command.input.body as string) as {
+      schemaVersion?: string;
       messages: Array<{ role: string; content: Array<{ text: string }> }>;
       inferenceConfig: { maxTokens: number; temperature: number };
       anthropic_version?: string;
     };
     expect(sentBody.anthropic_version).toBeUndefined();
+    // Nova's native InvokeModel request schema requires this discriminator;
+    // pinning it here so the contract can never silently regress again.
+    expect(sentBody.schemaVersion).toBe('messages-v1');
     expect(sentBody.inferenceConfig.maxTokens).toBe(300);
     expect(typeof sentBody.inferenceConfig.temperature).toBe('number');
     expect(sentBody.messages).toHaveLength(1);
