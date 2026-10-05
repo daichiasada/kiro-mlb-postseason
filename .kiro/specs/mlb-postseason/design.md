@@ -1395,3 +1395,38 @@ distribution depend on the HTTP API, the HTTP API CORS allow-origin is set to
 dependency, and `SITE_ORIGIN` is intentionally NOT injected from the stack onto
 the share Lambda (which would close a CloudFront<->Lambda cycle); the handler
 derives the origin from request headers instead.
+
+### Frontend share control and `?lang=` permalink (`frontend/src/components/ShareButton.tsx`)
+
+The human-facing share action is a localized `<ShareButton>` rendered next to a
+series (wired into the prediction panel and the series detail page). It builds
+the canonical permalink with the shared `buildSeriesPermalink`, using the live
+`window.location.origin` (guarded for jsdom/SSR) and the active UI language, so
+the URL carries `?lang=en|ja` and opens in the same language for the recipient.
+On click it degrades through three tiers, each feature-detected so the component
+is inert under jsdom: (1) the Web Share API (`navigator.share` with
+`{ title, text, url }`, where `text` appends the localized `SHARE_DISCLAIMER`);
+(2) a clipboard copy (`navigator.clipboard.writeText(url)`) that shows a
+localized "Link copied" `role="status"` confirmation; (3) a read-only input
+holding the URL for manual copy. The i18n layer consumes the query on load:
+`readLangFromQuery()` returns a valid `Lang` or `null`, and `I18nProvider` lets a
+valid `?lang=` take precedence over the persisted value and then persists it, so
+later in-app navigation (which drops the query) keeps the shared language. No new
+endpoint or infra is needed for the share button; it reuses the shared permalink
+builder and the existing routes.
+
+### Honest OGP tradeoff and the future PNG (raster) upgrade path
+
+The OG image is emitted as **SVG** by `GET /og`, not a rasterized PNG. The
+tradeoff is deliberate: a PNG would require a native rasterizer such as `sharp`
+(or a headless browser / `@resvg/resvg-js`), whose native `.node` binaries are
+risky to bundle through esbuild/`NodejsFunction` for a Node 20 Lambda and may
+not run in the test sandbox, which would make the build non-deterministic. An
+SVG is produced by a pure, fully unit-tested string builder with no I/O and no
+native dependency. The honest cost is that **some social crawlers do not render
+an SVG `og:image`** and will show no preview image (the text meta tags still
+work). The documented upgrade path, if a PNG becomes necessary, is to rasterize
+the SAME `buildOgImageSvg` output to PNG behind the same `GET /og` endpoint and
+cache key (keyed by `seriesId`+situation+`lang`), swapping only the Content-Type
+and the rasterization step so the card content, cache, and routing stay
+unchanged.

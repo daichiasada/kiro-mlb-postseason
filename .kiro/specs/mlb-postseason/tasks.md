@@ -852,3 +852,39 @@ shell.
       the two new routes, and the CloudFront behaviors/origin.
       - `infra/lib/mlb-postseason-stack.ts`, `infra/test/stack.test.ts`.
 - _Requirements: 21_
+
+### E3. Frontend: share button + lang-aware permalink + e2e (task-issue-21 FEAT-003)
+
+- [x] Localized `<ShareButton>` building the `?lang=`-tagged permalink from the
+      live origin + active language via the shared `buildSeriesPermalink`, with
+      a three-tier flow (Web Share API -> clipboard copy with a "Link copied"
+      status -> read-only input for manual copy), every browser API
+      feature-detected so it is inert under jsdom; the shared text appends the
+      localized `SHARE_DISCLAIMER`. Wired into the prediction panel and the
+      series detail page.
+      - `frontend/src/components/ShareButton.tsx` (+ `ShareButton.test.tsx`),
+        `frontend/src/components/PredictionPanel.tsx`,
+        `frontend/src/pages/SeriesDetailPage.tsx`, `frontend/src/styles.css`.
+- [x] i18n reads a shared `?lang=` permalink: `readLangFromQuery()` plus
+      `I18nProvider` letting a valid query override the persisted value and then
+      persisting it, with new `share.*` message keys (EN/JA).
+      - `frontend/src/i18n/index.ts`, `frontend/src/i18n/messages.ts`,
+        `frontend/src/i18n/index.test.tsx`.
+- [x] Playwright e2e covering the share button and the lang-tagged permalink.
+      - `frontend/e2e/share.spec.ts`.
+- _Requirements: 21_
+
+### E4. Spec + README truthfulness (task-issue-21 FEAT-004)
+
+- [x] Requirement 21 (share/OGP, mapping Issue #21's three acceptance criteria),
+      the design section (shared builders, `/og` + `/share` Lambdas, DynamoDB
+      cache, CloudFront routing, the share button + `?lang=` permalink, the
+      honest SVG-vs-PNG crawler tradeoff and the future raster/PNG upgrade path),
+      and these task entries. Both READMEs document the share button (Web Share +
+      copy fallback), the `?lang=` permalink, the `/og` SVG + `/share` HTML
+      endpoints, the caching, the disclaimer in shared content, and the
+      SVG-vs-PNG crawler caveat; the architecture bullets state FIVE Lambdas and
+      the `GET /og` + `GET /share` routes with the extra CloudFront behaviors.
+      - `.kiro/specs/mlb-postseason/{requirements,design,tasks}.md`,
+        `README.md`, `README.ja.md`.
+- _Requirements: 21_
