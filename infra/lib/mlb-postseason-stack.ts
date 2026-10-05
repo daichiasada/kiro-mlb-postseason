@@ -366,9 +366,7 @@ export class MlbPostseasonStack extends Stack {
     // naturally reports whatever public host the viewer used (cloudfront.net or
     // a custom domain). The share handler reads `x-site-origin` ahead of Host.
     const siteOriginFunction = new cloudfront.Function(this, 'ShareSiteOriginFn', {
-      comment:
-        'Copy the viewer Host into x-site-origin so the share/OG Lambda emits '
-        + 'absolute URLs on the public site origin, not the execute-api host.',
+      comment: 'Copy viewer Host into x-site-origin for share/OG absolute URLs.',
       code: cloudfront.FunctionCode.fromInline(
         [
           'function handler(event) {',
