@@ -13,6 +13,7 @@ import {
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type { Bracket } from '@mlb/shared';
+import type { WinPctMap } from '../predict/model.js';
 
 /** Default cache lifetime for a cached bracket item. */
 const DEFAULT_TTL_SECONDS = 60 * 15; // 15 minutes
@@ -20,10 +21,16 @@ const DEFAULT_TTL_SECONDS = 60 * 15; // 15 minutes
 export interface BracketStore {
   getCachedBracket(season: number): Promise<Bracket | undefined>;
   putCachedBracket(bracket: Bracket, ttlSeconds?: number): Promise<void>;
+  getCachedStandings(season: number): Promise<WinPctMap | undefined>;
+  putCachedStandings(season: number, winPct: WinPctMap, ttlSeconds?: number): Promise<void>;
 }
 
 function partitionKey(season: number): string {
   return `BRACKET#${season}`;
+}
+
+function standingsPartitionKey(season: number): string {
+  return `STANDINGS#${season}`;
 }
 
 /** DynamoDB-backed implementation of {@link BracketStore}. */
@@ -60,6 +67,39 @@ export class DynamoBracketStore implements BracketStore {
           season: bracket.season,
           bracket,
           updatedAt: bracket.updatedAt,
+          ttl,
+        },
+      }),
+    );
+  }
+
+  async getCachedStandings(season: number): Promise<WinPctMap | undefined> {
+    if (!this.tableName) return undefined;
+    const result = await this.doc.send(
+      new GetCommand({
+        TableName: this.tableName,
+        Key: { pk: standingsPartitionKey(season) },
+      }),
+    );
+    const item = result.Item;
+    if (!item || !item.winPct) return undefined;
+    return item.winPct as WinPctMap;
+  }
+
+  async putCachedStandings(
+    season: number,
+    winPct: WinPctMap,
+    ttlSeconds: number = DEFAULT_TTL_SECONDS,
+  ): Promise<void> {
+    if (!this.tableName) return;
+    const ttl = Math.floor(Date.now() / 1000) + ttlSeconds;
+    await this.doc.send(
+      new PutCommand({
+        TableName: this.tableName,
+        Item: {
+          pk: standingsPartitionKey(season),
+          season,
+          winPct,
           ttl,
         },
       }),

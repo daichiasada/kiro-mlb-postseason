@@ -16,8 +16,9 @@ import {
   type Series,
 } from '@mlb/shared';
 import { aggregateBracket } from '../mlb/aggregate.js';
-import { fetchPostseasonSchedule } from '../mlb/client.js';
+import { fetchPostseasonSchedule, fetchStandings } from '../mlb/client.js';
 import { predict, type WinPctMap } from '../predict/model.js';
+import { winPctFromStandings, teamMetric } from '../predict/standings.js';
 import {
   generateNarrative,
   RealBedrockInvoker,
@@ -28,6 +29,7 @@ import { DynamoBracketStore, type BracketStore } from '../store/dynamo.js';
 export interface BracketServiceDeps {
   store?: BracketStore;
   fetchSchedule?: typeof fetchPostseasonSchedule;
+  fetchStandings?: typeof fetchStandings;
   bedrockInvoker?: BedrockInvoker;
   /** Optional regular-season win pct per team id for the prediction model. */
   winPct?: WinPctMap;
@@ -135,14 +137,48 @@ function resolveSeries(bracket: Bracket, seriesId: string): Series | null {
 export class BracketService {
   private readonly store: BracketStore;
   private readonly fetchSchedule: typeof fetchPostseasonSchedule;
+  private readonly fetchStandings: typeof fetchStandings;
   private readonly bedrockInvoker: BedrockInvoker;
   private readonly winPct: WinPctMap;
 
   constructor(deps: BracketServiceDeps = {}) {
     this.store = deps.store ?? new DynamoBracketStore();
     this.fetchSchedule = deps.fetchSchedule ?? fetchPostseasonSchedule;
+    this.fetchStandings = deps.fetchStandings ?? fetchStandings;
     this.bedrockInvoker = deps.bedrockInvoker ?? new RealBedrockInvoker();
     this.winPct = deps.winPct ?? {};
+  }
+
+  /**
+   * Resolves the regular-season win pct per team for a season, used to feed the
+   * prediction model. Resolution order:
+   *   1. An explicitly injected, non-empty `deps.winPct` (preserves existing
+   *      test-injection behavior).
+   *   2. The DynamoDB standings cache (hit).
+   *   3. A live standings fetch, aggregated via {@link winPctFromStandings} and
+   *      written back to the cache.
+   *
+   * ANY failure in steps 2-3 (network, non-200, parse) resolves to `{}` (the
+   * neutral fallback that {@link predict} treats as 0.5 per team) and NEVER
+   * throws, so a prediction is always produced.
+   */
+  private async resolveWinPct(season: number): Promise<WinPctMap> {
+    if (Object.keys(this.winPct).length > 0) {
+      return this.winPct;
+    }
+
+    try {
+      const cached = await this.store.getCachedStandings(season);
+      if (cached) {
+        return cached;
+      }
+      const response = await this.fetchStandings(season);
+      const winPct = winPctFromStandings(response);
+      await this.store.putCachedStandings(season, winPct);
+      return winPct;
+    } catch {
+      return {};
+    }
   }
 
   /**
@@ -250,7 +286,8 @@ export class BracketService {
       };
     }
 
-    const result = predict(series, bracket, this.winPct, accuracy);
+    const winPct = await this.resolveWinPct(season);
+    const result = predict(series, bracket, winPct, accuracy);
     // Resolve the requested model against the shared allowlist (unknown/missing
     // falls back to the default) and default the language server-side.
     const resolvedModel = resolveModelId(model);
@@ -263,6 +300,12 @@ export class BracketService {
       resolvedLanguage,
     );
 
+    // The underdog is the series team (high/low) that is NOT the favorite.
+    const underdogId =
+      result.favoriteTeamId === series.high.teamId
+        ? series.low.teamId
+        : series.high.teamId;
+
     return {
       mode: 'prediction',
       seriesId,
@@ -271,6 +314,10 @@ export class BracketService {
       narrative,
       model: usedModel,
       generatedAt: new Date().toISOString(),
+      metrics: {
+        favorite: teamMetric(winPct, result.favoriteTeamId),
+        underdog: teamMetric(winPct, underdogId),
+      },
     };
   }
 }

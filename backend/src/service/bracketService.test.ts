@@ -3,6 +3,7 @@ import { getSeedBracket, type Bracket } from '@mlb/shared';
 import { BracketService } from './bracketService.js';
 import type { BracketStore } from '../store/dynamo.js';
 import type { BedrockInvoker } from '../bedrock/narrative.js';
+import type { WinPctMap } from '../predict/model.js';
 
 const sampleBracket: Bracket = {
   season: 2024,
@@ -21,12 +22,17 @@ const sampleBracket: Bracket = {
   ],
 };
 
-function memoryStore(initial?: Bracket): BracketStore {
+function memoryStore(initial?: Bracket, initialStandings?: WinPctMap): BracketStore {
   let stored = initial;
+  let storedStandings = initialStandings;
   return {
     getCachedBracket: vi.fn(async () => stored),
     putCachedBracket: vi.fn(async (b: Bracket) => {
       stored = b;
+    }),
+    getCachedStandings: vi.fn(async () => storedStandings),
+    putCachedStandings: vi.fn(async (_season: number, winPct: WinPctMap) => {
+      storedStandings = winPct;
     }),
   };
 }
@@ -609,5 +615,98 @@ describe('BracketService 2026 placeholder/mixed-game aggregation', () => {
       expect(s.high.wins).toBeLessThanOrEqual(clinch);
       expect(s.low.wins).toBeLessThanOrEqual(clinch);
     }
+  });
+});
+
+describe('BracketService.getPrediction (regular-season win pct wiring)', () => {
+  // current2026Bracket: high 117, low 116; low (116) leads 2-0 so it is the
+  // favorite. 117 is therefore the underdog.
+  it('passes a real standings-derived winPct into predict and surfaces metrics', async () => {
+    const store = memoryStore(current2026Bracket);
+    const standings = {
+      records: [
+        {
+          teamRecords: [
+            { team: { id: 116, name: 'Detroit Tigers' }, winningPercentage: '.600' },
+            { team: { id: 117, name: 'Houston Astros' }, winningPercentage: '.540' },
+          ],
+        },
+      ],
+    };
+    const fetchStandings = vi.fn().mockResolvedValue(standings);
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      fetchStandings,
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    expect(response.mode).toBe('prediction');
+    if (response.mode === 'prediction') {
+      expect(response.favoriteTeamId).toBe(116);
+      expect(response.metrics).toEqual({
+        favorite: { teamId: 116, winPct: 0.6 },
+        underdog: { teamId: 117, winPct: 0.54 },
+      });
+    }
+    // A cache miss triggers a live fetch and a write-back.
+    expect(fetchStandings).toHaveBeenCalledWith(2026);
+    expect(store.putCachedStandings).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to neutral (null metrics) and still predicts when fetchStandings throws', async () => {
+    const store = memoryStore(current2026Bracket);
+    const fetchStandings = vi.fn().mockRejectedValue(new Error('network down'));
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      fetchStandings,
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    // Acceptance criterion (1): a failed fetch degrades to a prediction with
+    // neutral (null) metrics rather than erroring.
+    expect(response.mode).toBe('prediction');
+    if (response.mode === 'prediction') {
+      expect(response.favoriteTeamId).toBe(116);
+      expect(response.metrics).toEqual({
+        favorite: { teamId: 116, winPct: null },
+        underdog: { teamId: 117, winPct: null },
+      });
+    }
+    expect(fetchStandings).toHaveBeenCalledOnce();
+    expect(store.putCachedStandings).not.toHaveBeenCalled();
+  });
+
+  it('uses a standings cache hit without calling fetchStandings', async () => {
+    const store = memoryStore(current2026Bracket, { 116: 0.58, 117: 0.52 });
+    const fetchStandings = vi.fn();
+    const bedrockInvoke = vi.fn().mockResolvedValue('narrative text');
+    const service = new BracketService({
+      store,
+      fetchSchedule: vi.fn(),
+      fetchStandings,
+      bedrockInvoker: { invoke: bedrockInvoke },
+    });
+
+    const response = await service.getPrediction('2026-al-wildcard-117-116', 2026);
+
+    expect(response.mode).toBe('prediction');
+    if (response.mode === 'prediction') {
+      expect(response.metrics).toEqual({
+        favorite: { teamId: 116, winPct: 0.58 },
+        underdog: { teamId: 117, winPct: 0.52 },
+      });
+    }
+    // Cache hit short-circuits: no live fetch and no write-back.
+    expect(fetchStandings).not.toHaveBeenCalled();
+    expect(store.getCachedStandings).toHaveBeenCalledWith(2026);
+    expect(store.putCachedStandings).not.toHaveBeenCalled();
   });
 });

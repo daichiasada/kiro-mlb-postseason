@@ -83,6 +83,26 @@ export interface PredictionRequest {
   seriesId: string;
 }
 
+/**
+ * One team's regular-season win pct as fed into the prediction model. A `null`
+ * `winPct` means the standings were unknown for that team and the neutral 0.5
+ * fallback was used by the model.
+ */
+export interface TeamMetric {
+  teamId: number;
+  winPct: number | null;
+}
+
+/**
+ * The regular-season metrics the prediction model used, split by role. This is
+ * additive, explanatory metadata so the UI can show the basis of a prediction;
+ * it never changes the numeric prediction itself.
+ */
+export interface PredictionMetrics {
+  favorite: TeamMetric;
+  underdog: TeamMetric;
+}
+
 /** AI-generated prediction for a single series. */
 export interface Prediction {
   seriesId: string;
@@ -91,6 +111,13 @@ export interface Prediction {
   narrative: string;
   model: string;
   generatedAt: string;
+  /**
+   * Optional, additive regular-season metrics used by the model (favorite vs
+   * underdog win pct). Omitted by older producers; present on mode:'prediction'
+   * responses that resolved standings. Existing consumers and the
+   * 'results'/'upcoming' variants are unaffected.
+   */
+  metrics?: PredictionMetrics;
 }
 
 /**
