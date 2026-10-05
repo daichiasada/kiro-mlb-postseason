@@ -10,7 +10,9 @@ import {
   teamName,
   useI18n,
   type TFn,
+  type Lang,
 } from '../i18n';
+import { formatStartTime, resolveTimeZone } from '../gameTime';
 import { TeamBadge } from '../components/TeamBadge';
 import { LanguageToggle } from '../components/LanguageToggle';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -31,7 +33,7 @@ type LoadState =
  */
 export function SeriesDetailPage() {
   const params = useParams();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const season = parseSeasonParam(params.season);
   const seriesId = params.seriesId ?? '';
 
@@ -102,7 +104,7 @@ export function SeriesDetailPage() {
       )}
 
       {state.status === 'ready' && series && (
-        <SeriesDetail t={t} series={series} season={season} />
+        <SeriesDetail t={t} lang={lang} series={series} season={season} />
       )}
     </div>
   );
@@ -110,13 +112,16 @@ export function SeriesDetailPage() {
 
 function SeriesDetail({
   t,
+  lang,
   series,
   season,
 }: {
   t: TFn;
+  lang: Lang;
   series: Series;
   season: number;
 }) {
+  const timeZone = resolveTimeZone();
   const needed = clinchWins(series.bestOf);
   const highWon = series.status === 'final' && series.high.wins >= needed;
   const lowWon = series.status === 'final' && series.low.wins >= needed;
@@ -170,7 +175,13 @@ function SeriesDetail({
       {series.games.length > 0 ? (
         <ol className="detail__games">
           {series.games.map((game) => (
-            <DetailGame key={game.gamePk} t={t} game={game} />
+            <DetailGame
+              key={game.gamePk}
+              t={t}
+              lang={lang}
+              game={game}
+              timeZone={timeZone}
+            />
           ))}
         </ol>
       ) : (
@@ -202,7 +213,17 @@ function DetailTeam({
   );
 }
 
-function DetailGame({ t, game }: { t: TFn; game: GameResult }) {
+function DetailGame({
+  t,
+  lang,
+  game,
+  timeZone,
+}: {
+  t: TFn;
+  lang: Lang;
+  game: GameResult;
+  timeZone: string;
+}) {
   const awayScore = game.away.score ?? '-';
   const homeScore = game.home.score ?? '-';
   const winnerSide =
@@ -211,6 +232,12 @@ function DetailGame({ t, game }: { t: TFn; game: GameResult }) {
       : game.home.isWinner === true
         ? 'home'
         : null;
+  const localTime = formatStartTime(game.startTime, {
+    lang,
+    timeZone,
+    timeTbd: game.timeTbd,
+    tbdLabel: t('gametime.tbd'),
+  });
 
   return (
     <li className="detail__game">
@@ -234,6 +261,7 @@ function DetailGame({ t, game }: { t: TFn; game: GameResult }) {
       >
         {teamAbbr(t, game.home.teamId)} {homeScore}
       </span>
+      <span className="detail__game-time">{localTime}</span>
     </li>
   );
 }

@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish a green baseline before any changes. Confirm the toolchain, install state, and that the existing build, unit/property tests, cdk synth, and (if runnable) the Playwright e2e suite all pass on branch feat/mlb-postseason-site. This de-risks later features by proving the starting point is clean.",
+  "status": "completed",
+  "steps": [
+    "Confirm node/npm are reachable: run `which node npm`; if empty, prefix all node/npm commands in this task with PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\".",
+    "From repo root /projects/sandbox/kiro-mlb-postseason, run `npm run build` and confirm shared->backend->frontend->infra all compile.",
+    "Run `npm test` and confirm all existing Vitest unit + property suites pass across workspaces.",
+    "Run `npm run synth` and confirm cdk synth succeeds with no AWS calls.",
+    "Attempt `npm run test:e2e -w @mlb/frontend` (Playwright headless chromium, --no-sandbox). If chromium is missing, run `npx playwright install chromium` once, then retry. If e2e cannot run in this environment, record that fact in findings but do NOT treat it as a baseline failure.",
+    "Confirm `git status` is clean and the current branch is feat/mlb-postseason-site; do NOT create a commit for this baseline feature."
+  ],
+  "acceptance_criteria": [
+    "`npm run build` exits 0 with all four workspaces compiled.",
+    "`npm test` exits 0 with all existing suites passing.",
+    "`npm run synth` exits 0.",
+    "Playwright e2e result (pass, or documented environment limitation) is recorded in findings.",
+    "Working tree is clean on branch feat/mlb-postseason-site."
+  ],
+  "verification": [
+    "npm run build",
+    "npm test",
+    "npm run synth",
+    "npm run test:e2e -w @mlb/frontend"
+  ],
+  "blocked_reason": null,
+  "findings": "Green baseline confirmed on branch feat/mlb-postseason-site (Node v22.23.3). node was on PATH but npm was NOT; used PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" prefix (npm 11.4.2). Results: `npm run build` exit 0 (shared->backend->frontend->infra all compiled; vite built 72 modules). `npm test` exit 0 (shared/backend/frontend 15 files/89 tests + infra 1 file/8 tests all pass; infra emits a benign nodejs20.x runtime-deprecation WARNING only). `npm run synth` exit 0 (cdk synth, no AWS calls; prints '62 feature flags not configured' notice only). `npm run test:e2e -w @mlb/frontend` exit 0: Playwright chromium was ALREADY installed (no `playwright install` needed), 34/34 tests passed in ~18.7s. Working tree clean on feat/mlb-postseason-site; no commit created for this verification-only feature (only the untracked .agents/tasks/task-issue-20-game-times/ plan dir remains, intentionally not committed)."
+}

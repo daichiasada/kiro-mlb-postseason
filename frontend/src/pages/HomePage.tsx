@@ -6,6 +6,7 @@ import { getBracket } from '../api';
 import { POLL_INTERVAL_MS, SELECTABLE_SEASONS } from '../config';
 import { hasStartedContent, parseSeasonParam } from '../seasonRoute';
 import { BracketView } from '../components/BracketView';
+import { UpcomingGames } from '../components/UpcomingGames';
 import { StandingsPanel } from '../components/StandingsPanel';
 import { PredictionPanel } from '../components/PredictionPanel';
 import { LanguageToggle } from '../components/LanguageToggle';
@@ -255,6 +256,14 @@ export function HomePage() {
               })}
             </p>
           )}
+          {/*
+            Today's / tomorrow's games with a countdown (Issue #20). Fed the
+            same injectable `now` that drives the "last updated" label and the
+            viewer's resolved time zone. Renders nothing when there are no
+            upcoming games (results-only or all-TBD), so it is safe to mount
+            unconditionally in the started branch.
+          */}
+          <UpcomingGames bracket={state.bracket} now={now} />
           <main className="app__main">
             <BracketView
               bracket={state.bracket}

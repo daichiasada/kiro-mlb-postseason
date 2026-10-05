@@ -10,7 +10,11 @@ import {
   teamName,
   useI18n,
   type TFn,
+  type Lang,
 } from '../i18n';
+import type { GameResult } from '@mlb/shared';
+import { formatStartTime, resolveTimeZone } from '../gameTime';
+import { buildIcs } from '../ics';
 
 interface SeriesCardProps {
   series: Series;
@@ -65,6 +69,93 @@ function TeamRow({
   );
 }
 
+/**
+ * Triggers a purely client-side download of an `.ics` file built from a game.
+ * No network call: the VEVENT text is wrapped in a `text/calendar` Blob, an
+ * object URL is created, a transient anchor is clicked, then the URL is
+ * revoked. Guarded so a non-browser/jsdom environment (no URL.createObjectURL)
+ * is a no-op rather than a throw.
+ */
+function downloadIcs(filename: string, ics: string): void {
+  if (
+    typeof URL === 'undefined' ||
+    typeof URL.createObjectURL !== 'function' ||
+    typeof document === 'undefined'
+  ) {
+    return;
+  }
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * A single game row inside the collapsible games list: the compact score line,
+ * the first-pitch time rendered in the viewer's local zone (or a localized
+ * "Time TBD"), and - only for a timed game - an "Add to calendar" control that
+ * downloads a client-side `.ics`. The control is omitted for a TBD/undefined
+ * start since there is no concrete instant to put in the event.
+ */
+function GameRow({
+  t,
+  lang,
+  game,
+  matchup,
+  timeZone,
+}: {
+  t: TFn;
+  lang: Lang;
+  game: GameResult;
+  matchup: string;
+  timeZone: string;
+}) {
+  const localTime = formatStartTime(game.startTime, {
+    lang,
+    timeZone,
+    timeTbd: game.timeTbd,
+    tbdLabel: t('gametime.tbd'),
+  });
+  const isTimed = game.startTime !== undefined && game.timeTbd !== true;
+
+  function handleAddToCalendar() {
+    if (game.startTime === undefined) return;
+    const ics = buildIcs({
+      uid: `mlb-game-${game.gamePk}@mlb-postseason`,
+      start: game.startTime,
+      summary: matchup,
+      description: matchup,
+    });
+    downloadIcs(`mlb-game-${game.gamePk}.ics`, ics);
+  }
+
+  return (
+    <li className="series-card__game">
+      <span className="series-card__game-num">G{game.seriesGameNumber}</span>
+      <span className="series-card__game-score">
+        {teamAbbr(t, game.away.teamId)} {game.away.score ?? '-'} @{' '}
+        {teamAbbr(t, game.home.teamId)} {game.home.score ?? '-'}
+      </span>
+      <span className="series-card__game-time">{localTime}</span>
+      {isTimed && (
+        <button
+          type="button"
+          className="series-card__game-ics"
+          onClick={handleAddToCalendar}
+          aria-label={t('ics.ariaLabel', { matchup, time: localTime })}
+        >
+          {t('ics.add')}
+        </button>
+      )}
+    </li>
+  );
+}
+
 export function SeriesCard({
   series,
   season,
@@ -75,8 +166,10 @@ export function SeriesCard({
   cardRef,
   onCardKeyDown,
 }: SeriesCardProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
+  const timeZone = resolveTimeZone();
+  const matchup = `${teamName(t, series.high.teamId)} ${t('series.vsLabel')} ${teamName(t, series.low.teamId)}`;
   const leaderId = seriesLeaderId(series);
   const needed = clinchWins(series.bestOf);
   const isFinal = series.status === 'final';
@@ -211,15 +304,14 @@ export function SeriesCard({
             hidden={!gamesOpen}
           >
             {series.games.map((game) => (
-              <li key={game.gamePk} className="series-card__game">
-                <span className="series-card__game-num">
-                  G{game.seriesGameNumber}
-                </span>
-                <span className="series-card__game-score">
-                  {teamAbbr(t, game.away.teamId)} {game.away.score ?? '-'} @{' '}
-                  {teamAbbr(t, game.home.teamId)} {game.home.score ?? '-'}
-                </span>
-              </li>
+              <GameRow
+                key={game.gamePk}
+                t={t}
+                lang={lang}
+                game={game}
+                matchup={matchup}
+                timeZone={timeZone}
+              />
             ))}
           </ol>
         </div>

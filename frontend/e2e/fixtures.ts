@@ -25,6 +25,18 @@ export const SAMPLE_2026_FINAL_SERIES_ID = '2026-al-championship-117-136';
 export const SAMPLE_2026_UNKNOWN_SERIES_ID = '2026-nl-division-5513-5599';
 export const SAMPLE_2026_UNKNOWN_TEAM_ID = 5513;
 
+/**
+ * An in-progress NLCS used to exercise the local start-time + .ics affordance
+ * and the "Today's / tomorrow's games" section (Issue #20). It carries one
+ * timed upcoming game (concrete `startTime`) and one time-TBD game (`timeTbd`).
+ * The upcoming game's `startTime` is injected relative to the current clock by
+ * {@link stubBracket2026WithGameTimes} so the today/tomorrow bucketing is
+ * deterministic in the e2e runner regardless of its timezone.
+ */
+export const SAMPLE_2026_UPCOMING_SERIES_ID = '2026-nl-championship-119-158';
+export const SAMPLE_2026_UPCOMING_TIMED_GAME_PK = 810001;
+export const SAMPLE_2026_UPCOMING_TBD_GAME_PK = 810002;
+
 export const SAMPLE_2026_BRACKET = {
   season: 2026,
   updatedAt: '2026-10-25T00:00:00.000Z',
@@ -53,6 +65,8 @@ export const SAMPLE_2026_BRACKET = {
         {
           gamePk: 800001,
           date: '2026-10-12',
+          // Full ISO UTC first pitch; the UI renders this in the viewer's zone.
+          startTime: '2026-10-12T20:08:00.000Z',
           away: { teamId: 136, score: 3, isWinner: false },
           home: { teamId: 117, score: 5, isWinner: true },
           seriesGameNumber: 1,
@@ -60,6 +74,7 @@ export const SAMPLE_2026_BRACKET = {
         {
           gamePk: 800002,
           date: '2026-10-13',
+          startTime: '2026-10-13T20:08:00.000Z',
           away: { teamId: 136, score: 2, isWinner: false },
           home: { teamId: 117, score: 4, isWinner: true },
           seriesGameNumber: 2,
@@ -114,6 +129,70 @@ export async function stubBracket2026(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(SAMPLE_2026_BRACKET),
+    });
+  });
+}
+
+/**
+ * Routes `**\/bracket*` to the 2026 bracket PLUS an extra in-progress NLCS whose
+ * timed game's `startTime` is a few hours from the current clock, so the game
+ * always buckets into "today or tomorrow" and the "Today's / tomorrow's games"
+ * section renders deterministically regardless of the e2e runner's timezone or
+ * run time. The NLCS also carries a time-TBD game (no `startTime`) so the
+ * TBD/Time-TBD path and the absence of a calendar affordance can be asserted.
+ *
+ * The extra series is appended only in THIS stub (not in the shared
+ * SAMPLE_2026_BRACKET) so the keyboard/layout specs that assume the fixed
+ * 3-series bracket stay unaffected.
+ */
+export async function stubBracket2026WithGameTimes(page: Page): Promise<void> {
+  // Three hours from now, truncated to whole seconds, as a full ISO UTC string.
+  const soon = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  soon.setMilliseconds(0);
+  const soonIso = soon.toISOString();
+
+  const upcomingSeries = {
+    id: SAMPLE_2026_UPCOMING_SERIES_ID,
+    round: 'Championship Series',
+    league: 'NL',
+    // Los Angeles Dodgers (119) vs Atlanta Braves (158), series underway.
+    high: { teamId: 119, wins: 1 },
+    low: { teamId: 158, wins: 1 },
+    bestOf: 7,
+    status: 'in_progress',
+    games: [
+      {
+        gamePk: SAMPLE_2026_UPCOMING_TIMED_GAME_PK,
+        date: soonIso.slice(0, 10),
+        // A concrete, upcoming first pitch relative to the current clock.
+        startTime: soonIso,
+        away: { teamId: 158, score: null, isWinner: null },
+        home: { teamId: 119, score: null, isWinner: null },
+        seriesGameNumber: 3,
+      },
+      {
+        gamePk: SAMPLE_2026_UPCOMING_TBD_GAME_PK,
+        date: '2026-10-21',
+        // Start time not yet scheduled: renders a localized "Time TBD" and
+        // exposes NO calendar affordance.
+        timeTbd: true,
+        away: { teamId: 158, score: null, isWinner: null },
+        home: { teamId: 119, score: null, isWinner: null },
+        seriesGameNumber: 4,
+      },
+    ],
+  };
+
+  const bracket = {
+    ...SAMPLE_2026_BRACKET,
+    series: [...SAMPLE_2026_BRACKET.series, upcomingSeries],
+  };
+
+  await page.route('**/bracket*', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(bracket),
     });
   });
 }

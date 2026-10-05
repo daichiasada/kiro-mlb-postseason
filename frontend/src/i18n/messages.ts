@@ -100,6 +100,16 @@ export type MessageKey =
   | 'detail.game'
   | 'detail.at'
   | 'detail.noGames'
+  | 'gametime.tbd'
+  | 'gametime.startLabel'
+  | 'ics.add'
+  | 'ics.ariaLabel'
+  | 'upcoming.title'
+  | 'upcoming.region'
+  | 'upcoming.today'
+  | 'upcoming.tomorrow'
+  | 'upcoming.countdown'
+  | 'upcoming.vs'
   | 'round.wildCard'
   | 'round.divisionSeries'
   | 'round.championshipSeries'
@@ -231,6 +241,16 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'detail.game': 'Game {n}',
     'detail.at': '@',
     'detail.noGames': 'No game detail is available for this series.',
+    'gametime.tbd': 'Time TBD',
+    'gametime.startLabel': 'First pitch',
+    'ics.add': 'Add to calendar',
+    'ics.ariaLabel': 'Add {matchup} ({time}) to your calendar',
+    'upcoming.title': "Today's and tomorrow's games",
+    'upcoming.region': "Today's and tomorrow's games",
+    'upcoming.today': 'Today',
+    'upcoming.tomorrow': 'Tomorrow',
+    'upcoming.countdown': 'Starts in {days}d {hours}h {minutes}m',
+    'upcoming.vs': 'vs',
     'round.wildCard': 'Wild Card',
     'round.divisionSeries': 'Division Series',
     'round.championshipSeries': 'Championship Series',
@@ -372,6 +392,16 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'detail.game': '第{n}戦',
     'detail.at': '@',
     'detail.noGames': 'このシリーズの試合詳細はありません。',
+    'gametime.tbd': '時刻未定',
+    'gametime.startLabel': '試合開始',
+    'ics.add': 'カレンダーに追加',
+    'ics.ariaLabel': '{matchup}（{time}）をカレンダーに追加',
+    'upcoming.title': '今日・明日の試合',
+    'upcoming.region': '今日・明日の試合',
+    'upcoming.today': '今日',
+    'upcoming.tomorrow': '明日',
+    'upcoming.countdown': 'あと {days}日 {hours}時間 {minutes}分',
+    'upcoming.vs': '対',
     'round.wildCard': 'ワイルドカード',
     'round.divisionSeries': '地区シリーズ',
     'round.championshipSeries': 'リーグ優勝決定シリーズ',

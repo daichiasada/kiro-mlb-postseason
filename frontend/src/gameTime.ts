@@ -18,6 +18,21 @@ export interface FormatStartTimeOptions {
 }
 
 /**
+ * Resolves the viewer's IANA time zone from the browser, with a safe `'UTC'`
+ * fallback when {@link Intl.DateTimeFormat} is unavailable or returns an empty
+ * zone (older/edge runtimes). Kept here so every component resolves the zone
+ * the same way; the result is passed into the otherwise-pure helpers so they
+ * stay deterministic and unit-testable.
+ */
+export function resolveTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+/**
  * Pure, localized first-pitch formatter for a game's start time.
  *
  * Renders a UTC ISO instant in the injected `timeZone` using

@@ -1,0 +1,7 @@
+{
+  "task_id": "task-issue-20-game-times",
+  "task_description": "Implement GitHub Issue #20 (UX: game schedule / start-time display): preserve the game start time (currently truncated to date-only in aggregation) as new OPTIONAL shared fields without changing the existing `date` field (criterion 1); display start times in the viewer's local timezone via Intl.DateTimeFormat with EN/JA formatting (criterion 2); correctly handle time-TBD games (criterion 3); plus the proposed today/tomorrow + countdown section and a client-side .ics calendar download. Spans shared (types) + backend (aggregation) + frontend; no infra/IAM change. Incremental commits on branch feat/mlb-postseason-site; orchestrator owns push/PR/deploy.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null
+}

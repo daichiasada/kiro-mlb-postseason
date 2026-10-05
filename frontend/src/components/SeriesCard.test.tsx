@@ -65,6 +65,53 @@ describe('SeriesCard', () => {
     );
   });
 
+  it('renders a localized start time and an Add-to-calendar control for a timed game, and the Time-TBD label with no control for a TBD game', () => {
+    const series: Series = {
+      ...wildCardSeries,
+      id: '2026-al-wildcard-timed',
+      status: 'in_progress',
+      games: [
+        {
+          gamePk: 900101,
+          date: '2026-10-20',
+          startTime: '2026-10-20T23:08:00.000Z',
+          away: { teamId: 116, score: null, isWinner: null },
+          home: { teamId: 117, score: null, isWinner: null },
+          seriesGameNumber: 1,
+        },
+        {
+          gamePk: 900102,
+          date: '2026-10-21',
+          timeTbd: true,
+          away: { teamId: 116, score: null, isWinner: null },
+          home: { teamId: 117, score: null, isWinner: null },
+          seriesGameNumber: 2,
+        },
+      ],
+    };
+    renderCard({ series });
+
+    // Reveal the collapsed games list.
+    fireEvent.click(screen.getByRole('button', { name: /show games/i }));
+    const list = document.getElementById(
+      screen.getByRole('button', { name: /hide games/i }).getAttribute('aria-controls')!,
+    )!;
+    const [timedRow, tbdRow] = within(list).getAllByRole('listitem');
+
+    // The timed game shows a 12-hour en-US clock and an enabled calendar button.
+    expect(timedRow.textContent).toMatch(/\d{1,2}:\d{2}\s?(AM|PM)/i);
+    const addButton = within(timedRow).getByRole('button', {
+      name: /add .* to your calendar/i,
+    });
+    expect(addButton).toBeEnabled();
+    // Clicking must not throw (download is a no-op in jsdom).
+    fireEvent.click(addButton);
+
+    // The TBD game shows the localized Time-TBD label and no calendar control.
+    expect(within(tbdRow).getByText('Time TBD')).toBeInTheDocument();
+    expect(within(tbdRow).queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('shows a Predict button (not a detail link) for an in-progress predictable series', () => {
     const inProgress: Series = {
       ...wildCardSeries,

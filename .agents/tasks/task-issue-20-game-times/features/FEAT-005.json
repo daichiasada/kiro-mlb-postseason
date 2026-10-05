@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-005",
+  "type": "docs",
+  "description": "Update the spec-driven-development artifacts and both READMEs to truthfully describe the new game-start-time features (Issue #20), since spec fidelity is graded by the Kiro University steering. Document the preserved startTime/timeTbd shared fields, the TBD-detection rule, the Intl EN/JA local-time formatting, the today/tomorrow + countdown section, and the .ics download. No code behavior changes in this feature.",
+  "status": "pending",
+  "steps": [
+    "Update .kiro/specs/mlb-postseason/requirements.md to add a requirement covering Issue #20: preserve game start time (new optional GameResult.startTime + timeTbd, date unchanged), local-timezone display via Intl.DateTimeFormat with EN/JA formats, TBD handling, today/tomorrow + countdown, and .ics calendar download. Trace it to the real modules (aggregate.ts, shared types.ts, frontend gameTime.ts/upcomingGames.ts/ics.ts, SeriesCard/SeriesDetailPage/HomePage).",
+    "Update .kiro/specs/mlb-postseason/design.md to describe the design decisions: additive optional shared fields for backward compat; the TBD-detection rule (status.startTimeTBD OR midnight/date-only placeholder => timeTbd, startTime omitted); injected now/timeZone/locale for deterministic pure helpers; today/tomorrow bucketing by local calendar day; and the client-side .ics generation (no new backend endpoint / no infra change).",
+    "Update .kiro/specs/mlb-postseason/tasks.md to record the Issue #20 work as completed tasks mapping to FEAT-002..FEAT-004, consistent with how prior issues are logged there.",
+    "Update README.md (English) with a short section on game start-time display (local timezone, EN/JA), the today/tomorrow + countdown section, and the .ics download, matching the actual shipped behavior.",
+    "Update README.ja.md with the equivalent Japanese section, kept in sync with README.md.",
+    "Verify no code/tests were affected: run `npm run build` and `npm test` to confirm still green (docs-only change should not alter results)."
+  ],
+  "acceptance_criteria": [
+    "requirements.md, design.md, and tasks.md describe the Issue #20 features accurately and trace to the real modules.",
+    "README.md and README.ja.md both document the local-time display (EN/JA), today/tomorrow + countdown, and .ics download, and are consistent with each other and with the code.",
+    "No statements in the specs/READMEs describe behavior that was not actually implemented.",
+    "`npm run build` and `npm test` remain green after the docs changes."
+  ],
+  "verification": [
+    "npm run build",
+    "npm test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -1,0 +1,29 @@
+{
+  "project_type": "npm-workspaces TypeScript monorepo: @mlb/shared (domain types + seed), @mlb/backend (Lambda handlers, MLB Stats API client + aggregation, Bedrock), @mlb/frontend (Vite React SPA), @mlb/infra (AWS CDK). Strict TS, ESM everywhere.",
+  "language": "TypeScript (strict, ES modules; Node 20 runtime target, local toolchain Node 22)",
+  "build_system": "npm workspaces. Root scripts build in dependency order shared -> backend -> frontend -> infra. node/npm may NOT be on PATH; prefix commands with PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" when `which node npm` is empty.",
+  "test_framework": "Vitest (unit tests colocated as *.test.ts and property tests *.property.test.ts). Playwright for e2e in frontend/e2e/*.spec.ts. AWS SDK and MLB Stats API are mocked; no live calls in tests.",
+  "build_command": "npm run build (root; ordered shared->backend->frontend->infra)",
+  "test_command": "npm test (root; runs vitest across workspaces). E2E: npm run test:e2e -w @mlb/frontend (Playwright headless chromium --no-sandbox; may need `npx playwright install chromium` once).",
+  "verification_instructions": "1) npm run build. 2) npm test (all workspaces green incl. new aggregation + helper tests). 3) npm run test:e2e -w frontend asserting a game shows localized local-time or 'Time TBD', today/tomorrow section renders, and .ics affordance appears for a timed game. 4) npm run synth (cdk synth, no AWS calls) as a regression guard. Do NOT run cdk deploy.",
+  "snapshot_or_generated_files": "cdk synth output under infra/cdk.out is generated (gitignored). No checked-in snapshots to regenerate. backend/dist and frontend/dist are build outputs.",
+  "setup_instructions": "Dependencies already installed (node_modules present). If missing: `npm install` at repo root. For e2e, Playwright chromium may need `npx playwright install chromium`.",
+  "environment_constraints": "No live MLB Stats API or Amazon Bedrock calls in tests (mock everything). The viewer timezone in the sandbox/CI is NOT Japan, so all timezone/locale/now must be INJECTABLE into pure helpers for deterministic tests; the app defaults to Intl.DateTimeFormat().resolvedOptions().timeZone. This is the orchestrator's sandbox; do NOT push, open PRs, create/close issues, or run cdk deploy.",
+  "contribution_requirements": "Stay on branch feat/mlb-postseason-site with incremental commits per the inclusion:always steering (.kiro/steering/*.md). Spec-driven development is graded: update .kiro/specs/mlb-postseason/{requirements,design,tasks}.md AND both README.md and README.ja.md truthfully. Keep npm run build, npm test, and npm run synth green before a change is 'done'. Add/update tests in the same change as the behavior.",
+  "key_patterns": "Domain types live ONLY in @mlb/shared and are imported by backend+frontend (never duplicated). Additive/optional fields are the established backward-compatible pattern (see Bracket.integrityWarnings? and Prediction.metrics?). Pure, dependency-free, injected-input helpers with colocated *.test.ts covering EN+JA are the house style (see frontend/src/relativeTime.ts + relativeTime.test.ts using Intl, with `now` injected). i18n is a flat dotted-key dictionary in frontend/src/i18n/messages.ts (MessageKey union + MESSAGES[en|ja]); default lang ja, key mlb.lang. HomePage.tsx already tracks an injectable `now` via useState(() => new Date()).",
+  "relevant_files": [
+    "shared/src/types.ts (GameResult: ADD optional startTime?/timeTbd? WITHOUT changing `date`)",
+    "backend/src/mlb/client.ts (RawGame: gameDate is full ISO UTC; status.startTimeTBD boolean exists in live API)",
+    "backend/src/mlb/aggregate.ts (truncation point: `date: game.gameDate.slice(0, 10)` - preserve full datetime into new field; derive timeTbd)",
+    "backend/src/mlb/aggregate.test.ts (fixture `game()` helper + tests to extend)",
+    "frontend/src/relativeTime.ts + relativeTime.test.ts (prior-art pure Intl helper, EN/JA, injected now - mirror this style)",
+    "frontend/src/i18n/messages.ts (add new MessageKeys + EN/JA strings)",
+    "frontend/src/components/SeriesCard.tsx (renders games; add local-time + .ics affordance)",
+    "frontend/src/pages/SeriesDetailPage.tsx (game-by-game detail; show start time)",
+    "frontend/src/pages/HomePage.tsx (tracks `now`; mount today/tomorrow + countdown section)",
+    "frontend/e2e/fixtures.ts + a new/updated *.spec.ts",
+    "shared/src/seed/postseason-2024.json, -2025.json (games lack startTime; absent field => treated as date-only/TBD, must still parse)",
+    ".kiro/specs/mlb-postseason/{requirements,design,tasks}.md, README.md, README.ja.md"
+  ],
+  "directory_structure": "shared/src (types.ts, seed/, index.ts); backend/src (mlb/, predict/, bedrock/, handlers); frontend/src (components/, pages/, i18n/, pure helpers like relativeTime.ts) + frontend/e2e; infra/src (CDK). Plans in .agents/tasks/, steering in .kiro/steering/, specs in .kiro/specs/mlb-postseason/."
+}
