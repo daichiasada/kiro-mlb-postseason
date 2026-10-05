@@ -3,15 +3,18 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AccuracyPage } from './AccuracyPage';
 import { I18nProvider } from '../i18n';
+import { ThemeProvider } from '../ThemeContext';
 import type { Lang } from '../i18n';
 
 /** Render the AccuracyPage at /accuracy in the given language. */
 function renderAccuracy(lang: Lang) {
   return render(
     <MemoryRouter initialEntries={['/accuracy']}>
-      <I18nProvider initialLang={lang}>
-        <AccuracyPage />
-      </I18nProvider>
+      <ThemeProvider initialPreference="light">
+        <I18nProvider initialLang={lang}>
+          <AccuracyPage />
+        </I18nProvider>
+      </ThemeProvider>
     </MemoryRouter>,
   );
 }

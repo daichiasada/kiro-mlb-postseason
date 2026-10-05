@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { I18nProvider } from './i18n';
+import { ThemeProvider } from './ThemeContext';
 import './styles.css';
 
 const container = document.getElementById('root');
@@ -24,9 +25,17 @@ createRoot(container).render(
         read params and translate. It hydrates the language from localStorage
         (default 'ja') and persists changes made via the header toggle.
       */}
-      <I18nProvider>
-        <App />
-      </I18nProvider>
+      {/*
+        The theme context wraps the whole app so every route (home, detail,
+        accuracy) inherits the resolved light/dark theme it applies to
+        <html data-theme>. An inline script in index.html sets data-theme
+        before React mounts to avoid a light-to-dark flash on first paint.
+      */}
+      <ThemeProvider>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,
 );

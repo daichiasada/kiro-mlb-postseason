@@ -9,6 +9,7 @@ import {
 import { DEFAULT_SEASON } from '../config';
 import { useI18n } from '../i18n';
 import { LanguageToggle } from '../components/LanguageToggle';
+import { ThemeToggle } from '../components/ThemeToggle';
 import brand from '../assets/brand.svg';
 
 /**
@@ -104,7 +105,10 @@ export function AccuracyPage() {
             <p className="app__subtitle">{t('accuracy.nav')}</p>
           </div>
         </div>
-        <LanguageToggle />
+        <div className="app__controls">
+          <ThemeToggle />
+          <LanguageToggle />
+        </div>
       </header>
 
       <nav className="app__seasons" aria-label={t('accuracy.backToBracket')}>

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { Bracket } from '@mlb/shared';
 import { App } from './App';
 import { I18nProvider } from './i18n';
+import { ThemeProvider } from './ThemeContext';
 import { sampleBracket } from './test/fixtures';
 import * as api from './api';
 
@@ -23,9 +24,11 @@ function renderApp() {
   // i18n/index.test.ts.
   return render(
     <MemoryRouter initialEntries={['/']}>
-      <I18nProvider initialLang="en">
-        <App />
-      </I18nProvider>
+      <ThemeProvider initialPreference="light">
+        <I18nProvider initialLang="en">
+          <App />
+        </I18nProvider>
+      </ThemeProvider>
     </MemoryRouter>,
   );
 }

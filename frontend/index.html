@@ -15,6 +15,32 @@
       the app falls back to VITE_API_BASE_URL and then a local default.
     -->
     <script src="/config.js"></script>
+    <!--
+      Theme bootstrap: set <html data-theme> BEFORE the app renders so the
+      correct light/dark palette paints on first frame (no flash). Reads the
+      persisted preference ('mlb.theme') and falls back to the OS color scheme
+      for 'system'/absent. Guarded so a storage/matchMedia failure is inert;
+      the ThemeProvider later re-applies and keeps this in sync.
+    -->
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('mlb.theme');
+          var systemDark =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var resolved =
+            pref === 'light' || pref === 'dark'
+              ? pref
+              : systemDark
+                ? 'dark'
+                : 'light';
+          document.documentElement.setAttribute('data-theme', resolved);
+        } catch (e) {
+          /* ignore: default (light) palette applies */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

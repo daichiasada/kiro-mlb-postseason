@@ -10,6 +10,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { Bracket } from '@mlb/shared';
 import { HomePage } from './HomePage';
 import { I18nProvider } from '../i18n';
+import { ThemeProvider } from '../ThemeContext';
 import * as api from '../api';
 
 vi.mock('../api', async () => {
@@ -24,9 +25,11 @@ const mockedGetPrediction = vi.mocked(api.getPrediction);
 function renderHome() {
   return render(
     <MemoryRouter initialEntries={['/season/2026']}>
-      <I18nProvider initialLang="en">
-        <HomePage />
-      </I18nProvider>
+      <ThemeProvider initialPreference="light">
+        <I18nProvider initialLang="en">
+          <HomePage />
+        </I18nProvider>
+      </ThemeProvider>
     </MemoryRouter>,
   );
 }

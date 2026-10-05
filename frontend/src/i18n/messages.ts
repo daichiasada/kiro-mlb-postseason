@@ -30,6 +30,10 @@ export type MessageKey =
   | 'app.lang.group'
   | 'app.lang.ja'
   | 'app.lang.en'
+  | 'app.theme.group'
+  | 'app.theme.system'
+  | 'app.theme.light'
+  | 'app.theme.dark'
   | 'app.loading'
   | 'app.notStarted'
   | 'app.offlineNotice'
@@ -146,6 +150,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'app.lang.group': 'Language',
     'app.lang.ja': '日本語',
     'app.lang.en': 'English',
+    'app.theme.group': 'Theme',
+    'app.theme.system': 'System',
+    'app.theme.light': 'Light',
+    'app.theme.dark': 'Dark',
     'app.loading': 'Loading the {season} postseason…',
     'app.notStarted':
       'The {season} postseason has not started yet. Check back once the games begin.',
@@ -280,6 +288,10 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'app.lang.group': '言語',
     'app.lang.ja': '日本語',
     'app.lang.en': 'English',
+    'app.theme.group': 'テーマ',
+    'app.theme.system': 'システム',
+    'app.theme.light': 'ライト',
+    'app.theme.dark': 'ダーク',
     'app.loading': '{season}年のポストシーズンを読み込み中…',
     'app.notStarted':
       '{season}年のポストシーズンはまだ始まっていません。試合開始後にまたご確認ください。',

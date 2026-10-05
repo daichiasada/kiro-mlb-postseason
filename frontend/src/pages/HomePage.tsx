@@ -9,6 +9,7 @@ import { BracketView } from '../components/BracketView';
 import { StandingsPanel } from '../components/StandingsPanel';
 import { PredictionPanel } from '../components/PredictionPanel';
 import { LanguageToggle } from '../components/LanguageToggle';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { useI18n } from '../i18n';
 import { formatRelativeTime } from '../relativeTime';
 import { AUTO_REFRESH_INTERVAL_MS, useAutoRefresh } from '../useAutoRefresh';
@@ -164,7 +165,10 @@ export function HomePage() {
             </p>
           </div>
         </div>
-        <LanguageToggle />
+        <div className="app__controls">
+          <ThemeToggle />
+          <LanguageToggle />
+        </div>
         <Link className="app__accuracy-link" to="/accuracy">
           {t('accuracy.nav')}
         </Link>

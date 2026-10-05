@@ -1,14 +1,126 @@
+/*
+  Theming model (Issue #22):
+  ALL themeable colors are CSS custom properties declared on :root (the light
+  palette) and overridden under [data-theme="dark"] (the dark palette). The app
+  sets data-theme on <html>, so every route inherits the active theme. The rest
+  of the stylesheet references ONLY these variables (plus the navy header
+  gradient, which is intentionally dark in both themes with light text on it).
+
+  Every foreground/background pair below is chosen to clear WCAG AA (>=4.5:1 for
+  normal text, >=3:1 for large text and UI affordances) in BOTH palettes.
+*/
 :root {
   --navy: #1b3a6b;
   --navy-dark: #0b2748;
   --red: #c8102e;
-  --gold: #b8860b;
+  --gold: #8a6400;
   --ink: #0f172a;
-  --muted: #64748b;
+  --muted: #5b6676;
   --surface: #ffffff;
+  --surface-2: #fbfcfe;
+  --surface-3: #f1f5f9;
   --bg: #eef2f7;
   --border: #d7dee8;
+  --border-strong: #c3d0e6;
+
+  /* Accent used for links/interactive text (accuracy nav etc.). */
+  --accent: #2563eb;
+  --accent-on: #ffffff;
+
+  /* Header text colors (on the navy gradient). */
+  --header-ink: #ffffff;
+  --header-muted: #c4d2e8;
+
+  /* Buttons rendered as "surface + navy text" (refresh/season/toggle). */
+  --control-bg: #ffffff;
+  --control-ink: var(--navy);
+  --control-border: var(--border-strong);
+
+  /* Status chips. */
+  --chip-bg: #e2e8f0;
+  --chip-ink: #334155;
+  --chip-final-bg: #dcfce7;
+  --chip-final-ink: #14532d;
+  --chip-progress-bg: #fef3c7;
+  --chip-progress-ink: #713f12;
+
+  /* Winner / leader row highlights. */
+  --winner-bg: #ecfdf5;
+  --winner-border: #86efac;
+  --winner-ink: #14532d;
+  --leader-bg: #f1f5f9;
+
+  /* Notices. */
+  --notice-bg: #fff7e6;
+  --notice-border: #f0d58a;
+  --notice-ink: #6b4e00;
+  --notice-alert-bg: #fdecea;
+  --notice-alert-border: #f1b0a8;
+  --notice-alert-ink: #8a2a1b;
+  --upcoming-bg: #eef3fb;
+  --upcoming-border: #b9c8e2;
+  --upcoming-ink: var(--navy);
+
+  /* Prediction bar track. */
+  --bar-track: #e2e8f0;
+
   color-scheme: light;
+}
+
+/*
+  Dark palette. Backgrounds get darker as surfaces nest; text stays light with
+  AA contrast. The navy header gradient is kept (it is already dark) and its
+  text remains light, so it reads the same in both themes.
+*/
+[data-theme='dark'] {
+  --navy: #2b4f85;
+  --navy-dark: #13294b;
+  --red: #ff6b7d;
+  --gold: #e3b341;
+  --ink: #e6edf5;
+  --muted: #9aa7b8;
+  --surface: #141b26;
+  --surface-2: #1b2432;
+  --surface-3: #222d3d;
+  --bg: #0b1017;
+  --border: #2b3647;
+  --border-strong: #3a4759;
+
+  --accent: #7aa7ff;
+  --accent-on: #0b1017;
+
+  --header-ink: #ffffff;
+  --header-muted: #c4d2e8;
+
+  --control-bg: #1b2432;
+  --control-ink: #cfe0ff;
+  --control-border: #3a4759;
+
+  --chip-bg: #2b3647;
+  --chip-ink: #cbd5e1;
+  --chip-final-bg: #14532d;
+  --chip-final-ink: #bbf7d0;
+  --chip-progress-bg: #713f12;
+  --chip-progress-ink: #fde68a;
+
+  --winner-bg: #0f3b2e;
+  --winner-border: #1f6f52;
+  --winner-ink: #bbf7d0;
+  --leader-bg: #222d3d;
+
+  --notice-bg: #3a2f12;
+  --notice-border: #6b561f;
+  --notice-ink: #fde68a;
+  --notice-alert-bg: #3a1c18;
+  --notice-alert-border: #7a3b33;
+  --notice-alert-ink: #fca5a5;
+  --upcoming-bg: #182438;
+  --upcoming-border: #2f4a74;
+  --upcoming-ink: #cfe0ff;
+
+  --bar-track: #2b3647;
+
+  color-scheme: dark;
 }
 
 * {
@@ -36,7 +148,7 @@ body {
   justify-content: space-between;
   gap: 1rem;
   background: linear-gradient(135deg, var(--navy-dark), var(--navy));
-  color: #fff;
+  color: var(--header-ink);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
   overflow: hidden;
@@ -57,7 +169,7 @@ body {
 
 .app__subtitle {
   margin: 0.2rem 0 0;
-  color: #c4d2e8;
+  color: var(--header-muted);
   font-size: 0.9rem;
 }
 
@@ -67,8 +179,18 @@ body {
   border-radius: 12px;
 }
 
-/* Language (JA/EN) toggle in the header */
-.app__lang {
+/* Header control cluster (theme + language toggles). */
+.app__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+/* Segmented toggles (language + theme) in the header */
+.app__lang,
+.app__theme {
   display: inline-flex;
   gap: 0.25rem;
   z-index: 1;
@@ -77,25 +199,28 @@ body {
   border-radius: 999px;
 }
 
-.app__lang-button {
+.app__lang-button,
+.app__theme-button {
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 0.3rem 0.75rem;
   background: transparent;
-  color: #c4d2e8;
+  color: var(--header-muted);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
 }
 
-.app__lang-button:hover {
+.app__lang-button:hover,
+.app__theme-button:hover {
   color: #fff;
 }
 
-.app__lang-button--active {
+.app__lang-button--active,
+.app__theme-button--active {
   background: #fff;
   border-color: #fff;
-  color: var(--navy);
+  color: var(--navy-dark);
 }
 
 .app__status {
@@ -111,23 +236,23 @@ body {
 .app__notice {
   margin: 1rem 0 0;
   padding: 0.6rem 0.9rem;
-  background: #fff7e6;
-  border: 1px solid #f0d58a;
+  background: var(--notice-bg);
+  border: 1px solid var(--notice-border);
   border-radius: 8px;
-  color: #7a5a00;
+  color: var(--notice-ink);
   font-size: 0.9rem;
 }
 
 .app__notice--integrity {
-  background: #fdecea;
-  border-color: #f1b0a8;
-  color: #8a2a1b;
+  background: var(--notice-alert-bg);
+  border-color: var(--notice-alert-border);
+  color: var(--notice-alert-ink);
 }
 
 .app__notice--refresh {
-  background: #fdecea;
-  border-color: #f1b0a8;
-  color: #8a2a1b;
+  background: var(--notice-alert-bg);
+  border-color: var(--notice-alert-border);
+  color: var(--notice-alert-ink);
 }
 
 /* Last-updated line + manual refresh button (in-progress auto-refresh) */
@@ -151,8 +276,8 @@ body {
   font-weight: 600;
   border: 1px solid var(--navy);
   border-radius: 999px;
-  background: #fff;
-  color: var(--navy);
+  background: var(--control-bg);
+  color: var(--control-ink);
   cursor: pointer;
 }
 
@@ -169,10 +294,10 @@ body {
 .app__status--upcoming {
   margin: 1.25rem 0 0;
   padding: 1.25rem;
-  background: #eef3fb;
-  border: 1px dashed #b9c8e2;
+  background: var(--upcoming-bg);
+  border: 1px dashed var(--upcoming-border);
   border-radius: 10px;
-  color: var(--navy);
+  color: var(--upcoming-ink);
 }
 
 /* Season selector */
@@ -198,11 +323,11 @@ body {
 }
 
 .app__season-button {
-  border: 1px solid #c3d0e6;
+  border: 1px solid var(--control-border);
   border-radius: 999px;
   padding: 0.4rem 0.95rem;
-  background: #fff;
-  color: var(--navy);
+  background: var(--control-bg);
+  color: var(--control-ink);
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
@@ -295,7 +420,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.7rem;
-  background: #fbfcfe;
+  background: var(--surface-2);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -333,18 +458,18 @@ body {
 .series-card__status {
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
 }
 
 .series-card__status[data-status='final'] {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--chip-final-bg);
+  color: var(--chip-final-ink);
 }
 
 .series-card__status[data-status='in_progress'] {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--chip-progress-bg);
+  color: var(--chip-progress-ink);
 }
 
 .series-card__teams {
@@ -363,12 +488,13 @@ body {
 }
 
 .series-team--winner {
-  background: #ecfdf5;
+  background: var(--winner-bg);
+  color: var(--winner-ink);
   font-weight: 700;
 }
 
 .series-team--leader {
-  background: #f1f5f9;
+  background: var(--leader-bg);
 }
 
 .series-team__name {
@@ -394,11 +520,11 @@ body {
 
 .series-card__games-toggle {
   align-self: flex-start;
-  border: 1px solid #c3d0e6;
+  border: 1px solid var(--control-border);
   border-radius: 999px;
   padding: 0.25rem 0.65rem;
-  background: #fff;
-  color: var(--navy);
+  background: var(--control-bg);
+  color: var(--control-ink);
   cursor: pointer;
   font-size: 0.76rem;
   font-weight: 600;
@@ -416,7 +542,7 @@ body {
   flex-direction: column;
   gap: 0.15rem;
   font-size: 0.76rem;
-  color: #475569;
+  color: var(--muted);
 }
 
 /* `hidden` collapses the list entirely so a collapsed card stays compact. */
@@ -457,11 +583,11 @@ body {
   display: block;
   text-align: center;
   text-decoration: none;
-  border: 1px solid #c3d0e6;
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   padding: 0.45rem 0.6rem;
-  background: #fff;
-  color: var(--navy);
+  background: var(--control-bg);
+  color: var(--control-ink);
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -475,6 +601,36 @@ body {
 /* Series detail page */
 .detail__nav {
   margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* On the detail page the toggles sit on the page background, not the navy
+   header, so give the segmented pills a surface-tinted track and readable
+   ink in both themes. */
+.app__controls--detail .app__lang,
+.app__controls--detail .app__theme {
+  background: var(--surface-3);
+}
+
+.app__controls--detail .app__lang-button,
+.app__controls--detail .app__theme-button {
+  color: var(--muted);
+}
+
+.app__controls--detail .app__lang-button:hover,
+.app__controls--detail .app__theme-button:hover {
+  color: var(--ink);
+}
+
+.app__controls--detail .app__lang-button--active,
+.app__controls--detail .app__theme-button--active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
 }
 
 .detail__back {
@@ -532,12 +688,13 @@ body {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fbfcfe;
+  background: var(--surface-2);
 }
 
 .detail__team--winner {
-  background: #ecfdf5;
-  border-color: #86efac;
+  background: var(--winner-bg);
+  border-color: var(--winner-border);
+  color: var(--winner-ink);
   font-weight: 700;
 }
 
@@ -576,7 +733,7 @@ body {
   padding: 0.45rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   font-size: 0.9rem;
 }
 
@@ -591,7 +748,7 @@ body {
 
 .detail__game-side--winner {
   font-weight: 700;
-  color: #166534;
+  color: var(--winner-ink);
 }
 
 .detail__game-at {
@@ -717,7 +874,7 @@ body {
   margin-top: 0.3rem;
   height: 14px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--bar-track);
   overflow: hidden;
 }
 
@@ -752,7 +909,7 @@ body {
   gap: 0.25rem;
   margin: 0.4rem 0 0;
   padding: 0.6rem 0.7rem;
-  background: #f1f5f9;
+  background: var(--surface-3);
   border: 1px solid var(--border);
   border-radius: 0.4rem;
 }
@@ -789,7 +946,7 @@ body {
   gap: 0.3rem;
   margin: 0 0 0.9rem;
   padding: 0.6rem 0.7rem;
-  background: #f1f5f9;
+  background: var(--surface-3);
   border: 1px solid var(--border);
   border-radius: 10px;
 }
@@ -840,7 +997,7 @@ body {
   gap: 0.3rem;
   margin: 0 0 0.9rem;
   padding: 0.6rem 0.7rem;
-  background: #f1f5f9;
+  background: var(--surface-3);
   border: 1px solid var(--border);
   border-radius: 10px;
 }
@@ -855,8 +1012,8 @@ body {
   width: 100%;
   padding: 0.4rem 0.5rem;
   font-size: 0.85rem;
-  color: var(--navy);
-  background: #fff;
+  color: var(--ink);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
 }
@@ -907,10 +1064,10 @@ body {
 .app__accuracy-link {
   align-self: center;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--accent);
   text-decoration: none;
   padding: 0.35rem 0.6rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--control-border);
   border-radius: 0.5rem;
   white-space: nowrap;
 }
@@ -948,14 +1105,14 @@ body {
 }
 .accuracy__table th,
 .accuracy__table td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   padding: 0.35rem 0.6rem;
   text-align: left;
 }
 .accuracy__caption {
   caption-side: top;
   text-align: left;
-  color: #475569;
+  color: var(--muted);
   margin-bottom: 0.4rem;
   max-width: 70ch;
 }
@@ -978,7 +1135,7 @@ body {
   font-weight: 600;
 }
 .accuracy__bar-meta {
-  color: #334155;
+  color: var(--ink);
 }
 .accuracy__sr-only {
   position: absolute;

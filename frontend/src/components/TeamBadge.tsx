@@ -1,5 +1,6 @@
 import { TEAMS } from '@mlb/shared';
 import { teamColor } from '../teamColors';
+import { readableTextColor } from '../readableTextColor';
 
 interface TeamBadgeProps {
   teamId: number;
@@ -37,7 +38,7 @@ export function TeamBadge({ teamId, size = 36 }: TeamBadgeProps) {
         fontFamily="Arial, Helvetica, sans-serif"
         fontSize={fontSize}
         fontWeight="700"
-        fill="#ffffff"
+        fill={readableTextColor(primary)}
       >
         {label}
       </text>

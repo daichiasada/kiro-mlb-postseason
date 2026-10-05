@@ -12,6 +12,8 @@ import {
   type TFn,
 } from '../i18n';
 import { TeamBadge } from '../components/TeamBadge';
+import { LanguageToggle } from '../components/LanguageToggle';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 type LoadState =
   | { status: 'loading' }
@@ -66,6 +68,10 @@ export function SeriesDetailPage() {
         <Link className="detail__back" to={backTo}>
           {t('detail.back', { season })}
         </Link>
+        <div className="app__controls app__controls--detail">
+          <ThemeToggle />
+          <LanguageToggle />
+        </div>
       </nav>
 
       {state.status === 'loading' && (
