@@ -19,8 +19,10 @@ const TEAM_COLORS: Record<number, TeamColor> = {
   119: { primary: '#005a9c', secondary: '#ef3e42' }, // Dodgers
   121: { primary: '#002d72', secondary: '#ff5910' }, // Mets
   135: { primary: '#2f241d', secondary: '#ffc425' }, // Padres
+  139: { primary: '#092c5c', secondary: '#8fbce6' }, // Rays
   143: { primary: '#e81828', secondary: '#002d72' }, // Phillies
   144: { primary: '#13274f', secondary: '#ce1141' }, // Braves
+  145: { primary: '#27251f', secondary: '#c4ced4' }, // White Sox
   147: { primary: '#0c2340', secondary: '#c4ced4' }, // Yankees
   158: { primary: '#12284b', secondary: '#ffc52f' }, // Brewers
 };

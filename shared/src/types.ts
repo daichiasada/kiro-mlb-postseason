@@ -149,9 +149,11 @@ export const TEAMS: Record<number, Team> = {
   121: { id: 121, name: 'New York Mets', abbreviation: 'NYM', league: 'NL' },
   135: { id: 135, name: 'San Diego Padres', abbreviation: 'SD', league: 'NL' },
   136: { id: 136, name: 'Seattle Mariners', abbreviation: 'SEA', league: 'AL' },
+  139: { id: 139, name: 'Tampa Bay Rays', abbreviation: 'TB', league: 'AL' },
   141: { id: 141, name: 'Toronto Blue Jays', abbreviation: 'TOR', league: 'AL' },
   143: { id: 143, name: 'Philadelphia Phillies', abbreviation: 'PHI', league: 'NL' },
   144: { id: 144, name: 'Atlanta Braves', abbreviation: 'ATL', league: 'NL' },
+  145: { id: 145, name: 'Chicago White Sox', abbreviation: 'CWS', league: 'AL' },
   147: { id: 147, name: 'New York Yankees', abbreviation: 'NYY', league: 'AL' },
   158: { id: 158, name: 'Milwaukee Brewers', abbreviation: 'MIL', league: 'NL' },
 };

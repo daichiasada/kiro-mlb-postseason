@@ -95,7 +95,10 @@ function seriesArb(): fc.Arbitrary<Series> {
       low: { teamId: r.lowId, wins: 0 },
       bestOf: r.bestOf,
       status: r.status,
-      games: r.games,
+      // gamePk is a unique MLB game id in real data, so disambiguate the
+      // generated games within a series. Invariant 3 looks a game up by its
+      // gamePk, which is only meaningful when gamePks are unique per series.
+      games: r.games.map((game, index) => ({ ...game, gamePk: index + 1 })),
     }));
 }
 
