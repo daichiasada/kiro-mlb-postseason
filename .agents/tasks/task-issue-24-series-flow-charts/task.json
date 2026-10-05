@@ -1,0 +1,7 @@
+{
+  "task_id": "task-issue-24-series-flow-charts",
+  "task_description": "Issue #24: Visualize the flow of a series. On the series detail, show a per-game score-difference bar chart and a cumulative win/loss trend chart; for predictable seasons also overlay a per-game predicted win-probability trend (reusing the pure shared predict()/backtest truncation). Add a small score-difference sparkline to bracket cards. Acceptance: (1) charts drawn as SVG WITH a tabular text alternative; (2) works for past/seed seasons (2024/2025) without the prediction overlay; (3) team-color coded and legible in dark mode. Frontend-only + docs; no backend/infra change. Branch feat/mlb-postseason-site; incremental commits; do NOT push/PR/deploy.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

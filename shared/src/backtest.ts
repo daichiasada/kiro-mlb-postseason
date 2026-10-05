@@ -112,9 +112,71 @@ function countWins(games: GameResult[], teamId: number): number {
   return wins;
 }
 
+/** One per-game favorite win-probability snapshot for a series. */
+export interface SeriesProbTrendPoint {
+  /** The game number (k) at which the prediction was taken (1-based). */
+  gameNumber: number;
+  /** The team the model favored at this snapshot. */
+  favoriteTeamId: number;
+  /** The model's favorite win probability at this snapshot, in [0.5, 0.95]. */
+  favoriteWinProbability: number;
+}
+
+/**
+ * The SINGLE source of the per-game truncation used by the backtest and by the
+ * frontend's win-probability trend chart. For a series with N games (sorted by
+ * `seriesGameNumber` ascending), for each k in 1..N it builds a PARTIAL series
+ * whose `games` are the first k games and whose `high.wins`/`low.wins` are
+ * RECOMPUTED by {@link countWins} over those first k games (the series' stored
+ * final win counts are never trusted). The partial status is `in_progress`
+ * when k < N else `final`, and the pure {@link predict} is called on it.
+ *
+ * Unlike {@link runBacktest}, this does NOT require the series to be `final`;
+ * it truncates whatever games are present (so an in-progress series yields a
+ * trend up to its latest game). A series with no games yields an empty array.
+ */
+export function seriesProbTrend(
+  series: Series,
+  bracket: Bracket,
+  accuracy: number,
+): SeriesProbTrendPoint[] {
+  if (series.games.length === 0) {
+    return [];
+  }
+
+  const games = [...series.games].sort((a, b) => a.seriesGameNumber - b.seriesGameNumber);
+  const highId = series.high.teamId;
+  const lowId = series.low.teamId;
+
+  const trend: SeriesProbTrendPoint[] = [];
+  for (let k = 1; k <= games.length; k += 1) {
+    const partialGames = games.slice(0, k);
+    const partial: Series = {
+      ...series,
+      high: { teamId: highId, wins: countWins(partialGames, highId) },
+      low: { teamId: lowId, wins: countWins(partialGames, lowId) },
+      status: k < games.length ? 'in_progress' : 'final',
+      games: partialGames,
+    };
+
+    const { favoriteTeamId, favoriteWinProbability } = predict(partial, bracket, {}, accuracy);
+    trend.push({
+      gameNumber: partialGames[partialGames.length - 1]!.seriesGameNumber,
+      favoriteTeamId,
+      favoriteWinProbability,
+    });
+  }
+
+  return trend;
+}
+
 /**
  * Build the per-game samples for a single FINAL series. Returns an empty array
  * for series that are not final or have no games.
+ *
+ * Delegates the per-game truncation + predict to {@link seriesProbTrend} so the
+ * slice/recompute-wins logic lives in exactly one place, then layers the
+ * eventual-winner scoring on top.
  */
 function sampleSeries(series: Series, bracket: Bracket, accuracy: number): BacktestSample[] {
   if (series.status !== 'final' || series.games.length === 0) {
@@ -131,36 +193,23 @@ function sampleSeries(series: Series, bracket: Bracket, accuracy: number): Backt
   const lowFinalWins = countWins(games, lowId);
   const eventualWinnerTeamId = highFinalWins >= lowFinalWins ? highId : lowId;
 
-  const samples: BacktestSample[] = [];
-  for (let k = 1; k <= games.length; k += 1) {
-    const partialGames = games.slice(0, k);
-    const partial: Series = {
-      ...series,
-      high: { teamId: highId, wins: countWins(partialGames, highId) },
-      low: { teamId: lowId, wins: countWins(partialGames, lowId) },
-      status: k < games.length ? 'in_progress' : 'final',
-      games: partialGames,
-    };
-
-    const { favoriteTeamId, favoriteWinProbability } = predict(partial, bracket, {}, accuracy);
-    const favoriteWasCorrect = favoriteTeamId === eventualWinnerTeamId;
+  return seriesProbTrend(series, bracket, accuracy).map((point) => {
+    const favoriteWasCorrect = point.favoriteTeamId === eventualWinnerTeamId;
     const probOfEventualWinner = favoriteWasCorrect
-      ? favoriteWinProbability
-      : 1 - favoriteWinProbability;
+      ? point.favoriteWinProbability
+      : 1 - point.favoriteWinProbability;
 
-    samples.push({
+    return {
       seriesId: series.id,
       round: series.round,
-      gameNumber: partialGames[partialGames.length - 1]!.seriesGameNumber,
-      favoriteTeamId,
-      favoriteWinProbability,
+      gameNumber: point.gameNumber,
+      favoriteTeamId: point.favoriteTeamId,
+      favoriteWinProbability: point.favoriteWinProbability,
       eventualWinnerTeamId,
       favoriteWasCorrect,
       probOfEventualWinner,
-    });
-  }
-
-  return samples;
+    };
+  });
 }
 
 /** Assign a favorite probability to its calibration bucket index. */

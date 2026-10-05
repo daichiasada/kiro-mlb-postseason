@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Bracket-card score-difference sparkline (Issue #24 proposal c) + e2e coverage + docs. Add a tiny inline-SVG score-diff sparkline to each SeriesCard summarizing the per-game run differentials (reusing FEAT-001 seriesScoreDiffs), with an accessible aria-label. It must stay subtle and theme-aware, must NOT bloat the card or break the #22 keyboard roving model, the #18 favorite highlight, or mobile layout (no overflow at 375px). Then add Playwright e2e, run the full verification suite, and update the specs + both READMEs (spec-driven dev is graded).",
+  "status": "pending",
+  "steps": [
+    "Create a small Sparkline component (e.g. in frontend/src/components/SeriesFlowCharts.tsx as a named export, or a dedicated frontend/src/components/ScoreDiffSparkline.tsx) that takes { series } and renders a compact inline SVG of per-game run differentials (small bars or a mini line) colored by winning team via teamColor; height a few px, width scaling with game count. Give it role=img with a localized aria-label summarizing the games (e.g. 'Score differences by game: ...'). Render nothing (or an empty state) when the series has no games.",
+    "Render the sparkline inside SeriesCard.tsx in a non-intrusive spot (e.g. near the series meta line), only when series.games.length > 0. Ensure it does NOT add focusable elements (keep it aria-hidden children / role=img), so the roving-tabindex keyboard model (BracketView) and Enter/Space activation are unchanged. Keep markup minimal so card heights stay consistent.",
+    "Add sparkline CSS to frontend/src/styles.css using theme variables; verify it is subtle and does not cause horizontal overflow at 375px (constrain width/max-width; the bracket already scrolls, so the sparkline must fit within the card content width).",
+    "Localize the sparkline aria-label (new MessageKey + ja/en). Default JA.",
+    "Add a component test (extend SeriesCard.test.tsx or add to SeriesFlowCharts.test.tsx) asserting the sparkline renders with its role=img/aria-label for a series with games and renders nothing for a games-less series; and a quick assertion that SeriesCard still exposes its existing card label / keyboard affordances (no regression).",
+    "Add Playwright e2e: (1) extend/add frontend/e2e specs so opening a 2024 series detail (seed data, offline fallback — navigate to /season/2024 then into a finished series, or deep-link) asserts the score-diff bar chart + cumulative trend chart + the tabular alternative <table> all render and NO probability chart appears. (2) For the predictable season, the e2e fixture SAMPLE_2026_BRACKET's final ALCS (117 vs 136) HAS games — open its detail at /season/2026/series/2026-al-championship-117-136 and assert the probability-trend chart + its prob column render (predictable season). (3) Assert a bracket card shows the sparkline (role=img) on the home page. (4) Capture a DARK-mode screenshot of a series detail with charts into frontend/test-results for legibility review (set theme via localStorage or the toggle, as a11y.spec.ts does). Reuse e2e fixtures/stubs in frontend/e2e/fixtures.ts. NOTE: 2026 WS series has empty games so no prob chart there — use the ALCS which has games for the overlay assertion.",
+    "Run the FULL verification: npm run build; npm test; npm run test:e2e -w frontend (run `npx playwright install chromium` first if needed); npm run synth. Confirm #22 keyboard (keyboard.spec.ts), #18 favorites (favorites.spec.ts), #17/#20 UI, and a11y (a11y.spec.ts) specs are unregressed.",
+    "Update docs truthfully: add the series-flow visualization to .kiro/specs/mlb-postseason/requirements.md, design.md, and tasks.md (new requirement + design of the pure helpers, SVG+table accessibility approach, prob overlay reusing predict/backtest truncation, sparkline, dark-mode theming), and add a user-facing section to BOTH README.md and README.ja.md describing the feature and that it works on seed seasons without a prediction overlay. Mention it is frontend-only reusing the shared predict()."
+  ],
+  "acceptance_criteria": [
+    "Each SeriesCard with games shows a subtle, theme-aware inline-SVG score-diff sparkline with a localized aria-label (role=img); cards without games show none.",
+    "The sparkline does not add focusable elements and does not regress the #22 roving-tabindex keyboard model, the #18 favorite highlight, or cause horizontal overflow at 375px.",
+    "Playwright e2e proves: a 2024 (seed) series detail renders the score-diff + cumulative charts + tabular alternative and NO prob chart; a predictable 2026 series-with-games detail renders the probability-trend chart; a bracket card shows the sparkline; and a dark-mode screenshot is captured.",
+    "npm run build, npm test, npm run test:e2e -w frontend, and npm run synth all pass; keyboard/favorites/a11y e2e specs remain green.",
+    "Specs (.kiro/specs/mlb-postseason/*) and BOTH README.md and README.ja.md are updated to describe the feature truthfully."
+  ],
+  "verification": [
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run test:e2e -w frontend",
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

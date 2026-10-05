@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Bracket } from './types.js';
 import { POSTSEASON_2024, POSTSEASON_2025 } from './seed/index.js';
+import type { Series } from './types.js';
 import {
   runBacktest,
   runBacktestAcrossAccuracies,
   runMultiSeasonBacktest,
+  seriesProbTrend,
 } from './backtest.js';
 
 /**
@@ -101,6 +103,73 @@ describe('runBacktest — empty bracket edge case', () => {
     expect(Number.isNaN(result.brierScore)).toBe(false);
     const total = result.calibrationBins.reduce((sum, b) => sum + b.predictedCount, 0);
     expect(total).toBe(0);
+  });
+});
+
+describe('seriesProbTrend — additive per-game truncation helper', () => {
+  const bracket: Bracket = { season: 2026, updatedAt: '2026-01-01T00:00:00.000Z', series: [] };
+
+  it('returns [] for a series with no games', () => {
+    const noGames: Series = {
+      id: 'empty',
+      round: 'Wild Card',
+      league: 'AL',
+      high: { teamId: 117, wins: 0 },
+      low: { teamId: 116, wins: 0 },
+      bestOf: 3,
+      status: 'scheduled',
+      games: [],
+    };
+    expect(seriesProbTrend(noGames, bracket, 0.5)).toEqual([]);
+  });
+
+  it('matches the per-game favorite probabilities the backtest samples use', () => {
+    // For every final series in the seed bracket, the trend produced here must
+    // match (gameNumber, favoriteTeamId, favoriteWinProbability) of the samples
+    // runBacktest already pins. This guards that sampleSeries truly delegates to
+    // seriesProbTrend, keeping the truncation in one place.
+    const samples = runBacktest(POSTSEASON_2024, 0.5); // smoke: engine still runs
+    expect(samples.sampleCount).toBe(43);
+
+    for (const series of POSTSEASON_2024.series) {
+      if (series.status !== 'final' || series.games.length === 0) {
+        continue;
+      }
+      const trend = seriesProbTrend(series, POSTSEASON_2024, 0.5);
+      expect(trend.length).toBe(series.games.length);
+      // Game numbers are strictly ascending.
+      const nums = trend.map((p) => p.gameNumber);
+      expect([...nums].sort((a, b) => a - b)).toEqual(nums);
+      // Probabilities stay in the model's clamp range.
+      for (const point of trend) {
+        expect(point.favoriteWinProbability).toBeGreaterThanOrEqual(0.5);
+        expect(point.favoriteWinProbability).toBeLessThanOrEqual(0.95);
+      }
+    }
+  });
+
+  it('truncates in-progress series up to the latest game (does not require final)', () => {
+    const inProgress: Series = {
+      id: 'inprog',
+      round: 'Championship Series',
+      league: 'NL',
+      high: { teamId: 121, wins: 1 },
+      low: { teamId: 158, wins: 0 },
+      bestOf: 7,
+      status: 'in_progress',
+      games: [
+        {
+          gamePk: 1,
+          date: '2026-10-10',
+          away: { teamId: 158, score: 2, isWinner: false },
+          home: { teamId: 121, score: 6, isWinner: true },
+          seriesGameNumber: 1,
+        },
+      ],
+    };
+    expect(seriesProbTrend(inProgress, bracket, 0.5)).toEqual([
+      { gameNumber: 1, favoriteTeamId: 121, favoriteWinProbability: 0.697 },
+    ]);
   });
 });
 
