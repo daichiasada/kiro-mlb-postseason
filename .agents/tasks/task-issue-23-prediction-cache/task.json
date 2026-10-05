@@ -1,7 +1,28 @@
 {
   "task_id": "task-issue-23-prediction-cache",
   "task_description": "Implement GitHub Issue #23: cache the /prediction result (including the Bedrock narrative) in DynamoDB keyed by seriesId + series situation (win counts) + language + model + accuracy so repeat same-situation requests do NOT call Bedrock and a game-result update invalidates the cache; add API Gateway throttling with a CDK assertion test; and emit CloudWatch metrics for cache hit rate and Bedrock call count (EMF preferred to avoid new IAM). Backend + infra + docs. Incremental commits on feat/mlb-postseason-site; no push/PR/deploy (orchestrator owns those).",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "synth": "pass",
+    "e2e": "pass",
+    "summary": "npm run build exit 0 (shared->backend->frontend->infra). npm test: shared 37, backend 124, frontend 194, infra 10 - all pass. npm run synth exit 0; synthesized AWS::ApiGatewayV2::Stage renders DefaultRouteSettings ThrottlingRateLimit=20 / ThrottlingBurstLimit=40 (criterion 3). Playwright e2e 49/49 pass (prediction UI unchanged; cache is server-side). Test quality verified: criterion-1 test asserts the mocked Bedrock invoker is called exactly once across two identical requests (zero extra calls on 2nd, response equals first) and would fail if the cache were reverted; criterion-2 test mutates high.wins and asserts a 2nd Bedrock call (would fail if the key omitted win counts). No Dockerfile; docker_build skipped."
+  },
+  "commits": {
+    "FEAT-002": "638295e",
+    "FEAT-003": "9c448aa",
+    "FEAT-004": "5fbdd86",
+    "review-followup": "cf65f6d"
+  },
+  "review": {
+    "verdict": "APPROVED",
+    "pass": "v1",
+    "artifact": ".agents/tasks/task-issue-23-prediction-cache/2026-10-05-114635-review.md",
+    "followup": "Two non-blocking v1 findings addressed in cf65f6d (store-level dynamo tests + criterion-2 freshness assertion). Finding #3 (throttle is API-wide not /prediction-only) intentionally left as-is and documented."
+  }
 }
