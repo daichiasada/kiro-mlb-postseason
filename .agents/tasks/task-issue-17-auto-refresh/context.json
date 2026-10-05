@@ -1,0 +1,27 @@
+{
+  "project_type": "npm-workspaces TypeScript monorepo: Vite React SPA (frontend), AWS Lambda backend, shared domain types, AWS CDK infra. Issue #17 is a FRONTEND-ONLY UX change.",
+  "language": "TypeScript (strict, ESM) + React (frontend)",
+  "build_system": "npm workspaces. Node/npm may NOT be on PATH - prefix commands with PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" (confirmed working this session; fallback /root/.nvm/versions/node/v22.23.3/bin).",
+  "test_framework": "Vitest colocated as *.test.ts(x) in each workspace; frontend uses jsdom + @testing-library/react (see frontend/src/test/setup.ts). Playwright e2e in frontend/e2e/*.spec.ts, headless chromium (--no-sandbox). fast-check *.property.test.ts for pure invariants.",
+  "build_command": "npm run build  (ordered shared -> backend -> frontend -> infra)",
+  "test_command": "npm test  (runs vitest across all workspaces). E2E: npm run test:e2e -w @mlb/frontend. Synth regression guard: npm run synth.",
+  "verification_instructions": "1) npm run build must pass. 2) npm test must pass (add unit tests for relative-time helper EN/JA and the auto-refresh polling hook with fake timers). 3) npm run test:e2e -w @mlb/frontend (may need `npx playwright install chromium` once). 4) npm run synth as a regression guard. NO cdk deploy, NO live Bedrock/MLB calls.",
+  "snapshot_or_generated_files": "None checked in that this change touches. Vite emits frontend/dist (gitignored); cdk synth emits cdk.out (not committed).",
+  "setup_instructions": "Node 22 toolchain already present. Dependencies already installed (node_modules present, baseline build+test green at session start). Playwright chromium may need `npx playwright install chromium -w @mlb/frontend` before first e2e run.",
+  "environment_constraints": "Network mode not explicitly checked; dependencies already installed so no registry access needed. Do NOT push, open PRs, deploy, or make live AWS/MLB/Bedrock calls. Stay on branch feat/mlb-postseason-site with incremental commits.",
+  "contribution_requirements": ".kiro/steering/*.md is inclusion:always and MANDATORY: (a) incremental commits per feature; (b) all new user-facing strings localized EN+JA via frontend/src/i18n/messages.ts (MessageKey union + both MESSAGES tables); (c) spec-driven dev is graded - update .kiro/specs/mlb-postseason/{requirements,design}.md and BOTH README.md and README.ja.md truthfully; (d) tests added in the same change as behavior; keep build/test/synth green.",
+  "key_patterns": "HomePage.tsx holds bracket state as a discriminated union BracketState (loading|error|ready) and selectedSeriesId local state; a useEffect keyed on [season] does the initial getBracket() load with a `cancelled` guard. api.getBracket(season) returns {bracket, usedFallback} and falls back to the bundled seed offline. Season predictability comes from @mlb/shared isPredictable(season) (CURRENT_YEAR=2026). In-progress series = series.status === 'in_progress'. Bracket.updatedAt is an ISO string. i18n: useI18n() -> {lang,setLang,t}; t(key, params) interpolates {param}; MessageKey is a string-literal union, both 'en' and 'ja' tables must stay in sync. SeriesDetailPage also fetches a bracket but is for FINISHED series only and is OUT OF SCOPE for polling.",
+  "relevant_files": [
+    "frontend/src/pages/HomePage.tsx (bracket state + selection; add background refresh + last-updated + manual refresh here)",
+    "frontend/src/api.ts (getBracket -> {bracket, usedFallback}; reuse unchanged)",
+    "frontend/src/i18n/messages.ts (add MessageKey entries + EN/JA strings for last-updated/refresh/error)",
+    "frontend/src/i18n/index.ts (useI18n, t, lang; relative-time helper will consume lang via Intl.RelativeTimeFormat)",
+    "shared/src/season.ts (isPredictable / isResultsOnly / CURRENT_YEAR)",
+    "shared/src/types.ts (Bracket.updatedAt, Series.status SeriesStatus)",
+    "frontend/src/seasonRoute.ts (hasStartedContent / parseSeasonParam - pattern for small pure helpers)",
+    "frontend/e2e/fixtures.ts (SAMPLE_2026_BRACKET has an in_progress WS series; stubBracket2026; add results-only path)",
+    "frontend/e2e/home.spec.ts (e2e patterns; add last-updated + refresh assertions)",
+    "frontend/src/i18n/index.test.ts, frontend/src/seasonRoute pattern, frontend/src/App.test.tsx (unit test patterns)"
+  ],
+  "directory_structure": "shared/ (@mlb/shared domain types+seed+season), backend/ (@mlb/backend Lambda), frontend/ (@mlb/frontend Vite React SPA: src/pages, src/components, src/i18n, e2e/), infra/ (@mlb/infra CDK). .kiro/specs/mlb-postseason/{requirements,design,tasks}.md, .kiro/steering/*.md, README.md + README.ja.md."
+}

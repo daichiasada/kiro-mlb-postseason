@@ -1,0 +1,14 @@
+{
+  "task_id": "task-issue-17-auto-refresh",
+  "task_description": "Implement GitHub Issue #17: auto-refresh an in-progress postseason bracket at a documented 60s interval ONLY when the selected season is predictable and has an in-progress series, display Bracket.updatedAt as a localized 'last updated: N minutes ago', add a manual refresh button, pause polling when the tab is hidden (Page Visibility API), and ensure refreshes are flicker-free (preserve scroll + selected series) with unobtrusive failure handling that keeps prior data. Frontend-only change plus unit/e2e tests, i18n (EN/JA), specs, and both READMEs. Branch feat/mlb-postseason-site, incremental commits; no push/PR/deploy.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "npm run build PASS (shared->backend->frontend->infra). npm test PASS: shared 22, backend 92, frontend 57, infra 8 (179 total). npm run test:e2e -w @mlb/frontend PASS: 22 passed incl. 2 new refresh.spec.ts tests. npm run synth PASS. No Dockerfile for app build so docker_build skipped. Test quality verified by reading useAutoRefresh.test.tsx (fake-timer assertions: polls only when enabled, pause-on-hidden, immediate-refresh-on-visible, unmount cleanup, stable timer across callback identity) and HomePage.test.tsx (flicker-free bracket stays mounted + selectedSeriesId preserved across refresh; failed refresh keeps prior data with inline notice/no alert and clears on next success) - these exercise the real new modules and would fail if reverted."
+  }
+}
