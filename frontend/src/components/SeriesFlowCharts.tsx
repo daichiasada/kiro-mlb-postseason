@@ -42,8 +42,8 @@ interface SeriesFlowChartsProps {
   season: number;
   /**
    * Whether the probability overlay may be shown. Defaults to the season's
-   * own predictability; the overlay still only renders when the season is
-   * predictable per {@link isPredictable} AND the series has games.
+   * own predictability per {@link isPredictable}. The overlay still only
+   * renders when the series has games.
    */
   predictable?: boolean;
   /** Model accuracy to drive the probability trend (defaults to 0.5). */
@@ -96,7 +96,7 @@ export function SeriesFlowCharts({
   const trend = cumulativeWinTrend(series);
 
   const seasonPredictable = predictable ?? isPredictable(season);
-  const showProb = seasonPredictable && isPredictable(season) && series.games.length > 0;
+  const showProb = seasonPredictable && series.games.length > 0;
   const probTrend = showProb ? winProbTrend(series, bracket, accuracy) : [];
 
   // No games at all -> nothing meaningful to visualize.

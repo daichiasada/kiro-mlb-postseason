@@ -136,6 +136,7 @@ export type MessageKey =
   | 'flow.showTable'
   | 'flow.hideTable'
   | 'flow.sparkline.label'
+  | 'flow.sparkline.noResult'
   | 'gametime.tbd'
   | 'gametime.startLabel'
   | 'ics.add'
@@ -315,6 +316,7 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'flow.showTable': 'Show data table',
     'flow.hideTable': 'Hide data table',
     'flow.sparkline.label': 'Run differential sparkline, {count} games: {summary}',
+    'flow.sparkline.noResult': 'no result',
     'gametime.tbd': 'Time TBD',
     'gametime.startLabel': 'First pitch',
     'ics.add': 'Add to calendar',
@@ -503,6 +505,7 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'flow.showTable': 'データ表を表示',
     'flow.hideTable': 'データ表を隠す',
     'flow.sparkline.label': '得点差スパークライン（{count}試合）: {summary}',
+    'flow.sparkline.noResult': '結果なし',
     'gametime.tbd': '時刻未定',
     'gametime.startLabel': '試合開始',
     'ics.add': 'カレンダーに追加',

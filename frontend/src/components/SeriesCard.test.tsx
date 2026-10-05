@@ -194,6 +194,34 @@ describe('SeriesCard', () => {
     expect(document.querySelector('.series-card__sparkline')).toBeNull();
   });
 
+  it('summarizes a no-winner / in-progress game as "no result" rather than claiming a "+0" margin', () => {
+    // Game 1 decided (DET 3 @ HOU 1 => DET +2); game 2 in progress (no scores,
+    // no winner) so it has no margin to announce.
+    const inProgress: Series = {
+      ...wildCardSeries,
+      status: 'in_progress',
+      games: [
+        wildCardSeries.games[0],
+        {
+          gamePk: 900201,
+          date: '2024-10-03',
+          away: { teamId: 116, score: null, isWinner: null },
+          home: { teamId: 117, score: null, isWinner: null },
+          seriesGameNumber: 2,
+        },
+      ],
+    };
+    renderCard({ series: inProgress });
+    const spark = screen.getByRole('img', {
+      name: /run differential sparkline, 2 games:/i,
+    });
+    const label = spark.getAttribute('aria-label')!;
+    expect(label).toContain('DET +2');
+    expect(label).toContain('no result');
+    // The unplayed game must NOT be announced as a "+0" margin.
+    expect(label).not.toContain('+0');
+  });
+
   it('still exposes the card accessible label and keyboard affordances with the sparkline present (no regression)', () => {
     renderCard();
     const card = document.querySelector('.series-card') as HTMLElement;

@@ -38,15 +38,17 @@ interface ScoreDiffSparklineProps {
 /**
  * Build the localized aria-label summary, e.g. "DET +2, DET +3" (winner abbr
  * and the run margin of each game), so a screen-reader user gets the same
- * per-game story the bars convey. A game with no resolved winner reads as a
- * dash with its margin.
+ * per-game story the bars convey. A game with no resolved winner (in-progress
+ * or unplayed) reads as a localized "no result" phrase instead of claiming a
+ * "+0" margin.
  */
 function summarize(t: TFn, rows: ReturnType<typeof seriesScoreDiffs>): string {
   return rows
-    .map((row) => {
-      const who = row.winnerTeamId !== null ? teamAbbr(t, row.winnerTeamId) : '-';
-      return `${who} +${row.diff}`;
-    })
+    .map((row) =>
+      row.winnerTeamId !== null
+        ? `${teamAbbr(t, row.winnerTeamId)} +${row.diff}`
+        : t('flow.sparkline.noResult'),
+    )
     .join(', ');
 }
 
