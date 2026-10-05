@@ -135,6 +135,7 @@ export type MessageKey =
   | 'flow.winner.inProgress'
   | 'flow.showTable'
   | 'flow.hideTable'
+  | 'flow.sparkline.label'
   | 'gametime.tbd'
   | 'gametime.startLabel'
   | 'ics.add'
@@ -313,6 +314,7 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'flow.winner.inProgress': 'In progress',
     'flow.showTable': 'Show data table',
     'flow.hideTable': 'Hide data table',
+    'flow.sparkline.label': 'Run differential sparkline, {count} games: {summary}',
     'gametime.tbd': 'Time TBD',
     'gametime.startLabel': 'First pitch',
     'ics.add': 'Add to calendar',
@@ -500,6 +502,7 @@ export const MESSAGES: Record<Lang, Record<MessageKey, string>> = {
     'flow.winner.inProgress': '進行中',
     'flow.showTable': 'データ表を表示',
     'flow.hideTable': 'データ表を隠す',
+    'flow.sparkline.label': '得点差スパークライン（{count}試合）: {summary}',
     'gametime.tbd': '時刻未定',
     'gametime.startLabel': '試合開始',
     'ics.add': 'カレンダーに追加',

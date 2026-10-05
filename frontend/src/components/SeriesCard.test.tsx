@@ -173,6 +173,41 @@ describe('SeriesCard', () => {
     expect(screen.getByText('Eliminated')).toBeInTheDocument();
   });
 
+  it('renders a score-diff sparkline (role=img + localized aria-label) for a series with games', () => {
+    renderCard();
+    // wildCardSeries has 2 games: DET 3 @ HOU 1 (diff 2, DET), DET 5 @ HOU 2 (diff 3, DET).
+    const spark = screen.getByRole('img', {
+      name: /run differential sparkline, 2 games: DET \+2, DET \+3/i,
+    });
+    expect(spark.tagName.toLowerCase()).toBe('svg');
+    // Decorative only: no focusable element is introduced inside it.
+    expect(spark).not.toHaveAttribute('tabindex');
+    expect(within(spark as HTMLElement).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('renders no sparkline for a games-less series', () => {
+    const noGames: Series = { ...wildCardSeries, games: [] };
+    renderCard({ series: noGames });
+    expect(
+      screen.queryByRole('img', { name: /run differential sparkline/i }),
+    ).not.toBeInTheDocument();
+    expect(document.querySelector('.series-card__sparkline')).toBeNull();
+  });
+
+  it('still exposes the card accessible label and keyboard affordances with the sparkline present (no regression)', () => {
+    renderCard();
+    const card = document.querySelector('.series-card') as HTMLElement;
+    // The roving-tabindex card remains focusable and keeps its accessible name.
+    expect(card).toHaveAttribute('tabindex', '0');
+    expect(card.getAttribute('aria-label')).toMatch(/Houston Astros/);
+    expect(card.getAttribute('aria-label')).toMatch(/Detroit Tigers/);
+    // The sparkline adds no extra tab stop: the only interactive descendants
+    // are the existing favorite toggles plus the games toggle and detail link.
+    const buttons = within(card).getAllByRole('button');
+    // 2 favorite toggles + 1 games toggle (final series shows a detail link, not a predict button).
+    expect(buttons).toHaveLength(3);
+  });
+
   it('exposes a localized star toggle whose aria-pressed reflects favorite state', () => {
     renderCard({}, [117]);
     // Astros (117) is favorited => its toggle offers "Remove ... from favorites".

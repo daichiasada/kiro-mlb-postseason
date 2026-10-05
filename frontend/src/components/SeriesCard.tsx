@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { Bracket, Series, SeriesTeam } from '@mlb/shared';
 import { TeamBadge } from './TeamBadge';
 import { FavoriteToggle } from './FavoriteToggle';
+import { ScoreDiffSparkline } from './ScoreDiffSparkline';
 import { useFavorites } from '../FavoritesContext';
 import { clinchWins, isTeamEliminated, seriesLeaderId } from '../bracketLayout';
 import {
@@ -354,6 +355,15 @@ export function SeriesCard({
           lowWins: series.low.wins,
         })}
       </p>
+
+      {/*
+        Score-difference sparkline (Issue #24, proposal c): a subtle, purely
+        decorative inline-SVG summary of per-game run margins. It is a single
+        role="img" element with aria-hidden children and NO focusable node, so
+        the roving-tabindex keyboard model (BracketView) and Enter/Space
+        activation are unchanged. Shown only when the series has games.
+      */}
+      {hasGames && <ScoreDiffSparkline series={series} />}
 
       {hasGames && (
         <div className="series-card__games-wrap">

@@ -574,6 +574,18 @@ body {
   color: var(--muted);
 }
 
+/* Score-difference sparkline (Issue #24): a subtle, decorative strip of
+   per-game run-margin bars. Height is fixed and small so card heights stay
+   consistent; max-width:100% keeps it inside the card content width so it
+   never causes horizontal overflow at 375px. Slightly dimmed so it reads as
+   a summary rather than competing with the team rows. */
+.series-card__sparkline {
+  display: block;
+  height: 18px;
+  max-width: 100%;
+  opacity: 0.85;
+}
+
 .series-card__games-wrap {
   display: flex;
   flex-direction: column;
