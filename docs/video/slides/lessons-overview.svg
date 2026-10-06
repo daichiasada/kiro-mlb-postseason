@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Noto Sans JP', sans-serif">
+  <rect width="1920" height="1080" fill="#0b1220"/>
+  <rect x="0" y="0" width="1920" height="14" fill="#8C4FFF"/>
+
+  <text x="120" y="130" font-size="58" font-weight="700" fill="#ffffff">7 つの必須レッスンの実証</text>
+  <rect x="122" y="150" width="340" height="8" rx="4" fill="#01A88D"/>
+  <text x="1800" y="130" font-size="30" fill="#8aa0bd" text-anchor="end">DEMONSTRATED_LESSONS.md に全パスを記載</text>
+
+  <!-- row helper: 3 columns, 3 rows (last row 1 item) -->
+  <!-- 1 -->
+  <rect x="120" y="200" width="540" height="190" rx="18" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <circle cx="170" cy="252" r="30" fill="#8C4FFF"/><text x="170" y="263" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="218" y="263" font-size="36" font-weight="700" fill="#ffffff">仕様主導型開発</text>
+  <text x="150" y="320" font-size="25" fill="#c7d2e0">EARS 形式の要件・設計・タスクが実装に対応</text>
+  <text x="150" y="358" font-size="24" fill="#7ee0cf">.kiro/specs/mlb-postseason/requirements.md</text>
+
+  <!-- 2 -->
+  <rect x="690" y="200" width="540" height="190" rx="18" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <circle cx="740" cy="252" r="30" fill="#8C4FFF"/><text x="740" y="263" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="788" y="263" font-size="36" font-weight="700" fill="#ffffff">運営文書</text>
+  <text x="720" y="320" font-size="25" fill="#c7d2e0">常時適用の steering が全変更を方向付け</text>
+  <text x="720" y="358" font-size="24" fill="#7ee0cf">.kiro/steering/kiro-university.md</text>
+
+  <!-- 3 -->
+  <rect x="1260" y="200" width="540" height="190" rx="18" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <circle cx="1310" cy="252" r="30" fill="#8C4FFF"/><text x="1310" y="263" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="1358" y="263" font-size="36" font-weight="700" fill="#ffffff">フック (Agent Hooks)</text>
+  <text x="1290" y="320" font-size="25" fill="#c7d2e0">保存時にテストと型チェックを自動実行</text>
+  <text x="1290" y="358" font-size="24" fill="#7ee0cf">.kiro/hooks/run-tests-on-save.kiro.hook</text>
+
+  <!-- 4 -->
+  <rect x="120" y="420" width="540" height="190" rx="18" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <circle cx="170" cy="472" r="30" fill="#8C4FFF"/><text x="170" y="483" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+  <text x="218" y="483" font-size="36" font-weight="700" fill="#ffffff">プロパティベーステスト</text>
+  <text x="150" y="540" font-size="25" fill="#c7d2e0">fast-check が実関数を無作為入力で検証</text>
+  <text x="150" y="578" font-size="23" fill="#7ee0cf">backend/src/predict/model.property.test.ts</text>
+
+  <!-- 5 -->
+  <rect x="690" y="420" width="540" height="190" rx="18" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <circle cx="740" cy="472" r="30" fill="#8C4FFF"/><text x="740" y="483" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+  <text x="788" y="483" font-size="36" font-weight="700" fill="#ffffff">パワー (Kiro Powers)</text>
+  <text x="720" y="540" font-size="25" fill="#c7d2e0">Playwright と github-cli のパワーを活用</text>
+  <text x="720" y="578" font-size="24" fill="#7ee0cf">.kiro/powers/mlb-postseason/</text>
+
+  <!-- 6 -->
+  <rect x="1260" y="420" width="540" height="190" rx="18" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <circle cx="1310" cy="472" r="30" fill="#8C4FFF"/><text x="1310" y="483" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+  <text x="1358" y="483" font-size="36" font-weight="700" fill="#ffffff">MCP</text>
+  <text x="1290" y="540" font-size="25" fill="#c7d2e0">aws-docs と fetch の MCP サーバーを設定</text>
+  <text x="1290" y="578" font-size="24" fill="#7ee0cf">.kiro/settings/mcp.json</text>
+
+  <!-- 7 -->
+  <rect x="690" y="640" width="540" height="190" rx="18" fill="#152338" stroke="#8C4FFF" stroke-width="3"/>
+  <circle cx="740" cy="692" r="30" fill="#8C4FFF"/><text x="740" y="703" font-size="34" font-weight="700" fill="#ffffff" text-anchor="middle">7</text>
+  <text x="788" y="703" font-size="36" font-weight="700" fill="#ffffff">カスタムエージェント</text>
+  <text x="720" y="760" font-size="25" fill="#c7d2e0">スタックと規約を内蔵した専用エージェント</text>
+  <text x="720" y="798" font-size="23" fill="#7ee0cf">.kiro/agents/mlb-postseason-dev.json</text>
+
+  <text x="120" y="930" font-size="32" font-weight="700" fill="#ffffff">各レッスンは実在するリポジトリのファイルで実証しています。</text>
+  <text x="120" y="980" font-size="28" fill="#8aa0bd">npm run build / npm test / npm run synth はすべてグリーン。全 .kiro JSON は有効な JSON。</text>
+</svg>

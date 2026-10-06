@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Noto Sans JP', sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#152338"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1920" height="14" fill="#8C4FFF"/>
+  <rect x="0" y="1066" width="1920" height="14" fill="#01A88D"/>
+
+  <text x="960" y="300" font-size="40" font-weight="700" fill="#8C4FFF" text-anchor="middle" letter-spacing="2">MLB POSTSEASON SUMMARY SITE</text>
+
+  <text x="960" y="470" font-size="104" font-weight="700" fill="#ffffff" text-anchor="middle">MLB ポストシーズン</text>
+  <text x="960" y="600" font-size="104" font-weight="700" fill="#ffffff" text-anchor="middle">サマリーサイト</text>
+
+  <text x="960" y="730" font-size="42" fill="#c7d2e0" text-anchor="middle">ブラケット表示と AI 勝敗予測を備えたサーバーレス Web アプリ</text>
+
+  <rect x="470" y="820" width="980" height="92" rx="46" fill="#8C4FFF"/>
+  <text x="960" y="880" font-size="40" font-weight="700" fill="#ffffff" text-anchor="middle">Kiro University Challenge 最終試験 提出作品</text>
+
+  <text x="960" y="1000" font-size="30" fill="#8aa0bd" text-anchor="middle">React / Vite · AWS Lambda · DynamoDB · Amazon Bedrock · AWS CDK</text>
+</svg>

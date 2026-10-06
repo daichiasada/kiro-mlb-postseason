@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Noto Sans JP', sans-serif">
+  <rect width="1920" height="1080" fill="#0b1220"/>
+  <rect x="0" y="0" width="1920" height="14" fill="#8C4FFF"/>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 z" fill="#8aa0bd"/>
+    </marker>
+  </defs>
+
+  <text x="120" y="130" font-size="58" font-weight="700" fill="#ffffff">アーキテクチャのハイライト</text>
+  <rect x="122" y="150" width="340" height="8" rx="4" fill="#01A88D"/>
+  <text x="120" y="210" font-size="32" fill="#8aa0bd">サーバーレス構成。すべて AWS CDK (TypeScript) でワンコマンドデプロイ。</text>
+
+  <!-- User -->
+  <rect x="120" y="470" width="230" height="150" rx="16" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+  <text x="235" y="535" font-size="30" font-weight="700" fill="#1a2029" text-anchor="middle">ユーザー</text>
+  <text x="235" y="578" font-size="26" fill="#334" text-anchor="middle">Web ブラウザ</text>
+  <text x="235" y="608" font-size="24" fill="#334" text-anchor="middle">EN / JA</text>
+
+  <!-- CloudFront + S3 -->
+  <rect x="420" y="300" width="260" height="150" rx="16" fill="#8C4FFF" stroke="#ffffff" stroke-width="2"/>
+  <text x="550" y="360" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">CloudFront</text>
+  <text x="550" y="402" font-size="24" fill="#eadcff" text-anchor="middle">+ S3 (SPA 配信)</text>
+  <text x="550" y="432" font-size="22" fill="#eadcff" text-anchor="middle">React / Vite · OAC</text>
+
+  <rect x="420" y="640" width="260" height="150" rx="16" fill="#277116" stroke="#ffffff" stroke-width="2"/>
+  <text x="550" y="700" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">S3</text>
+  <text x="550" y="742" font-size="24" fill="#ddf3d7" text-anchor="middle">非公開バケット</text>
+  <text x="550" y="772" font-size="22" fill="#ddf3d7" text-anchor="middle">SPA バンドル + config.js</text>
+
+  <!-- API Gateway -->
+  <rect x="760" y="470" width="260" height="150" rx="16" fill="#BC1356" stroke="#ffffff" stroke-width="2"/>
+  <text x="890" y="530" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">API Gateway</text>
+  <text x="890" y="572" font-size="23" fill="#f6c9da" text-anchor="middle">HTTP API · CORS</text>
+  <text x="890" y="602" font-size="22" fill="#f6c9da" text-anchor="middle">/bracket · /prediction</text>
+
+  <!-- Lambdas -->
+  <rect x="1100" y="300" width="260" height="150" rx="16" fill="#D05C17" stroke="#ffffff" stroke-width="2"/>
+  <text x="1230" y="360" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">Lambda</text>
+  <text x="1230" y="402" font-size="25" fill="#ffe0cc" text-anchor="middle">getBracket</text>
+  <text x="1230" y="432" font-size="22" fill="#ffe0cc" text-anchor="middle">Node 20</text>
+
+  <rect x="1100" y="640" width="260" height="150" rx="16" fill="#D05C17" stroke="#ffffff" stroke-width="2"/>
+  <text x="1230" y="700" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">Lambda</text>
+  <text x="1230" y="742" font-size="25" fill="#ffe0cc" text-anchor="middle">getPrediction</text>
+  <text x="1230" y="772" font-size="22" fill="#ffe0cc" text-anchor="middle">Node 20</text>
+
+  <!-- DynamoDB + Bedrock -->
+  <rect x="1440" y="300" width="300" height="150" rx="16" fill="#3334B9" stroke="#ffffff" stroke-width="2"/>
+  <text x="1590" y="360" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">DynamoDB</text>
+  <text x="1590" y="402" font-size="24" fill="#d4d4f3" text-anchor="middle">ブラケットキャッシュ</text>
+  <text x="1590" y="432" font-size="22" fill="#d4d4f3" text-anchor="middle">TTL 約 15 分</text>
+
+  <rect x="1440" y="640" width="300" height="150" rx="16" fill="#01A88D" stroke="#ffffff" stroke-width="2"/>
+  <text x="1590" y="700" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle">Amazon Bedrock</text>
+  <text x="1590" y="742" font-size="24" fill="#ccf3ec" text-anchor="middle">AI ナラティブ生成</text>
+  <text x="1590" y="772" font-size="22" fill="#ccf3ec" text-anchor="middle">決定論的フォールバック</text>
+
+  <!-- edges -->
+  <line x1="350" y1="520" x2="418" y2="400" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="330" y="440" font-size="22" fill="#8aa0bd">HTTPS</text>
+  <line x1="550" y1="450" x2="550" y2="638" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="350" y1="545" x2="758" y2="545" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="420" y="668" font-size="22" fill="#8aa0bd" text-anchor="middle"></text>
+  <line x1="1020" y1="500" x2="1098" y2="400" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="1020" y1="560" x2="1098" y2="700" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="1360" y1="375" x2="1438" y2="375" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="1365" y="358" font-size="22" fill="#8aa0bd">cache</text>
+  <line x1="1360" y1="715" x2="1438" y2="715" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="1365" y="698" font-size="22" fill="#8aa0bd">InvokeModel</text>
+
+  <text x="120" y="900" font-size="34" font-weight="700" fill="#ffffff">キャッシュミス時は MLB Stats API を取得・集約 (2024/2025 はシードにフォールバック)。</text>
+  <text x="120" y="955" font-size="30" fill="#8aa0bd">Bedrock 未達時も決定論的フォールバックで予測ナラティブを必ず返す。</text>
+</svg>

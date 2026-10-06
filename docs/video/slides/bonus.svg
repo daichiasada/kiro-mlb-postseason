@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Noto Sans JP', sans-serif">
+  <rect width="1920" height="1080" fill="#0b1220"/>
+  <rect x="0" y="0" width="1920" height="14" fill="#01A88D"/>
+
+  <text x="120" y="150" font-size="60" font-weight="700" fill="#ffffff">2 つのボーナスの実証</text>
+  <rect x="122" y="172" width="300" height="8" rx="4" fill="#8C4FFF"/>
+
+  <!-- Bonus A -->
+  <rect x="120" y="250" width="820" height="560" rx="24" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <rect x="120" y="250" width="820" height="120" rx="24" fill="#01A88D"/>
+  <rect x="120" y="320" width="820" height="50" fill="#152338"/>
+  <text x="170" y="330" font-size="46" font-weight="700" fill="#ffffff">ボーナス A</text>
+  <text x="170" y="440" font-size="44" font-weight="700" fill="#7ee0cf">Kiro Web / クラウドセッション</text>
+  <text x="170" y="520" font-size="32" fill="#c7d2e0">Kiro Web のクラウドセッションで開発。</text>
+  <text x="170" y="572" font-size="32" fill="#c7d2e0">ローカルとクラウドの開発差分と、</text>
+  <text x="170" y="624" font-size="32" fill="#c7d2e0">新規セッションでの AWS 認証から</text>
+  <text x="170" y="676" font-size="32" fill="#c7d2e0">cdk bootstrap + cdk deploy までの流れを解説。</text>
+  <text x="170" y="760" font-size="30" fill="#7ee0cf">docs/kiro-web-cloud.md</text>
+
+  <!-- Bonus B -->
+  <rect x="980" y="250" width="820" height="560" rx="24" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <rect x="980" y="250" width="820" height="120" rx="24" fill="#8C4FFF"/>
+  <rect x="980" y="320" width="820" height="50" fill="#152338"/>
+  <text x="1030" y="330" font-size="46" font-weight="700" fill="#ffffff">ボーナス B</text>
+  <text x="1030" y="440" font-size="44" font-weight="700" fill="#c7a8ff">Kiro Power のパッケージ化</text>
+  <text x="1030" y="520" font-size="32" fill="#c7d2e0">自己完結型でインストール可能なパワー。</text>
+  <text x="1030" y="572" font-size="32" fill="#c7d2e0">マニフェスト・同梱 steering・スキル・</text>
+  <text x="1030" y="624" font-size="32" fill="#c7d2e0">mlb-fetch MCP サーバー・README を同梱。</text>
+  <text x="1030" y="676" font-size="32" fill="#c7d2e0">npm workspaces 外の非ビルド資産。</text>
+  <text x="1030" y="760" font-size="30" fill="#c7a8ff">.kiro/powers/mlb-postseason/power.json</text>
+
+  <text x="120" y="910" font-size="34" font-weight="700" fill="#ffffff">7 つの必須レッスン＋2 つのボーナスを、実機能を持つプロダクトで実証。</text>
+</svg>
