@@ -29,9 +29,16 @@ Approved architecture (one-command deploy on AWS, TypeScript end to end).
 
 ## AI
 
-- **Amazon Bedrock** with **Anthropic Claude** models (e.g. Claude 3 Haiku / Sonnet) via
-  `InvokeModel` generates the natural-language prediction narrative. The win probability is
-  computed by a deterministic model in code; Bedrock explains it in prose.
+- **Amazon Bedrock** with a **selectable model** via `InvokeModel` generates the
+  natural-language prediction narrative. The options are the **Amazon Nova** family
+  (`us.amazon.nova-micro|lite|pro-v1:0`, default **Nova Lite**) plus the **Anthropic
+  Claude** Haiku inference profile; the request/response JSON is shaped per provider by a
+  small adapter. The narrative is **localized to the UI language (EN / JA)**. The win
+  probability is computed by a deterministic model in code; Bedrock explains it in prose,
+  and a deterministic templated fallback (localized) is returned on any Bedrock error so
+  the endpoint never hard-fails.
+- Each selectable model must be **access-enabled** for Bedrock in the account/region
+  (us-east-1) for live generation; otherwise the deterministic fallback is used.
 
 ## Infrastructure as Code
 

@@ -1,0 +1,107 @@
+import type { Bracket, Series } from '@mlb/shared';
+
+/** A finished AL Wild Card series: Tigers (116) beat Astros (117) 2-0. */
+export const wildCardSeries: Series = {
+  id: '2024-al-wildcard-117-116',
+  round: 'Wild Card',
+  league: 'AL',
+  high: { teamId: 117, wins: 0 },
+  low: { teamId: 116, wins: 2 },
+  bestOf: 3,
+  status: 'final',
+  games: [
+    {
+      gamePk: 775345,
+      date: '2024-10-01',
+      away: { teamId: 116, score: 3, isWinner: true },
+      home: { teamId: 117, score: 1, isWinner: false },
+      seriesGameNumber: 1,
+    },
+    {
+      gamePk: 775344,
+      date: '2024-10-02',
+      away: { teamId: 116, score: 5, isWinner: true },
+      home: { teamId: 117, score: 2, isWinner: false },
+      seriesGameNumber: 2,
+    },
+  ],
+};
+
+/** World Series: Dodgers (119) beat Yankees (147) 4-1. */
+export const worldSeries: Series = {
+  id: '2024-ws-worldseries-119-147',
+  round: 'World Series',
+  league: 'WS',
+  high: { teamId: 119, wins: 4 },
+  low: { teamId: 147, wins: 1 },
+  bestOf: 7,
+  status: 'final',
+  games: [],
+};
+
+export const sampleBracket: Bracket = {
+  season: 2024,
+  updatedAt: '2024-10-31T00:00:00.000Z',
+  series: [wildCardSeries, worldSeries],
+};
+
+/**
+ * An in-progress NL Championship Series: Mets (121) lead Brewers (158) 1-0.
+ * Used to exercise the "active but not final" favorite path.
+ */
+export const inProgressSeries: Series = {
+  id: '2024-nl-championship-121-158',
+  round: 'Championship Series',
+  league: 'NL',
+  high: { teamId: 121, wins: 1 },
+  low: { teamId: 158, wins: 0 },
+  bestOf: 7,
+  status: 'in_progress',
+  games: [],
+};
+
+/**
+ * A predictable (current-season) in-progress series WITH games: Mets (121)
+ * lead Brewers (158) 2-1 after three played games. Used to exercise the
+ * win-probability overlay, which only renders for a predictable season with
+ * games.
+ */
+export const predictableInProgressSeries: Series = {
+  id: '2026-nl-championship-121-158',
+  round: 'Championship Series',
+  league: 'NL',
+  high: { teamId: 121, wins: 2 },
+  low: { teamId: 158, wins: 1 },
+  bestOf: 7,
+  status: 'in_progress',
+  games: [
+    {
+      gamePk: 800001,
+      date: '2026-10-12',
+      away: { teamId: 158, score: 2, isWinner: false },
+      home: { teamId: 121, score: 5, isWinner: true },
+      seriesGameNumber: 1,
+    },
+    {
+      gamePk: 800002,
+      date: '2026-10-13',
+      away: { teamId: 158, score: 4, isWinner: true },
+      home: { teamId: 121, score: 1, isWinner: false },
+      seriesGameNumber: 2,
+    },
+    {
+      gamePk: 800003,
+      date: '2026-10-15',
+      away: { teamId: 121, score: 6, isWinner: true },
+      home: { teamId: 158, score: 3, isWinner: false },
+      seriesGameNumber: 3,
+    },
+  ],
+};
+
+/** A predictable (2026) bracket wrapping the in-progress series above. */
+export const predictableBracket: Bracket = {
+  season: 2026,
+  updatedAt: '2026-10-15T00:00:00.000Z',
+  series: [predictableInProgressSeries],
+};

@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "name": "Run Playwright e2e suite (manual)",
+  "description": "Manually triggered hook that runs the frontend Playwright end-to-end UI suite against the built SPA. Disabled by default because it needs a browser; enable it in the IDE when you want to validate bracket, standings, and prediction flows after UI changes.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "frontend/**/*.tsx",
+      "frontend/e2e/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the Playwright e2e suite with `npm run test:e2e -w @mlb/frontend` and report which specs (home, prediction) passed or failed. Summarize any UI regressions and suggest fixes."
+  }
+}

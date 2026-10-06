@@ -1,0 +1,103 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Architecture" id="mlb-arch">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="860" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="MLB Postseason Summary Site — Architecture" style="text;html=1;fontSize=18;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Client -->
+        <mxCell id="client" value="User (Web Browser)&#10;EN / JA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="50" y="150" width="170" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- AWS Account boundary -->
+        <mxCell id="aws" value="AWS Account 051826704233 (us-east-1)&#10;CloudFormation stack: MlbPostseasonStack" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#D79B00;fillColor=none;verticalAlign=top;fontStyle=1;fontSize=13;align=left;spacingLeft=10;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="300" y="90" width="760" height="560" as="geometry" />
+        </mxCell>
+
+        <!-- CloudFront -->
+        <mxCell id="cf" value="Amazon CloudFront&#10;REDIRECT_TO_HTTPS, OAC&#10;SPA 403/404 -&gt; /index.html" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;" vertex="1" parent="1">
+          <mxGeometry x="360" y="150" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- S3 -->
+        <mxCell id="s3" value="Amazon S3 (private)&#10;SPA bundle + deploy-time /config.js&#10;Block Public Access" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#60A337;gradientDirection=north;fillColor=#277116;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" vertex="1" parent="1">
+          <mxGeometry x="360" y="320" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- API Gateway -->
+        <mxCell id="api" value="Amazon API Gateway&#10;HTTP API, CORS&#10;GET /bracket; GET+POST /prediction" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F34482;gradientDirection=north;fillColor=#BC1356;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="1">
+          <mxGeometry x="610" y="150" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- Lambda getBracket -->
+        <mxCell id="lambdaBracket" value="AWS Lambda getBracket&#10;Node 20, 256MB / 15s" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="610" y="320" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- Lambda getPrediction -->
+        <mxCell id="lambdaPrediction" value="AWS Lambda getPrediction&#10;Node 20, 512MB / 30s" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#F78E04;gradientDirection=north;fillColor=#D05C17;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="1">
+          <mxGeometry x="610" y="500" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- DynamoDB -->
+        <mxCell id="ddb" value="Amazon DynamoDB&#10;BracketCacheTable, PAY_PER_REQUEST&#10;pk, TTL on ttl (~15min)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#4D72F3;gradientDirection=north;fillColor=#3334B9;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" vertex="1" parent="1">
+          <mxGeometry x="900" y="320" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- Bedrock -->
+        <mxCell id="bedrock" value="Amazon Bedrock&#10;InvokeModel&#10;us.anthropic.claude-haiku-4-5-20251001-v1:0&#10;cross-region profile; deterministic fallback" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=#55B9A6;gradientDirection=north;fillColor=#01A88D;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sagemaker;" vertex="1" parent="1">
+          <mxGeometry x="900" y="500" width="78" height="78" as="geometry" />
+        </mxCell>
+
+        <!-- External: MLB Stats API -->
+        <mxCell id="mlb" value="MLB Stats API&#10;statsapi.mlb.com&#10;public, no key" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="900" y="150" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- External: CDK IaC -->
+        <mxCell id="cdk" value="AWS CDK (TypeScript)&#10;infra/ — one-command deploy&#10;MlbPostseasonStack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="560" width="190" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="client" target="cf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="OAC: static SPA + /config.js" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="cf" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="fetch /bracket, /prediction" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="client" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="GET /bracket" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="api" target="lambdaBracket">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="GET+POST /prediction" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="api" target="lambdaPrediction">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="cache read/write" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="lambdaBracket" target="ddb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="cache miss: fetch + aggregate&#10;(seed fallback 2024/2025)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;dashed=1;" edge="1" parent="1" source="lambdaBracket" target="mlb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="reads bracket (same cache/MLB path)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="lambdaPrediction" target="ddb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="InvokeModel (narrative)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;" edge="1" parent="1" source="lambdaPrediction" target="bedrock">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="provisions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;dashed=1;" edge="1" parent="1" source="cdk" target="aws">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="National League mark">
+  <circle cx="24" cy="24" r="22" fill="#1b3a6b" />
+  <circle cx="24" cy="24" r="22" fill="none" stroke="#ffffff" stroke-width="2" />
+  <text x="24" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">NL</text>
+</svg>

@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-004",
+  "type": "docs",
+  "description": "Truthful spec + README documentation for the prediction cache, throttling, and metrics (spec-driven development is graded; both READMEs must stay accurate). Update .kiro/specs/mlb-postseason/{requirements.md,design.md,tasks.md} and both README.md and README.ja.md to describe exactly what FEAT-002 and FEAT-003 shipped: the DynamoDB prediction cache keyed by seriesId + win-count situation + language + model + accuracy, cache-first behavior that skips Bedrock on repeat same-situation requests, win-count-change (game result) invalidation, the TTL backstop, API Gateway throttling (with the chosen rate/burst), and the CloudWatch metrics (EMF namespace + metric names, or PutMetricData + IAM if that was chosen). Documentation must match the code as actually implemented; read the final source before writing. Depends on FEAT-002 and FEAT-003.",
+  "status": "completed",
+  "steps": [
+    "Read the final implemented source first (backend/src/service/predictionCacheKey.ts, backend/src/store/dynamo.ts prediction cache additions and TTL constant, backend/src/service/bracketService.ts cache wiring, backend/src/metrics/emf.ts namespace/metric names, infra/lib/mlb-postseason-stack.ts throttling values and any IAM) so the docs state the actual key format, TTL, throttle rate/burst, and metric names.",
+    "Update .kiro/specs/mlb-postseason/requirements.md: add a requirement for prediction caching and cost control covering the three Issue #23 acceptance criteria (2nd same-situation request does not call Bedrock; game-result update invalidates the cache; CDK assertion test verifies throttling) plus the metrics visibility goal.",
+    "Update .kiro/specs/mlb-postseason/design.md: document the cache key format (PREDICTION#<seriesId>#<highWins>-<lowWins>#<language>#<modelId>#<accuracy>), where the cache sits in getPrediction relative to the results-only/final/not-started short-circuits, the TTL backstop and why the win-count-in-key design is the primary invalidation mechanism, the API Gateway default-stage throttling (rate/burst), and the metrics approach (EMF namespace MlbPostseason/Prediction and metric names, or PutMetricData + IAM).",
+    "Update .kiro/specs/mlb-postseason/tasks.md: add a task entry marking the Issue #23 cache/throttling/metrics work as implemented with pointers to the real modules and tests.",
+    "Update README.md: in the architecture/features or caching section, briefly document the prediction cache (what is cached, the key, invalidation on series progress, TTL), the throttling limits, and the CloudWatch metrics. Keep it concise and accurate.",
+    "Update README.ja.md with the equivalent Japanese content mirroring the README.md additions (same facts, localized prose; team names and identifiers stay as-is per the i18n convention).",
+    "Do NOT invent numbers: use the exact key format, TTL, rate/burst, namespace, and metric names from the implemented code. No em dashes anywhere."
+  ],
+  "acceptance_criteria": [
+    "requirements.md, design.md, and tasks.md each describe the Issue #23 cache + throttling + metrics behavior accurately and reference the real modules/tests",
+    "README.md documents the prediction cache (key, invalidation, TTL), the throttling limits, and the metrics with values matching the code",
+    "README.ja.md mirrors the README.md additions in Japanese with the same facts",
+    "No documented value (key format, TTL, rate/burst, namespace, metric names) contradicts the implemented source",
+    "No em dashes are introduced"
+  ],
+  "verification": [
+    "grep the chosen cache-key format, throttle rate/burst, and metric namespace in both READMEs and the three spec files and confirm they match the source constants",
+    "npm run build (exit 0; docs-only change must not break the build)"
+  ],
+  "blocked_reason": null,
+  "findings": "Docs-only. Verified facts against source before writing: cache key PREDICTION#<seriesId>#<highWins>-<lowWins>#<language>#<modelId>#<accuracy> (predictionCacheKey.ts; undefined accuracy -> DEFAULT_ACCURACY 0.5), PREDICTION_TTL_SECONDS=15min backstop + only mode:'prediction' cached + no-op when TABLE_NAME unset (dynamo.ts), cache sits AFTER the 3 short-circuits with HIT skipping Bedrock and win-count change invalidating via key (bracketService.ts), EMF metrics namespace MlbPostseason/Prediction with PredictionCacheHit/PredictionCacheMiss/BedrockInvokeCount (0 hit/1 miss), empty dimensions, seriesId as log property, no PutMetricData IAM (emf.ts), and $default-stage ThrottlingRateLimit=20 / ThrottlingBurstLimit=40 asserted in infra/test/stack.test.ts. Added Requirement 20 to requirements.md, a 'Prediction cache and cost control (Issue #23)' section + getPrediction/data-store/infra updates to design.md, a task-issue-23 block to tasks.md, and matching EN/JA README sections. No em dashes introduced in any new content. `npm run build` exit 0."
+}

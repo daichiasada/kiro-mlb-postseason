@@ -1,0 +1,20 @@
+{
+  "task_id": "task-issue-18-favorites",
+  "task_description": "Implement GitHub Issue #18: let fans mark MLB teams as favorites (persisted to localStorage, multiple allowed), highlight a favorite team's path through the bracket with a non-color-only cue plus a pinned header status, switch to an 'Eliminated'/'敗退' indication when a favorite loses a final series, and add a filter to show only favorite teams' series. Frontend-only (plus graded spec/README docs). EN/JA throughout and accessible. Branch feat/mlb-postseason-site; incremental commits; no push/PR/deploy (orchestrator owns publishing).",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "review": {
+    "verdict": "APPROVED",
+    "pass": "v1",
+    "file": ".agents/tasks/task-issue-18-favorites/2026-10-05-101109-review.md",
+    "non_blocking_notes": "Dead i18n key favorites.header.status.inProgress; imprecise between-rounds 'starts soon' status; favorites-filter button nested in refresh-bar testid. All cosmetic, none blocking."
+  },
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "Ordered npm run build passes. npm test: shared 34, backend 94, frontend 166, infra 8 all pass. npm run synth passes (CDK nodejs20.x deprecation warnings pre-existing). npm run test:e2e -w frontend: 42 passed incl. favorites.spec.ts. Test quality verified: bracketLayout helper tests assert eliminated/champion/in-progress/not-in-bracket outcomes that would fail if logic reverted; e2e asserts the non-color marker class + visually-hidden label, the active vs 敗退 pin status, the favorites-only filter, and the localized empty state. No Dockerfile build run (frontend-only change). #22 keyboard model and #17/#20 UI unregressed (their tests still green)."
+  }
+}

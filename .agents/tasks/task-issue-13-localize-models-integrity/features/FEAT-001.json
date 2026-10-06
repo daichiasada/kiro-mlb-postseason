@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish and confirm the green baseline before changing behavior. Install/verify dependencies and run the full build + test + synth so later features start from a known-good state. (Already verified green by the planner: build, npm test, synth all pass; this feature records the exact commands for the coder to reconfirm.)",
+  "status": "completed",
+  "steps": [
+    "Ensure npm is on PATH: prefix every command with PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" (node is at /usr/local/bin/node but npm is only under that nvm bin).",
+    "Run `npm run build` from the repo root and confirm all four workspaces compile (shared -> backend -> frontend -> infra).",
+    "Run `npm test` from the repo root and confirm all Vitest suites (unit + property + infra synth assertions) pass.",
+    "Run `npm run synth` and confirm cdk synth succeeds with no AWS calls.",
+    "If any dependency is missing, run `npm install` once at the repo root."
+  ],
+  "acceptance_criteria": [
+    "`npm run build` exits 0 with all four workspaces built.",
+    "`npm test` exits 0 with all suites passing.",
+    "`npm run synth` exits 0."
+  ],
+  "verification": [
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+    "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": "Verified green by the planner before delegation: `npm run build` built all four workspaces (shared/backend/frontend/infra); `npm test` passed; `npm run synth` succeeded (only a benign nodejs20.x deprecation warning). npm is reached via PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\"."
+}

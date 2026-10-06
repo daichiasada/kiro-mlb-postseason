@@ -1,0 +1,36 @@
+{
+  "project_type": "Serverless MLB postseason summary site: React+Vite SPA (S3+CloudFront) + API Gateway HTTP API -> two Node20 Lambdas + DynamoDB cache + Amazon Bedrock, provisioned by AWS CDK (TypeScript). npm-workspaces monorepo.",
+  "language": "TypeScript",
+  "build_system": "npm workspaces. Root scripts: build (shared->backend->frontend->infra), test (vitest across workspaces), typecheck, synth (builds frontend then cdk synth), deploy. Node may not be on PATH; prefix with PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\".",
+  "test_framework": "Vitest, colocated *.test.ts; AWS SDK and MLB Stats API mocked (no live calls).",
+  "build_command": "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+  "test_command": "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+  "verification_instructions": "This is a docs-only task (docs/ + README files). No source code should change. Sanity checks: validate docs/architecture.drawio and docs/architecture.svg are well-formed XML (python3 -c 'import xml.dom.minidom,sys; xml.dom.minidom.parse(path)'); confirm docs/architecture.png is a non-empty valid PNG (file signature / size); confirm README.md (EN) and README.ja.md (JA) both exist with language-switcher lines and that the embedded ![Architecture](docs/architecture.png) path resolves to a real file. Since no non-doc files change, running the full build/test is optional, but a `git diff --stat` confirming only docs/ + README changed is required.",
+  "snapshot_or_generated_files": "docs/architecture.png is generated FROM docs/architecture.svg using cairosvg (python3 -m cairosvg docs/architecture.svg -o docs/architecture.png). cairosvg is already installed in this environment (pip). The .drawio and .svg are hand-authored. All three are committed artifacts.",
+  "setup_instructions": "cairosvg is already installed (pip3 install cairosvg succeeded; OPEN_INTERNET). Node 22 at /opt/toolchains/.nvm/versions/node/v22.23.3/bin.",
+  "environment_constraints": "Network is OPEN_INTERNET. No draw.io GUI, rsvg-convert, ImageMagick, or inkscape. PNG export is done via python3 cairosvg from the hand-authored SVG. The .drawio is authored by hand as draw.io XML using the native AWS4 resource-icon shapes (shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.*) exactly as the reference repo daichiasada/kiro-worldriskmap does, so it opens cleanly in diagrams.net with real AWS icons.",
+  "contribution_requirements": ".kiro/steering/*.md is inclusion:always: incremental commits, docs must stay TRUTHFUL to the implementation. Stay on branch feat/mlb-postseason-site. Do NOT push, open PRs, or deploy. Make local commits only.",
+  "key_patterns": "Reference repo README convention: line 3 is the language switcher. README.md (EN baseline): `**English** | [日本語](README.ja.md)`. README.ja.md: `[English](README.md) | **日本語**`. Architecture section embeds `![Architecture](docs/architecture.png)` then links the editable .drawio and .svg. draw.io file uses mxGraphModel with mxgraph.aws4 resource icons; a dashed 'AWS Account' boundary box; external services as plain colored boxes.",
+  "relevant_files": [
+    "README.md (current single JA/EN-mixed file, source of truth to port)",
+    "infra/lib/mlb-postseason-stack.ts (authoritative real architecture: DynamoDB TTL table, two NodejsFunction Lambdas getBracket/getPrediction Node20, HTTP API with CORS routes GET /bracket and GET+POST /prediction, private S3 + CloudFront OAC with 403/404->index.html, Bedrock InvokeModel IAM, config.js injection)",
+    "backend/src/handlers/getBracket.ts",
+    "backend/src/handlers/getPrediction.ts",
+    "backend/src/service/bracketService.ts (resolution order: DynamoDB cache -> MLB Stats API -> seed fallback)",
+    "backend/src/mlb/client.ts (statsapi.mlb.com public API)",
+    "backend/src/bedrock/narrative.ts (Bedrock InvokeModel, model us.anthropic.claude-haiku-4-5-20251001-v1:0 cross-region inference profile, deterministic fallback)",
+    "docs/ (currently only kiro-web-cloud.md)"
+  ],
+  "directory_structure": "shared/ (@mlb/shared domain types + seed), backend/ (@mlb/backend handlers/mlb/predict/bedrock/service/store), frontend/ (@mlb/frontend React+Vite SPA), infra/ (@mlb/infra CDK), docs/, .kiro/steering/ (inclusion:always).",
+  "real_architecture_facts": {
+    "account_region": "AWS account 051826704233, us-east-1",
+    "frontend": "React + TypeScript (Vite) SPA on private S3 (Block Public Access) served via CloudFront with OAC, REDIRECT_TO_HTTPS, SPA 403/404 -> /index.html (HTTP 200). Deploy-time /config.js injects window.__API_BASE_URL__.",
+    "api": "API Gateway HTTP API (apigwv2) with CORS (CloudFront origin + localhost:5173/3000). Routes: GET /bracket, GET + POST /prediction.",
+    "lambdas": "Two NodejsFunction (esbuild bundled, Node 20): getBracketFn (256MB/15s), getPredictionFn (512MB/30s, Bedrock).",
+    "data": "DynamoDB table BracketCacheTable, PAY_PER_REQUEST, partition key pk, TTL attribute ttl (~15min). getBracket resolution: cache -> MLB Stats API fetch+aggregate+cache -> bundled seed fallback (2024/2025).",
+    "external": "Public MLB Stats API https://statsapi.mlb.com/api/v1/schedule/postseason (no API key).",
+    "ai": "Amazon Bedrock InvokeModel for prediction narrative; model us.anthropic.claude-haiku-4-5-20251001-v1:0 (cross-region inference profile, prefix us.); deterministic fallback on error. IAM grants bedrock:InvokeModel on foundation-model/* (wildcard region) + inference-profile/* in account.",
+    "iac": "AWS CDK (TypeScript) in infra/, single stack MlbPostseasonStack.",
+    "note": "Prediction only offered for the current/in-progress season (2026); finished series and results-only seasons (2024/2025) show results, never a prediction."
+  }
+}

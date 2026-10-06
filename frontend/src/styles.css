@@ -1,0 +1,1678 @@
+/*
+  Theming model (Issue #22):
+  ALL themeable colors are CSS custom properties declared on :root (the light
+  palette) and overridden under [data-theme="dark"] (the dark palette). The app
+  sets data-theme on <html>, so every route inherits the active theme. The rest
+  of the stylesheet references ONLY these variables (plus the navy header
+  gradient, which is intentionally dark in both themes with light text on it).
+
+  Every foreground/background pair below is chosen to clear WCAG AA (>=4.5:1 for
+  normal text, >=3:1 for large text and UI affordances) in BOTH palettes.
+*/
+:root {
+  --navy: #1b3a6b;
+  --navy-dark: #0b2748;
+  /* Navy used as FOREGROUND text on surfaces (headings, links, game numbers).
+     Kept as a distinct variable from --navy (which also fills backgrounds) so
+     the dark palette can brighten the text role to clear WCAG AA without
+     lightening the navy fills/gradients. In light mode it equals --navy. */
+  --heading: #1b3a6b;
+  --red: #c8102e;
+  --gold: #8a6400;
+  --ink: #0f172a;
+  --muted: #5b6676;
+  --surface: #ffffff;
+  --surface-2: #fbfcfe;
+  --surface-3: #f1f5f9;
+  --bg: #eef2f7;
+  --border: #d7dee8;
+  --border-strong: #c3d0e6;
+
+  /* Accent used for links/interactive text (accuracy nav etc.). */
+  --accent: #2563eb;
+  --accent-on: #ffffff;
+
+  /* Header text colors (on the navy gradient). */
+  --header-ink: #ffffff;
+  --header-muted: #c4d2e8;
+
+  /* Buttons rendered as "surface + navy text" (refresh/season/toggle). */
+  --control-bg: #ffffff;
+  --control-ink: var(--navy);
+  --control-border: var(--border-strong);
+
+  /* Status chips. */
+  --chip-bg: #e2e8f0;
+  --chip-ink: #334155;
+  --chip-final-bg: #dcfce7;
+  --chip-final-ink: #14532d;
+  --chip-progress-bg: #fef3c7;
+  --chip-progress-ink: #713f12;
+
+  /* Winner / leader row highlights. */
+  --winner-bg: #ecfdf5;
+  --winner-border: #86efac;
+  --winner-ink: #14532d;
+  --leader-bg: #f1f5f9;
+
+  /* Favorite highlight (Issue #18). The outline is a dark, high-contrast gold
+     so a favorite series is distinguishable even in grayscale (it pairs with a
+     thick/dashed border + star icon, so the cue is never color-only). The pin
+     surface and the eliminated badge reuse the chip tokens for AA contrast. */
+  --favorite-outline: #8a6400;
+  --favorite-marker: #8a6400;
+  --favorite-pin-bg: #fff8e6;
+  --favorite-pin-border: #e4c35a;
+  --favorite-pin-ink: #5a4300;
+  --favorite-elim-bg: #fdecea;
+  --favorite-elim-ink: #8a2a1b;
+
+  /* Notices. */
+  --notice-bg: #fff7e6;
+  --notice-border: #f0d58a;
+  --notice-ink: #6b4e00;
+  --notice-alert-bg: #fdecea;
+  --notice-alert-border: #f1b0a8;
+  --notice-alert-ink: #8a2a1b;
+  --upcoming-bg: #eef3fb;
+  --upcoming-border: #b9c8e2;
+  --upcoming-ink: var(--navy);
+
+  /* Prediction bar track. */
+  --bar-track: #e2e8f0;
+
+  /* Keyboard focus ring. A high-contrast blue that is legible on the light
+     surfaces; the dark palette overrides it with a brighter tone. */
+  --focus-ring: #1d4ed8;
+
+  color-scheme: light;
+}
+
+/*
+  Dark palette. Backgrounds get darker as surfaces nest; text stays light with
+  AA contrast. The navy header gradient is kept (it is already dark) and its
+  text remains light, so it reads the same in both themes.
+*/
+[data-theme='dark'] {
+  --navy: #2b4f85;
+  --navy-dark: #13294b;
+  /* Brightened navy for text on dark surfaces so headings/links/game numbers
+     clear WCAG AA (>=4.5:1) against every dark surface (>=5.9:1 here). */
+  --heading: #8fb4f2;
+  --red: #ff6b7d;
+  --gold: #e3b341;
+  --ink: #e6edf5;
+  --muted: #9aa7b8;
+  --surface: #141b26;
+  --surface-2: #1b2432;
+  --surface-3: #222d3d;
+  --bg: #0b1017;
+  --border: #2b3647;
+  --border-strong: #3a4759;
+
+  --accent: #7aa7ff;
+  --accent-on: #0b1017;
+
+  --header-ink: #ffffff;
+  --header-muted: #c4d2e8;
+
+  --control-bg: #1b2432;
+  --control-ink: #cfe0ff;
+  --control-border: #3a4759;
+
+  --chip-bg: #2b3647;
+  --chip-ink: #cbd5e1;
+  --chip-final-bg: #14532d;
+  --chip-final-ink: #bbf7d0;
+  --chip-progress-bg: #713f12;
+  --chip-progress-ink: #fde68a;
+
+  --winner-bg: #0f3b2e;
+  --winner-border: #1f6f52;
+  --winner-ink: #bbf7d0;
+  --leader-bg: #222d3d;
+
+  /* Favorite highlight in dark mode: a bright gold outline/marker that clears
+     AA against the dark surfaces, plus a tinted pin surface and eliminated
+     badge. The non-color cues (thick dashed border + star icon) carry the
+     meaning in grayscale regardless of palette. */
+  --favorite-outline: #e3b341;
+  --favorite-marker: #e3b341;
+  --favorite-pin-bg: #2a2410;
+  --favorite-pin-border: #6b561f;
+  --favorite-pin-ink: #fde68a;
+  --favorite-elim-bg: #3a1c18;
+  --favorite-elim-ink: #fca5a5;
+
+  --notice-bg: #3a2f12;
+  --notice-border: #6b561f;
+  --notice-ink: #fde68a;
+  --notice-alert-bg: #3a1c18;
+  --notice-alert-border: #7a3b33;
+  --notice-alert-ink: #fca5a5;
+  --upcoming-bg: #182438;
+  --upcoming-border: #2f4a74;
+  --upcoming-ink: #cfe0ff;
+
+  --bar-track: #2b3647;
+
+  /* Brighter ring so the keyboard focus outline stays legible on the dark
+     surfaces. */
+  --focus-ring: #93c5fd;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Theme-aware keyboard focus ring. Only shown for keyboard users
+   (:focus-visible) so mouse clicks stay clean. Legible in light and dark via
+   the --focus-ring variable. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The bracket series cards are focusable (roving tabindex); give the focused
+   card a slightly stronger ring so keyboard position is obvious. */
+.series-card:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+/* Header */
+.app__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, var(--navy-dark), var(--navy));
+  color: var(--header-ink);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  overflow: hidden;
+}
+
+.app__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  z-index: 1;
+}
+
+.app__title {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+}
+
+.app__subtitle {
+  margin: 0.2rem 0 0;
+  color: var(--header-muted);
+  font-size: 0.9rem;
+}
+
+.app__hero {
+  width: 260px;
+  max-width: 40%;
+  border-radius: 12px;
+}
+
+/* Header control cluster (theme + language toggles). */
+.app__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+/* Segmented toggles (language + theme) in the header */
+.app__lang,
+.app__theme {
+  display: inline-flex;
+  gap: 0.25rem;
+  z-index: 1;
+  padding: 0.2rem;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+.app__lang-button,
+.app__theme-button {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  background: transparent;
+  color: var(--header-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.app__lang-button:hover,
+.app__theme-button:hover {
+  color: #fff;
+}
+
+.app__lang-button--active,
+.app__theme-button--active {
+  background: #fff;
+  border-color: #fff;
+  color: var(--navy-dark);
+}
+
+.app__status {
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.app__status--error {
+  color: var(--red);
+}
+
+.app__notice {
+  margin: 1rem 0 0;
+  padding: 0.6rem 0.9rem;
+  background: var(--notice-bg);
+  border: 1px solid var(--notice-border);
+  border-radius: 8px;
+  color: var(--notice-ink);
+  font-size: 0.9rem;
+}
+
+.app__notice--integrity {
+  background: var(--notice-alert-bg);
+  border-color: var(--notice-alert-border);
+  color: var(--notice-alert-ink);
+}
+
+.app__notice--refresh {
+  background: var(--notice-alert-bg);
+  border-color: var(--notice-alert-border);
+  color: var(--notice-alert-ink);
+}
+
+/* Last-updated line + manual refresh button (in-progress auto-refresh) */
+.app__refresh {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.app__refresh-updated {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.app__refresh-button {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--navy);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--control-ink);
+  cursor: pointer;
+}
+
+.app__refresh-button:hover:not(:disabled) {
+  background: var(--navy);
+  color: #fff;
+}
+
+.app__refresh-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.app__status--upcoming {
+  margin: 1.25rem 0 0;
+  padding: 1.25rem;
+  background: var(--upcoming-bg);
+  border: 1px dashed var(--upcoming-border);
+  border-radius: 10px;
+  color: var(--upcoming-ink);
+}
+
+/* Season selector */
+.app__seasons {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.app__seasons-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.app__season-buttons {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.app__season-button {
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+  background: var(--control-bg);
+  color: var(--control-ink);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.app__season-button:hover {
+  border-color: var(--navy);
+}
+
+.app__season-button--active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.app__main {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.app__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.app__footer {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* Bracket */
+.bracket {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.bracket__legend {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.bracket__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.bracket__grid {
+  display: grid;
+  gap: 0.9rem;
+  /* Keep every round column anchored to the top so cards line up across
+     columns regardless of how many series a round has (fixes the uneven
+     "gatagata" drift). Expanding one card's game list only grows that grid
+     row; other columns stay aligned. */
+  align-items: start;
+}
+
+.bracket__column {
+  min-width: 0;
+}
+
+.bracket__round-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--heading);
+  text-align: center;
+}
+
+.bracket__series-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+/* Series card */
+.series-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* With the game list collapsed by default, cards differ only by their
+     action row. Push any single trailing action (toggle / detail link /
+     predict button) to the bottom so headers, teams, and meta line up across
+     cards and columns. */
+  justify-content: flex-start;
+}
+
+.series-card__games-wrap,
+.series-card__detail-link,
+.series-card__predict {
+  margin-top: auto;
+}
+
+.series-card--selected {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.25);
+}
+
+.series-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.series-card__round {
+  color: var(--muted);
+}
+
+.series-card__status {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+}
+
+.series-card__status[data-status='final'] {
+  background: var(--chip-final-bg);
+  color: var(--chip-final-ink);
+}
+
+.series-card__status[data-status='in_progress'] {
+  background: var(--chip-progress-bg);
+  color: var(--chip-progress-ink);
+}
+
+.series-card__teams {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.series-team {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.3rem;
+  border-radius: 8px;
+}
+
+/* The team name takes the remaining width so the wins + star stay right-aligned
+   (replacing the former fixed 3-column grid now that the row also carries an
+   optional "Eliminated" badge and the favorite star). */
+.series-team__name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.series-team--winner {
+  background: var(--winner-bg);
+  color: var(--winner-ink);
+  font-weight: 700;
+}
+
+.series-team--leader {
+  background: var(--leader-bg);
+}
+
+.series-team__name {
+  font-size: 0.92rem;
+}
+
+.series-team__wins {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.series-card__meta {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* Score-difference sparkline (Issue #24): a subtle, decorative strip of
+   per-game run-margin bars. Height is fixed and small so card heights stay
+   consistent; max-width:100% keeps it inside the card content width so it
+   never causes horizontal overflow at 375px. Slightly dimmed so it reads as
+   a summary rather than competing with the team rows. */
+.series-card__sparkline {
+  display: block;
+  height: 18px;
+  max-width: 100%;
+  opacity: 0.85;
+}
+
+.series-card__games-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.series-card__games-toggle {
+  align-self: flex-start;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: var(--control-bg);
+  color: var(--control-ink);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.series-card__games-toggle:hover {
+  border-color: var(--navy);
+}
+
+.series-card__games {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+/* `hidden` collapses the list entirely so a collapsed card stays compact. */
+.series-card__games[hidden] {
+  display: none;
+}
+
+.series-card__game {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.series-card__game-num {
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.series-card__predict {
+  margin-top: 0.3rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  background: var(--navy);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.series-card__predict:hover {
+  background: var(--navy-dark);
+}
+
+.series-card--selected .series-card__predict {
+  background: var(--red);
+}
+
+.series-card__detail-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  background: var(--control-bg);
+  color: var(--control-ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.series-card__detail-link:hover {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
+}
+
+/* Series detail page */
+.detail__nav {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* On the detail page the toggles sit on the page background, not the navy
+   header, so give the segmented pills a surface-tinted track and readable
+   ink in both themes. */
+.app__controls--detail .app__lang,
+.app__controls--detail .app__theme {
+  background: var(--surface-3);
+}
+
+.app__controls--detail .app__lang-button,
+.app__controls--detail .app__theme-button {
+  color: var(--muted);
+}
+
+.app__controls--detail .app__lang-button:hover,
+.app__controls--detail .app__theme-button:hover {
+  color: var(--ink);
+}
+
+.app__controls--detail .app__lang-button--active,
+.app__controls--detail .app__theme-button--active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.detail__back {
+  display: inline-block;
+  color: var(--heading);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.detail__back:hover {
+  text-decoration: underline;
+}
+
+.detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.detail__round {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.detail__title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--heading);
+}
+
+.detail__result {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.detail__teams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.detail__team {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.detail__team--winner {
+  background: var(--winner-bg);
+  border-color: var(--winner-border);
+  color: var(--winner-ink);
+  font-weight: 700;
+}
+
+.detail__team-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detail__team-wins {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.detail__games-title {
+  margin: 1rem 0 0.6rem;
+  font-size: 1rem;
+  color: var(--heading);
+}
+
+.detail__games {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail__game {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.detail__game-num {
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.detail__game-side {
+  font-variant-numeric: tabular-nums;
+}
+
+.detail__game-side--winner {
+  font-weight: 700;
+  color: var(--winner-ink);
+}
+
+.detail__game-at {
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Per-game accordion (Issue #19) */
+.detail__game {
+  display: block;
+}
+
+.detail__game-row {
+  display: block;
+}
+
+.detail__game-toggle {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.detail__game-toggle .detail__game-time {
+  color: var(--muted);
+  font-size: 0.82rem;
+  grid-column: 2 / -1;
+}
+
+.detail__game-toggle-label {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--link, var(--heading));
+}
+
+.detail__game-panel {
+  margin-top: 0.6rem;
+}
+
+.detail__game-status {
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.detail__game-status--error {
+  color: var(--heading);
+}
+
+.detail__game-venue {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.detail__game-venue-label {
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.detail__game-pitchers {
+  margin: 0 0 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+}
+
+.detail__game-pitcher {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.detail__game-pitcher dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.detail__game-pitcher dd {
+  margin: 0;
+}
+
+/* The scroll container absorbs the table's width on narrow screens so ONLY the
+   table scrolls horizontally and the rest of the page keeps the 375px
+   no-horizontal-overflow guarantee (criterion 3). */
+.detail__linescore-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.detail__linescore {
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail__linescore th,
+.detail__linescore td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.detail__linescore th[scope='row'] {
+  text-align: left;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.detail__linescore-total {
+  font-weight: 700;
+}
+
+.detail__game-highlight {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+}
+
+.detail__game-highlight-link {
+  color: var(--heading);
+  text-decoration: underline;
+}
+
+.detail--missing {
+  text-align: center;
+}
+
+.detail__hint {
+  margin: 0.5rem 0;
+  color: var(--muted);
+}
+
+/* Series flow charts (Issue #24) */
+.series-flow {
+  margin: 1.25rem 0 0;
+}
+
+.series-flow__heading {
+  margin: 1rem 0 0.6rem;
+  font-size: 1rem;
+  color: var(--heading);
+}
+
+.series-flow__figure {
+  margin: 0 0 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.series-flow__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.series-flow__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+/* Axes/gridlines/frames reference theme vars so they are legible in both
+   light and dark palettes. */
+.series-flow__axis line {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.series-flow__tick {
+  fill: var(--muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.series-flow__bar-label {
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.series-flow__line {
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.series-flow__line--prob {
+  stroke: var(--focus-ring);
+}
+
+.series-flow__dot {
+  fill: var(--focus-ring);
+}
+
+.series-flow__table-toggle {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--heading);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.series-flow__table-toggle:hover {
+  background: var(--surface-3);
+}
+
+.series-flow__table-wrap {
+  margin-top: 0.6rem;
+  overflow-x: auto;
+}
+
+.series-flow__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.series-flow__table caption {
+  text-align: left;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.series-flow__table th,
+.series-flow__table td {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  color: var(--ink);
+}
+
+.series-flow__table thead th {
+  background: var(--surface-3);
+  color: var(--heading);
+}
+
+/* Standings */
+.standings,
+.prediction {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.standings__title,
+.prediction__title {
+  margin: 0 0 0.8rem;
+  font-size: 1.1rem;
+  color: var(--heading);
+}
+
+.standings__league + .standings__league {
+  margin-top: 0.9rem;
+}
+
+.standings__league-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.standings__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.standings__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.standings__team {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.standings__row[data-champion] {
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.standings__progress {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Prediction */
+.prediction__hint,
+.prediction__loading,
+.prediction__error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.prediction__error {
+  color: var(--red);
+}
+
+.prediction__result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.prediction__favorite {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.prediction__favorite-label {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.prediction__favorite-name {
+  margin: 0.1rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.prediction__prob-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.prediction__prob-value {
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.prediction__bar {
+  margin-top: 0.3rem;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--bar-track);
+  overflow: hidden;
+}
+
+.prediction__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--navy), var(--red));
+  transition: width 0.4s ease;
+}
+
+.prediction__underdog {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.prediction__narrative {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.prediction__model {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* Prediction basis (regular-season metrics the model used) */
+.prediction__metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.4rem 0 0;
+  padding: 0.6rem 0.7rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.prediction__metrics-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.prediction__metrics-caption {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.prediction__metrics-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.prediction__metrics-item {
+  font-size: 0.82rem;
+}
+
+/* Model-accuracy control */
+.prediction__accuracy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 0.9rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.prediction__accuracy-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.prediction__accuracy-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.prediction__accuracy-value {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--heading);
+}
+
+.prediction__accuracy-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--navy);
+}
+
+.prediction__accuracy-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.prediction__accuracy-help {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* AI-model selector */
+.prediction__model-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0 0.9rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.prediction__model-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.prediction__model-select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Responsive */
+
+/* Tablet / small laptop: stack the aside under the bracket and let the
+   round columns wrap to two across instead of four. */
+@media (max-width: 860px) {
+  .app__main {
+    grid-template-columns: 1fr;
+  }
+  .bracket__grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Phone / narrow widths: collapse the bracket to a single column so the
+   series cards never overflow the viewport horizontally. */
+@media (max-width: 560px) {
+  .app {
+    padding: 0.85rem;
+  }
+  .app__header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .app__hero {
+    width: 100%;
+    max-width: 100%;
+  }
+  .bracket__grid {
+    grid-template-columns: 1fr !important;
+  }
+  .standings__row,
+  .series-team {
+    /* Guard against long team names forcing a wider-than-screen row. */
+    min-width: 0;
+  }
+  .standings__team,
+  .series-team__name {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ---- Model accuracy / backtest page ---- */
+.app__accuracy-link {
+  align-self: center;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--control-border);
+  border-radius: 0.5rem;
+  white-space: nowrap;
+}
+.app__accuracy-link:hover {
+  text-decoration: underline;
+}
+.accuracy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+.accuracy__intro,
+.accuracy__methodology {
+  max-width: 70ch;
+  line-height: 1.6;
+}
+.accuracy__def-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+  max-width: 80ch;
+}
+.accuracy__def-list dt {
+  font-weight: 700;
+}
+.accuracy__def-list dd {
+  margin: 0;
+  line-height: 1.5;
+}
+.accuracy__table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 48rem;
+}
+.accuracy__table th,
+.accuracy__table td {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+}
+.accuracy__caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  max-width: 70ch;
+}
+.accuracy__bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.accuracy__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.accuracy__bar-bucket {
+  min-width: 5.5rem;
+  font-weight: 600;
+}
+.accuracy__bar-meta {
+  color: var(--ink);
+}
+.accuracy__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Shared visually-hidden utility: content stays in the accessibility tree and
+   is announced by screen readers but is not painted (used for the favorite
+   series marker's label). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Favorites (Issue #18) ---------------------------------------------------- */
+
+/* The star toggle on team rows (SeriesCard + StandingsPanel). The glyph shape
+   (filled vs outline star, set in the SVG) carries the state, not color; color
+   only reinforces it. */
+.favorite-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 0;
+}
+
+.favorite-toggle:hover {
+  color: var(--favorite-marker);
+}
+
+.favorite-toggle--on {
+  color: var(--favorite-marker);
+}
+
+.favorite-toggle__star {
+  display: block;
+}
+
+/* A favorite team's series: a distinct, THICK, DASHED outline (perceivable in
+   grayscale) layered on top of the existing border so the selected/winner
+   styles still read. Paired with the star icon marker in the header. */
+.series-card--favorite {
+  outline: 3px dashed var(--favorite-outline);
+  outline-offset: 2px;
+}
+
+.series-card__favorite-marker {
+  display: inline-flex;
+  align-items: center;
+  color: var(--favorite-marker);
+  margin-right: auto;
+  margin-left: 0.35rem;
+}
+
+.series-card__favorite-icon {
+  display: block;
+}
+
+/* The localized "Eliminated" badge on an eliminated favorite's team row. */
+.series-team__eliminated {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--favorite-elim-bg);
+  color: var(--favorite-elim-ink);
+}
+
+/* Header pin: a compact strip summarizing each in-bracket favorite's status. */
+.favorites-pin {
+  margin-top: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--favorite-pin-border);
+  border-radius: 10px;
+  background: var(--favorite-pin-bg);
+  color: var(--favorite-pin-ink);
+}
+
+.favorites-pin__title {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--favorite-pin-ink);
+}
+
+.favorites-pin__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.favorites-pin__item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.favorites-pin__team {
+  font-weight: 700;
+}
+
+.favorites-pin__status {
+  color: var(--favorite-pin-ink);
+}
+
+.favorites-pin__item--eliminated .favorites-pin__status {
+  font-weight: 700;
+  color: var(--favorite-elim-ink);
+}
+
+/* The "Show only my teams" filter toggle, sitting in the refresh bar. It is
+   pushed to the left so the last-updated line and refresh button stay right. */
+.app__favorites-filter {
+  margin-right: auto;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--control-ink);
+  cursor: pointer;
+}
+
+.app__favorites-filter:hover {
+  border-color: var(--navy);
+}
+
+.app__favorites-filter--on {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+/* Empty state when the filter is on but no favorite has a series here. */
+.bracket__filter-empty {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Share control (Web Share + copy-link fallback), Issue #21. */
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+}
+
+.share__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.share__button:hover {
+  background: var(--surface-3);
+}
+
+.share__copied {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.share__url {
+  flex: 1 1 14rem;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+/* The disclaimer shown near the prediction output (criterion 3). */
+.prediction__disclaimer {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}

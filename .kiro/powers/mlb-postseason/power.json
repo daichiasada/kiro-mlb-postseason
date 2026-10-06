@@ -1,0 +1,24 @@
+{
+  "name": "mlb-postseason",
+  "displayName": "MLB Postseason Helper",
+  "version": "0.1.0",
+  "description": "A self-contained Kiro Power for working on the MLB Postseason Summary Site. Bundles MLB Stats API usage notes as steering plus a skill that explains how to aggregate the postseason schedule into the project's bracket shape.",
+  "author": "kiro-mlb-postseason",
+  "license": "MIT",
+  "keywords": ["mlb", "postseason", "bracket", "statsapi", "aws", "bedrock"],
+  "steering": [
+    "steering/mlb-stats-api.md"
+  ],
+  "skills": [
+    "skills/aggregate-bracket.md"
+  ],
+  "mcpServers": {
+    "mlb-fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": ["fetch"]
+    }
+  }
+}

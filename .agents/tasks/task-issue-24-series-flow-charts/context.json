@@ -1,0 +1,33 @@
+{
+  "project_type": "React + Vite SPA (frontend) in a TypeScript npm-workspaces monorepo (shared/backend/frontend/infra) for an MLB postseason summary site deployed via AWS CDK",
+  "language": "TypeScript (strict, ESM, type: module everywhere)",
+  "build_system": "npm workspaces. Root scripts run in dependency order shared -> backend -> frontend -> infra. node is on PATH but npm is NOT: prefix commands with PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" (v22.23.3 confirmed present).",
+  "test_framework": "Vitest (unit + property + component via @testing-library/react/jsdom). Playwright for e2e in frontend/e2e/*.spec.ts (headless chromium, --no-sandbox).",
+  "build_command": "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+  "test_command": "PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+  "verification_instructions": "1) npm run build (ordered shared->backend->frontend->infra) must pass. 2) npm test (vitest all workspaces) must pass. 3) npm run test:e2e -w frontend (Playwright; may need `npx playwright install chromium` once) must pass. 4) npm run synth (cdk synth, no AWS calls) must pass as a regression guard. Do NOT run cdk deploy. Do NOT make live Bedrock/MLB calls.",
+  "snapshot_or_generated_files": "frontend build emits dist/ (gitignored). No committed snapshots. Playwright screenshots go to gitignored frontend/test-results/.",
+  "setup_instructions": "node_modules already installed at repo root. If Playwright chromium missing: PATH=\"/root/.nvm/versions/node/v22.23.3/bin:$PATH\" npx playwright install chromium (run from frontend/ or repo root).",
+  "environment_constraints": "No live AWS/Bedrock/MLB calls. Frontend-only + docs change; no backend/infra source change expected. Reuse the pure shared predict()/backtest truncation for the probability overlay (never Bedrock). Branch feat/mlb-postseason-site; make incremental local commits (per steering). Do NOT push/PR/deploy (orchestrator owns that).",
+  "contribution_requirements": "Steering .kiro/steering/*.md is inclusion:always: incremental commits; truthful specs/README (update .kiro/specs/mlb-postseason/{requirements,design,tasks}.md and BOTH README.md and README.ja.md); spec-driven development is graded. Testing steering: add unit tests next to code as *.test.ts, property tests as *.property.test.ts, e2e in frontend/e2e. Keep build/test/synth all green.",
+  "key_patterns": "i18n: flat dotted-key dictionary in frontend/src/i18n/messages.ts (MessageKey union + MESSAGES[lang]); default JA; add every new string to the MessageKey union AND both ja/en tables; use useI18n()/t(). Team colors: frontend/src/teamColors.ts teamColor(teamId)->{primary,secondary}; frontend/src/readableTextColor.ts (relativeLuminance/contrastRatio/readableTextColor) for legible-on-color text. Theme: CSS custom properties on :root and [data-theme='dark'] in frontend/src/styles.css; reference vars (--surface,--border,--muted,--ink,--heading,--focus-ring etc.) so dark mode works; axes/labels/gridlines should use these vars not hardcoded colors. Pure helpers (e.g. gameTime.ts, upcomingGames.ts, ics.ts, bracketLayout.ts) are dependency-free and unit-tested with injected inputs. Series shape: Series.games[] each GameResult has away/home {teamId, score|null, isWinner|null} and seriesGameNumber; score diff per game = |away.score - home.score|, winner side via isWinner. Cumulative wins can be recomputed by counting isWinner among games. clinchWins(bestOf) in bracketLayout.ts. isPredictable(season) in @mlb/shared season.ts (CURRENT_YEAR=2026). The pure predict(series,bracket,winPct,accuracy) is in @mlb/shared; backtest.ts already implements per-game truncation (slice first k games, recompute high/low wins, call predict) in sampleSeries — reuse/extend this truncation approach for the win-prob trend rather than duplicating it.",
+  "relevant_files": [
+    "frontend/src/pages/SeriesDetailPage.tsx (detail view where full charts go)",
+    "frontend/src/components/SeriesCard.tsx (bracket card where the sparkline goes)",
+    "frontend/src/components/BracketView.tsx (renders cards; keyboard roving model to not regress)",
+    "frontend/src/bracketLayout.ts (clinchWins, seriesLeaderId, favorites helpers)",
+    "frontend/src/teamColors.ts (teamColor)",
+    "frontend/src/readableTextColor.ts (contrast helpers)",
+    "frontend/src/i18n/messages.ts and frontend/src/i18n/index.ts (localization)",
+    "frontend/src/styles.css (theme CSS variables, dark palette)",
+    "frontend/src/test/fixtures.ts (unit test series fixtures)",
+    "frontend/e2e/fixtures.ts (SAMPLE_2026_BRACKET, stubBracket2026, final ALCS 117-136 with games)",
+    "frontend/e2e/detail.spec.ts (detail page e2e pattern)",
+    "shared/src/predict.ts (pure predict - single source of truth for prob)",
+    "shared/src/backtest.ts (sampleSeries per-game truncation to reuse for prob trend)",
+    "shared/src/season.ts (isPredictable)",
+    "shared/src/types.ts (Series/GameResult/Bracket/TEAMS)",
+    "shared/src/seed/postseason-2024.json and postseason-2025.json (completed seeds with full games)"
+  ],
+  "directory_structure": "shared/src: domain types, predict, backtest, season, seed JSON. backend/src: Lambda handlers (not touched). frontend/src: SPA. frontend/src/components: SeriesCard, BracketView, TeamBadge, panels. frontend/src/pages: HomePage, SeriesDetailPage, AccuracyPage. frontend/src/i18n: messages+index. frontend/e2e: Playwright specs + fixtures. infra/src: CDK (not touched)."
+}

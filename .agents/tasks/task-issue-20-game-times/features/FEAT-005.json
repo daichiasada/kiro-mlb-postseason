@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-005",
+  "type": "docs",
+  "description": "Update the spec-driven-development artifacts and both READMEs to truthfully describe the new game-start-time features (Issue #20), since spec fidelity is graded by the Kiro University steering. Document the preserved startTime/timeTbd shared fields, the TBD-detection rule, the Intl EN/JA local-time formatting, the today/tomorrow + countdown section, and the .ics download. No code behavior changes in this feature.",
+  "status": "completed",
+  "steps": [
+    "Update .kiro/specs/mlb-postseason/requirements.md to add a requirement covering Issue #20: preserve game start time (new optional GameResult.startTime + timeTbd, date unchanged), local-timezone display via Intl.DateTimeFormat with EN/JA formats, TBD handling, today/tomorrow + countdown, and .ics calendar download. Trace it to the real modules (aggregate.ts, shared types.ts, frontend gameTime.ts/upcomingGames.ts/ics.ts, SeriesCard/SeriesDetailPage/HomePage).",
+    "Update .kiro/specs/mlb-postseason/design.md to describe the design decisions: additive optional shared fields for backward compat; the TBD-detection rule (status.startTimeTBD OR midnight/date-only placeholder => timeTbd, startTime omitted); injected now/timeZone/locale for deterministic pure helpers; today/tomorrow bucketing by local calendar day; and the client-side .ics generation (no new backend endpoint / no infra change).",
+    "Update .kiro/specs/mlb-postseason/tasks.md to record the Issue #20 work as completed tasks mapping to FEAT-002..FEAT-004, consistent with how prior issues are logged there.",
+    "Update README.md (English) with a short section on game start-time display (local timezone, EN/JA), the today/tomorrow + countdown section, and the .ics download, matching the actual shipped behavior.",
+    "Update README.ja.md with the equivalent Japanese section, kept in sync with README.md.",
+    "Verify no code/tests were affected: run `npm run build` and `npm test` to confirm still green (docs-only change should not alter results)."
+  ],
+  "acceptance_criteria": [
+    "requirements.md, design.md, and tasks.md describe the Issue #20 features accurately and trace to the real modules.",
+    "README.md and README.ja.md both document the local-time display (EN/JA), today/tomorrow + countdown, and .ics download, and are consistent with each other and with the code.",
+    "No statements in the specs/READMEs describe behavior that was not actually implemented.",
+    "`npm run build` and `npm test` remain green after the docs changes."
+  ],
+  "verification": [
+    "npm run build",
+    "npm test"
+  ],
+  "blocked_reason": null,
+  "findings": "Docs-only change. Added Requirement 16 to requirements.md, a 'Local-timezone game start times, today/tomorrow, and calendar export (Issue #20)' section to design.md, and a 'task-issue-20-game-times' section (G1-G4 mapping to FEAT-002..FEAT-005) to tasks.md. Added an equivalent 'Local game start times, today/tomorrow, and calendar export' subsection to both README.md and README.ja.md under the dark-mode section. All claims verified against the real modules (shared/src/types.ts optional startTime?/timeTbd? with date unchanged; aggregate.ts TBD rule status.startTimeTBD||midnight-UTC/unparseable placeholder, startTime omitted when TBD; client.ts RawGame.status.startTimeTBD; frontend gameTime.ts/upcomingGames.ts/ics.ts injected now/timeZone/locale; SeriesCard/SeriesDetailPage/HomePage+UpcomingGames; i18n gametime.*/ics.*/upcoming.* EN+JA; client-side .ics, no new endpoint, no infra change). Verified green: npm run build OK; npm test shared 34 / backend 94 / frontend 120 / infra 8 all passing, unchanged from baseline."
+}

@@ -1,7 +1,29 @@
 {
   "task_id": "task-mlb-postseason-site",
-  "task_description": "Build a greenfield MLB postseason information summary site for the Kiro University final exam: a React+TS (Vite) SPA that graphically shows postseason status (bracket/series/standings) with a win/loss prediction feature powered by Amazon Bedrock narratives. Backend is API Gateway + Lambda (TS) with DynamoDB caching of MLB Stats API data (seed fallback). AWS CDK (TS) provides one-command deploy. Includes Kiro steering files (University requirements + product/tech/structure) and a README. Deliverable is complete, buildable, synth-verified code; no live cdk deploy (AWS creds inactive this session).",
-  "status": "in_progress",
-  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
-  "blocked_reason": null
+  "task_description": "Build a greenfield MLB postseason information summary site for the Kiro University final exam: a React+TS (Vite) SPA that graphically shows postseason status (bracket/series/standings) with a win/loss prediction feature powered by Amazon Bedrock narratives. Backend is API Gateway + Lambda (TS) with DynamoDB caching of MLB Stats API data (seed fallback). AWS CDK (TS) provides one-command deploy. Includes Kiro steering files plus artifacts demonstrating all 7 required Kiro University lessons + 2 bonuses (specs, hooks, MCP, custom agent, property-based tests, packaged power, cloud writeup) and a judge-facing DEMONSTRATED_LESSONS.md, a Playwright e2e suite, and a tracked ISSUES.md. Deliverable is complete, buildable, synth-verified code; no live cdk deploy (AWS creds inactive this session).",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005", "FEAT-006", "FEAT-007"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "e2e": "pass",
+    "synth": "pass",
+    "docker_build": "skipped",
+    "summary": "Final clean verification: `npm run build` (shared->backend->frontend->infra) exit 0; `npm test` = 49 unit tests pass (backend 31 incl. fast-check property tests, frontend 12, infra 6); `npm run test:e2e -w frontend` = 7 Playwright specs pass (headless chromium --no-sandbox); `npm run synth` (cdk synth) exits 0 producing MlbPostseasonStack.template.json (DynamoDB TTL table, 2 Node 20 Lambdas, HTTP API routes + CORS, CloudFront + OAC + SPA error responses, private S3, bedrock:InvokeModel IAM, single BucketDeployment SPA + /config.js, CfnOutputs ApiUrl/DistributionDomainName/BucketName/TableName). All 6 .kiro JSON artifacts (3 hooks, mcp.json, custom agent, power manifest) parse as valid JSON; every path referenced by DEMONSTRATED_LESSONS.md resolves. No live AWS/Bedrock/MCP/cdk deploy calls (creds inactive this session, by design). Test quality verified by reading tests (unit + property-based + infra assertions + e2e all exercise real code paths). No Dockerfile; docker_build skipped."
+  },
+  "review_loop": {
+    "rounds": 3,
+    "verdicts": ["APPROVED (v1)", "APPROVED (v2)", "APPROVED (v3)"],
+    "review_files": [
+      ".agents/tasks/task-mlb-postseason-site/2026-10-04-150850-review.md",
+      ".agents/tasks/task-mlb-postseason-site/2026-10-04-153058-review.md",
+      ".agents/tasks/task-mlb-postseason-site/2026-10-04-154930-review.md"
+    ],
+    "issues_registry": "ISSUES.md (ISSUE-1..8): all Fixed except the ISSUE-2 live Bedrock smoke test, documented as a post-deploy step (not runnable offline).",
+    "summary": "Three semantic review rounds all APPROVED. Issues from v1 (4) resolved in FEAT-006; the FEAT-005 UI issue fixed; three non-blocking v3 polish issues resolved in a cleanup pass. All tracked in ISSUES.md for the orchestrator to file as GitHub Issues."
+  },
+  "deployment_note": "AWS credentials were NOT active this session by design; no cdk bootstrap/deploy or live Bedrock/MLB/MCP calls were made. The repo is complete and synth-verified. Deploy from a session with active AWS creds and Bedrock model access via: `npm install && npm run build && npm run deploy` (or `cd infra && npx cdk bootstrap && npx cdk deploy`). After deploy, run the ISSUE-2 Bedrock smoke test documented in ISSUES.md.",
+  "publish_note": "The orchestrator owns GitHub: this repo currently has zero remote commits (first commit must be on/after Sept 21 per Kiro University). The coder made local commits on branch `main`. The orchestrator should publish (push + PR) and may file ISSUES.md entries as GitHub Issues per the user's request."
 }

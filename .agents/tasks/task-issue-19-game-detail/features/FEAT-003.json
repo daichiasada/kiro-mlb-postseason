@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Infra: wire the new /game endpoint into the CDK stack. Add a GetGameDetailFn Lambda (Node 20, TABLE_NAME env, NO Bedrock IAM since it only calls the public MLB API), grant it DynamoDB read/write, add the HTTP API route GET /game, and update the synth-time assertion tests. Depends on FEAT-002 (the handler entry backend/src/handlers/getGameDetail.ts must exist for lambdaNodejs bundling).",
+  "status": "completed",
+  "steps": [
+    "In infra/lib/mlb-postseason-stack.ts add a new `getGameDetailFn = new lambdaNodejs.NodejsFunction(this, 'GetGameDetailFn', {...})` with runtime NODEJS_20_X, entry path.join(BACKEND_HANDLERS, 'getGameDetail.ts'), handler 'handler', memorySize 256, timeout Duration.seconds(15), environment { TABLE_NAME: table.tableName } (NO BEDROCK_MODEL_ID - this function never calls Bedrock), and the shared commonBundling. Place it alongside the existing getBracketFn.",
+    "Grant DynamoDB read/write: `table.grantReadWriteData(getGameDetailFn);`. Do NOT add any bedrock:InvokeModel policy to this function.",
+    "Add the HTTP API integration + route: create `new apigwv2Integrations.HttpLambdaIntegration('GetGameDetailIntegration', getGameDetailFn)` and `httpApi.addRoutes({ path: '/game', methods: [apigwv2.HttpMethod.GET], integration: gameDetailIntegration });`.",
+    "Update the stack doc comment at the top of the file to mention the third Lambda (getGameDetail) and the GET /game route so the file comment stays truthful.",
+    "Update infra/test/stack.test.ts: (a) the function-count assertion currently asserts exactly 2 nodejs20.x application functions with TABLE_NAME + BEDROCK_MODEL_ID - adjust so it still holds for the two Bedrock-model functions, AND add a new assertion that there are now 3 nodejs20.x application functions carrying TABLE_NAME (match on TABLE_NAME present via Match.objectLike), i.e. resourcePropertiesCountIs for Runtime nodejs20.x + Environment TABLE_NAME anyValue == 3; (b) add an assertion that the new game-detail function has TABLE_NAME but does NOT carry BEDROCK_MODEL_ID (assert there are exactly 2 nodejs20.x functions WITH BEDROCK_MODEL_ID, confirming the game function is not among them); (c) extend the HTTP API routes test to also assert a `GET /game` RouteKey exists. Keep the existing Bedrock IAM assertions unchanged (they target the prediction function).",
+    "Run `npm run build` (so infra TS compiles) and `npm test -w @mlb/infra` and `npm run synth` to confirm the stack still synthesizes and the assertions pass."
+  ],
+  "acceptance_criteria": [
+    "A third Node 20 Lambda (GetGameDetailFn) exists with TABLE_NAME env and NO BEDROCK_MODEL_ID env, and has DynamoDB read/write but no bedrock:InvokeModel policy.",
+    "The HTTP API exposes GET /game routed to the new function.",
+    "infra/test/stack.test.ts asserts: 3 nodejs20.x app functions carry TABLE_NAME; exactly 2 carry BEDROCK_MODEL_ID; a GET /game route exists.",
+    "`npm run synth` succeeds (no AWS calls) and `npm test -w @mlb/infra` passes."
+  ],
+  "verification": [
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test -w @mlb/infra",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": "Done. Commit 9201876 on feat/mlb-postseason-site. Added GetGameDetailFn (NodejsFunction, NODEJS_20_X, entry backend/src/handlers/getGameDetail.ts, handler 'handler', memorySize 256, timeout 15s, env TABLE_NAME only - NO BEDROCK_MODEL_ID), shared commonBundling. Granted table.grantReadWriteData(getGameDetailFn); NO bedrock:InvokeModel policy. Added GetGameDetailIntegration + httpApi.addRoutes GET /game. Updated stack doc comment (now 'Three bundled Lambda functions'). Tests: renamed/kept the BEDROCK_MODEL_ID count==2 assertion (now 'scopes BEDROCK_MODEL_ID to exactly the two Bedrock-invoking functions'), added a new TABLE_NAME count==3 assertion, extended routes test with GET /game. Bedrock IAM assertions left unchanged. Verification all green: npm run build OK; npm test -w @mlb/infra => 9 passed; npm run synth OK (no AWS calls). nodejs20.x deprecation WARNINGs are pre-existing (apply to all three app Lambdas), non-fatal. ORCHESTRATOR NOTE: this adds a NEW Lambda (GetGameDetailFn) + a new HTTP API route GET /game, so a redeploy creates new resources; the new /game Lambda needs only DynamoDB read/write access (no Bedrock/model access). Did NOT push or deploy."
+}

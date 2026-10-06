@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish a green baseline for Issue #17 work. Confirm the Node toolchain is reachable and that the existing build, unit tests, and synth all pass before any change, so later regressions are attributable to this feature's work. This is an existing project so a baseline check is required first.",
+  "status": "completed",
+  "steps": [
+    "Resolve the Node toolchain: run `which node npm`; if npm is not on PATH, prefix all npm commands with PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" (fallback /root/.nvm/versions/node/v22.23.3/bin).",
+    "From repo root /projects/sandbox/kiro-mlb-postseason run `npm run build` and confirm it completes (shared -> backend -> frontend -> infra).",
+    "Run `npm test` and confirm all workspace vitest suites pass.",
+    "Run `npm run synth` and confirm cdk synth succeeds (deprecation warnings about nodejs20.x runtime are pre-existing and acceptable).",
+    "Confirm `npx playwright install chromium -w @mlb/frontend` is available; if the e2e browser is missing, install it once so FEAT-003 e2e can run. Do NOT run cdk deploy or any live AWS/MLB/Bedrock calls.",
+    "Record the baseline result (pass/fail per command) in this feature's findings."
+  ],
+  "acceptance_criteria": [
+    "`npm run build` exits 0.",
+    "`npm test` exits 0 with all suites passing.",
+    "`npm run synth` exits 0.",
+    "Playwright chromium is installed and available for e2e."
+  ],
+  "verification": [
+    "npm run build",
+    "npm test",
+    "npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": "Baseline verified by orchestrator this session. Toolchain reachable via PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" (node v22.23.3). `npm run build` PASS (shared->backend->frontend->infra; vite bundle built). `npm test` PASS (all workspace vitest suites, incl. infra stack.test.ts 8 tests; nodejs20.x deprecation warnings are pre-existing/benign). `npm run synth` PASS. Playwright chromium installed via `npx playwright install chromium` (fallback ubuntu24.04-x64 build). Clean working tree on branch feat/mlb-postseason-site at commit 1e2b044."
+}

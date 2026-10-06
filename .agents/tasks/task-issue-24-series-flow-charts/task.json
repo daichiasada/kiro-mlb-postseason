@@ -1,0 +1,14 @@
+{
+  "task_id": "task-issue-24-series-flow-charts",
+  "task_description": "Issue #24: Visualize the flow of a series. On the series detail, show a per-game score-difference bar chart and a cumulative win/loss trend chart; for predictable seasons also overlay a per-game predicted win-probability trend (reusing the pure shared predict()/backtest truncation). Add a small score-difference sparkline to bracket cards. Acceptance: (1) charts drawn as SVG WITH a tabular text alternative; (2) works for past/seed seasons (2024/2025) without the prediction overlay; (3) team-color coded and legible in dark mode. Frontend-only + docs; no backend/infra change. Branch feat/mlb-postseason-site; incremental commits; do NOT push/PR/deploy.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "npm run build (shared->backend->frontend->infra) green. npm test green: shared 37, backend 94, frontend 188, infra 8. npm run test:e2e -w frontend: 46 passed incl 4 new series-flow specs and unregressed keyboard(#22)/favorites(#18)/a11y/prediction/refresh. npm run synth green. No Docker in build path. Semantic review v1 APPROVED (2026-10-05-104000-review.md); its 2 non-blocking items (sparkline '- +0' aria-label and overlay-prop doc/semantics) fixed in commit 75c33c3. Test quality: unit tests pin exact helper numbers (would fail on logic revert), component tests read rendered table cells back against pure-helper output, e2e exercises real rendered charts/sparkline + dark-mode screenshot."
+  }
+}

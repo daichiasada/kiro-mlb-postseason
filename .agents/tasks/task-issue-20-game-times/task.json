@@ -1,0 +1,26 @@
+{
+  "task_id": "task-issue-20-game-times",
+  "task_description": "Implement GitHub Issue #20 (UX: game schedule / start-time display): preserve the game start time (currently truncated to date-only in aggregation) as new OPTIONAL shared fields without changing the existing `date` field (criterion 1); display start times in the viewer's local timezone via Intl.DateTimeFormat with EN/JA formatting (criterion 2); correctly handle time-TBD games (criterion 3); plus the proposed today/tomorrow + countdown section and a client-side .ics calendar download. Spans shared (types) + backend (aggregation) + frontend; no infra/IAM change. Incremental commits on branch feat/mlb-postseason-site; orchestrator owns push/PR/deploy.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null,
+  "review": {
+    "verdict": "APPROVED",
+    "pass": "v1",
+    "artifact": ".agents/tasks/task-issue-20-game-times/2026-10-05-093555-review.md",
+    "nonblocking_notes": [
+      "hasNoTimeOfDay treats a legitimate exactly-00:00:00Z first pitch as TBD (documented trade-off; explicit startTimeTBD flag is the reliable signal).",
+      "A game bucketed 'today' but already started shows a 0d 0h 0m countdown (minor display oddity).",
+      "Midnight-UTC placeholder assumption asserted by synthetic test only, not a live not-yet-scheduled payload."
+    ]
+  },
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "e2e": "pass",
+    "synth": "pass",
+    "summary": "npm run build (shared->backend->frontend->infra) green. npm test green: shared 34, backend 94, frontend 120, infra 8. npm run test:e2e -w @mlb/frontend 38 passed (incl. 4 new game-times tests). npm run synth exit 0 (no AWS calls; only benign nodejs20.x deprecation + feature-flag notices, pre-existing). Reviewed the new tests (gameTime.test.ts, upcomingGames.test.ts, ics.test.ts, aggregate.test.ts additions): they exercise the real functions with fixed inputs and exact assertions (UTC-vs-local date-shift, EN/JA locale divergence, TBD/undefined/unparseable paths, fixed-string .ics DTSTART/DTEND/SUMMARY escaping, aggregation startTime verbatim + timeTbd rule) and would fail if the implementation were reverted. No Dockerfile build path used (host-based validation). No infra/IAM change."
+  }
+}

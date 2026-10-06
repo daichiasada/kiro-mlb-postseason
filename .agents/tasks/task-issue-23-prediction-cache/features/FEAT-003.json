@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Infrastructure: API Gateway (HTTP API) throttling + CDK assertion test (Issue #23 criterion 3 and proposal b). Add default-route throttling (rate + burst) on the HTTP API default stage so a public, no-auth endpoint cannot be hammered into runaway Bedrock cost, and add an infra assertion test that verifies the throttling settings. Depends on FEAT-002 (the EMF metrics approach requires NO new IAM; confirm no PutMetricData IAM is needed - if FEAT-002 chose PutMetricData instead, also add the cloudwatch:PutMetricData IAM here and assert it). Keep CORS and the existing GET /bracket, GET+POST /prediction, GET /game routes intact.",
+  "status": "completed",
+  "steps": [
+    "In infra/lib/mlb-postseason-stack.ts, enable throttling on the HTTP API default stage. The default stage is created implicitly by apigwv2.HttpApi; configure its default route settings with a documented ThrottlingRateLimit and ThrottlingBurstLimit. Preferred approach: access the stage via httpApi.defaultStage and set throttle on the default route settings, e.g. construct with `defaultStage` options or use the L1 escape hatch on the CfnStage (`httpApi.defaultStage.node.defaultChild as apigwv2.CfnStage`) to set `DefaultRouteSettings: { ThrottlingRateLimit, ThrottlingBurstLimit }`. Choose sane values and document them in a code comment: rate = 20 requests/second steady-state, burst = 40 (tune comment explains these bound a public no-auth endpoint's Bedrock exposure while leaving normal browsing unaffected). If apigwv2.HttpApi exposes a typed `defaultStage` with throttle props, prefer the typed API; otherwise use the CfnStage escape hatch. Do NOT remove or alter corsPreflight or any addRoutes call.",
+    "Only if FEAT-002 used PutMetricData (not EMF): add an iam.PolicyStatement granting `cloudwatch:PutMetricData` (resource '*') to getPredictionFn, with a comment that EMF was not used. If FEAT-002 used EMF (preferred), add NO new IAM and leave a short comment in the stack noting metrics are emitted via EMF logs (no IAM needed).",
+    "In infra/test/stack.test.ts add a test asserting the throttling settings on the stage. Use template.hasResourceProperties('AWS::ApiGatewayV2::Stage', { DefaultRouteSettings: Match.objectLike({ ThrottlingRateLimit: <rate>, ThrottlingBurstLimit: <burst> }) }) with the exact numeric values chosen in the stack. This is the criterion-3 assertion. Keep all existing stack assertions passing.",
+    "If PutMetricData IAM was added, also assert it in infra/test/stack.test.ts via hasResourceProperties('AWS::IAM::Policy', PolicyDocument.Statement arrayWith an Allow for cloudwatch:PutMetricData). Skip this assertion if EMF was used.",
+    "Run cdk synth to confirm the stage + throttling render in CloudFormation without AWS calls."
+  ],
+  "acceptance_criteria": [
+    "The HTTP API default stage has DefaultRouteSettings with a documented ThrottlingRateLimit and ThrottlingBurstLimit in the synthesized template",
+    "infra/test/stack.test.ts asserts the exact throttling rate and burst values (criterion 3)",
+    "CORS preflight and the GET /bracket, GET+POST /prediction, GET /game routes are unchanged and their existing assertions still pass",
+    "If and only if PutMetricData was used in FEAT-002, the cloudwatch:PutMetricData IAM is added and asserted; otherwise no new IAM is added (EMF)",
+    "npm run build, npm test, and npm run synth all pass"
+  ],
+  "verification": [
+    "npm run build (exit 0)",
+    "npm test (exit 0; new infra throttling assertion passes)",
+    "npm run synth (exit 0; template includes AWS::ApiGatewayV2::Stage DefaultRouteSettings with the throttling limits)"
+  ],
+  "blocked_reason": null,
+  "findings": "Confirmed FEAT-002 used EMF (no PutMetricData IAM), so no new IAM added. Enabled default-route throttling on the implicit $default HTTP API stage via the CfnStage escape hatch (httpApi.defaultStage.node.defaultChild as apigwv2.CfnStage), setting defaultRouteSettings = { throttlingRateLimit: 20, throttlingBurstLimit: 40 }. CORS and all routes (GET /bracket, GET+POST /prediction, GET /game) unchanged. Added infra assertion for AWS::ApiGatewayV2::Stage DefaultRouteSettings { ThrottlingRateLimit: 20, ThrottlingBurstLimit: 40 }; infra test count now 10 (was 9) all green. build/test/synth all exit 0; synthesized template verified to contain the throttling limits. Note: this changes the API Gateway default stage, so a redeploy modifies the stage."
+}

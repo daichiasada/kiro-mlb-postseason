@@ -1,0 +1,16 @@
+{
+  "task_id": "task-issue-19-game-detail",
+  "task_description": "Implement GitHub Issue #19: enrich the series detail page with per-game detail (per-inning R/H/E, W/L/S pitchers, venue, optional MLB highlight link) via a new GET /game?gamePk= backend endpoint that caches per game in DynamoDB (pk=GAME#<gamePk>, long TTL for completed games, short TTL for in-progress), with an API-failure fallback to the existing final-score display, surfaced in an accessible per-game accordion whose inning table scrolls horizontally on mobile. Touches shared, backend, frontend, infra (new Lambda + route + IAM/env), and docs. No push/PR/deploy.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "e2e": "pass",
+    "synth": "pass",
+    "summary": "npm run build green (shared->backend->frontend->infra). Unit tests: shared 37, backend 111 (incl. gameDetail parser suite + 5 getGameDetail service cases proving cache-hit-skips-fetch, Final->long vs in-progress->short TTL, unavailable-fallback-no-throw-no-cache, content-failure-still-ok + getGameDetail handler 400/200 cases), frontend 194 (incl. SeriesDetailPage accordion tests), infra 9 (3 nodejs20 app Lambdas carry TABLE_NAME, exactly 2 carry BEDROCK_MODEL_ID, GET /game route). cdk synth green, no AWS calls. Playwright e2e 49 passed incl. 3 new accordion specs (ok render, error keeps final score, 375px horizontal-scroll container + no page overflow). Test-quality review: new backend service tests directly exercise the new code paths and would fail if reverted. No Dockerfile for app build; docker skipped. Commits: d63c63b (backend+shared), 9201876 (infra), a3ff6f6 (frontend), 3779032 (docs). All 3 Issue #19 acceptance criteria met."
+  }
+}

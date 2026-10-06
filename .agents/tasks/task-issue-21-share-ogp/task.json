@@ -1,0 +1,20 @@
+{
+  "task_id": "task-issue-21-share-ogp",
+  "task_description": "Implement GitHub Issue #21: share a series/prediction via a localized Web-Share/copy-link button with a language-aware permalink; generate per-series OGP images (team colors, series score, win probability) via a cached Lambda; serve crawler-readable per-series OpenGraph/Twitter meta tags for the SPA via a dedicated /share HTML Lambda; and include the 'predictions are reference values, not betting advice' disclaimer in all shared content. Keep all prior features (#15-#24) green. No push/PR/deploy.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null,
+  "review": {
+    "v1": "NEEDS_CHANGES - share HTML emitted the API/execute-api origin into og:url/canonical/og:image/redirect; copy fallback dropped the disclaimer.",
+    "v2": "APPROVED - fixed via a viewer-request CloudFront Function (ShareSiteOriginFn) copying viewer Host into x-site-origin header that getShareHtml reads; copy fallback now carries title+disclaimer+URL. One non-blocking observation (origin-agnostic share-HTML cache key) not reachable in the single-distribution topology.",
+    "commits_reviewed": ["cbbd3ce", "5125e8d", "b32cc64", "ab85bf5", "b0dd5eb"]
+  },
+  "commits": ["cbbd3ce", "5125e8d", "b32cc64", "ab85bf5", "b0dd5eb"],
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "npm run build (ordered shared->backend->frontend->infra) passes. npm test passes: shared 62, backend 150, frontend 206, infra 15. npm run synth passes with no cyclic dependency (only pre-existing non-fatal nodejs20.x deprecation warnings). npm run test:e2e -w frontend: 52 Playwright tests pass incl. 3 share specs. Review fixes (2026-10-05-123032): (1) share HTML now emits the PUBLIC site origin - a viewer-request CloudFront Function copies the viewer Host into an x-site-origin header (acyclic) which the handler reads ahead of the stripped Host; a new handler test reproduces the stripped-Host production path (Host=execute-api, x-site-origin present) and asserts no execute-api leaks into og:url/canonical/og:image. (2) CORS stays '*' with a documented conscious note (scoping back would reintroduce the synth cycle). (3) ShareButton copy + manual-copy fallbacks now carry title+disclaimer+URL (textarea), tests updated. (4) og:image now traverses the cached /og* behavior as a consequence of (1). stack.test.ts asserts five functions, exactly one Bedrock policy, and the new x-site-origin viewer-request function association."
+  }
+}

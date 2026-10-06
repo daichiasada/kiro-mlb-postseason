@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Establish a green baseline before any changes. Install deps, build in order, run all unit + property + e2e + synth suites, and confirm they pass. This de-risks later features by proving the toolchain path and current test state.",
+  "status": "completed",
+  "steps": [
+    "Prepend PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" to every npm command (npm is not on PATH by default in this sandbox).",
+    "From repo root run: npm install (workspaces already populated; confirms lockfile is consistent).",
+    "Run: npm run build  (ordered shared -> backend -> frontend -> infra) and confirm it exits 0.",
+    "Run: npm test  (vitest across shared/backend/frontend/infra, including fast-check *.property.test.ts) and confirm all pass.",
+    "Run: npm run test:e2e -w @mlb/frontend  (Playwright headless chromium). If the Playwright browser is not installed, run `npx playwright install chromium` first. Confirm the existing home.spec.ts and prediction.spec.ts pass.",
+    "Run: npm run synth  and confirm cdk synth produces a template with no errors (nodejs20.x deprecation WARNINGs are acceptable, they already appear in the baseline).",
+    "Record the baseline results in this feature's findings field."
+  ],
+  "acceptance_criteria": [
+    "npm run build exits 0.",
+    "npm test passes for all four workspaces.",
+    "npm run test:e2e -w @mlb/frontend passes (all existing specs).",
+    "npm run synth exits 0."
+  ],
+  "verification": [
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run build",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm test",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run test:e2e -w @mlb/frontend",
+    "PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" npm run synth"
+  ],
+  "blocked_reason": null,
+  "findings": "Baseline is GREEN on branch feat/mlb-postseason-site. All commands run with PATH=\"/opt/toolchains/.nvm/versions/node/v22.23.3/bin:$PATH\" prefix (npm not on PATH by default).\n\n- npm install: exit 0. Lockfile consistent; 'added 95 packages, audited 371'. (6 npm audit vulnerabilities reported - pre-existing, informational only, not blocking.)\n- npm run build: exit 0. Ordered shared -> backend -> frontend -> infra all compiled. Frontend vite build produced dist/ (index-wSPUhrDZ.js 175.74 kB / gzip 53.86 kB).\n- npm test (vitest, all 4 workspaces): PASS. shared+backend = 7 files / 42 tests (includes fast-check *.property.test.ts). frontend = 4 files / 19 tests. infra = 1 file / 6 tests. The infra Template assertions emit expected nodejs20.x deprecation WARNINGs (W2531) - acceptable baseline, tests pass.\n- npm run test:e2e -w @mlb/frontend (Playwright headless chromium): INITIALLY FAILED because the browser binary was missing (Executable doesn't exist at /opt/playwright/chromium_headless_shell-1243/...). Ran `npx playwright install chromium` (downloaded Chrome for Testing 153.0.8010.12 + chrome-headless-shell to /opt/playwright/). Re-ran: 9 passed (home.spec.ts + prediction.spec.ts). NOTE for later features: the chromium browser is now installed in this session; e2e should run without re-install.\n- npm run synth (cdk synth): exit 0. Template produced with HttpApi/CloudFront/S3/DynamoDB outputs. nodejs20.x deprecation WARNINGs present and acceptable; '62 feature flags not configured' is informational.\n\nAll four acceptance criteria met: build exit 0, unit+property tests pass across all workspaces, e2e passes (after one-time chromium install), synth exit 0. No feature code changes made in this step."
+}
