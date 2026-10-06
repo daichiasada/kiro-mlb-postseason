@@ -5,6 +5,7 @@ import {
   SAMPLE_2026_FINAL_SERIES_ID,
   SAMPLE_2026_SERIES_ID,
   stubBracket2026,
+  stubGameDetail,
   stubPredictionSuccess,
 } from './fixtures';
 
@@ -48,20 +49,22 @@ async function capture(page: Page, name: string): Promise<void> {
 test.describe('video hero shots', () => {
   test.use({ viewport: DESKTOP });
 
-  test('bracket-overview: full 2024 bracket with all rounds and AL/NL/WS lanes', async ({
+  test('bracket-overview: stubbed 2026 bracket with no offline-fallback banner', async ({
     page,
   }) => {
+    // Capture from the stubbed 2026 live season (not the 2024 seed) so the
+    // "offline recorded data / live API unreachable" fallback banner never
+    // appears in the hero shot a judge sees first. The 2026 bracket serves a
+    // real-looking in-progress World Series plus a finished LCS and a preview
+    // Division Series straight from the stub.
+    await stubBracket2026(page);
     await page.goto('/');
-    await page
-      .getByTestId('season-group')
-      .getByRole('button', { name: '2024' })
-      .click();
 
     const bracket = page.getByRole('region', { name: /トーナメント表/ });
     await expect(bracket).toBeVisible();
-    // Confirm every round lane rendered before the shot.
+    // The stub only carries Division/Championship/World Series rounds (empty
+    // round lanes are not rendered), so confirm those three lanes are present.
     for (const round of [
-      'ワイルドカード',
       '地区シリーズ',
       'リーグ優勝決定シリーズ',
       'ワールドシリーズ',
@@ -73,14 +76,20 @@ test.describe('video hero shots', () => {
     await expect(
       page.getByRole('img', { name: 'アメリカンリーグ' }),
     ).toBeVisible();
+    // The offline-fallback banner must NOT be present on this stubbed season.
+    await expect(page.getByText(/オフラインの収録データ/)).toHaveCount(0);
 
     await capture(page, 'bracket-overview.png');
   });
 
-  test('series-detail: a completed series detail page with game-by-game results', async ({
+  test('series-detail: a completed series detail with an expanded game panel', async ({
     page,
   }) => {
+    // Stub both the bracket AND the per-game detail so the first game can be
+    // expanded to show the rich panel the narration promises: venue, W/L/S
+    // pitchers, the inning R/H/E line score, and a highlight link.
     await stubBracket2026(page);
+    await stubGameDetail(page);
     await page.goto(`/season/2026/series/${SAMPLE_2026_FINAL_SERIES_ID}`);
 
     const detail = page.getByRole('region', {
@@ -90,6 +99,20 @@ test.describe('video hero shots', () => {
     await expect(detail).toContainText(/Houston Astros/);
     await expect(detail.getByText('第1戦')).toBeVisible();
     await expect(detail.getByText('第2戦')).toBeVisible();
+
+    // Expand game 1 so the full detail panel renders in the shot.
+    const game1 = detail.getByRole('region', { name: '第1戦' });
+    await detail
+      .getByRole('button', { name: /第1戦/ })
+      .click();
+    // Wait for the stubbed /game detail to resolve into the rich panel: venue,
+    // pitchers, line score and highlight link all come from SAMPLE_GAME_DETAIL_OK.
+    await expect(game1.getByText('Daikin Park')).toBeVisible();
+    await expect(game1.getByText('Framber Valdez')).toBeVisible();
+    await expect(game1.getByText('Josh Hader')).toBeVisible();
+    await expect(
+      game1.getByRole('link', { name: /Astros take Game 1/ }),
+    ).toBeVisible();
 
     await capture(page, 'series-detail.png');
   });
@@ -122,15 +145,13 @@ test.describe('video hero shots', () => {
     page,
   }) => {
     // Set the dark theme preference before the first paint, then load the
-    // seed-backed 2024 bracket so the whole tournament renders in dark mode.
+    // stubbed 2026 bracket (not the 2024 seed) so the whole tournament renders
+    // in dark mode WITHOUT the offline-fallback banner dominating the shot.
+    await stubBracket2026(page);
     await page.addInitScript(() => {
       window.localStorage.setItem('mlb.theme', 'dark');
     });
     await page.goto('/');
-    await page
-      .getByTestId('season-group')
-      .getByRole('button', { name: '2024' })
-      .click();
 
     const bracket = page.getByRole('region', { name: /トーナメント表/ });
     await expect(bracket).toBeVisible();
@@ -139,6 +160,8 @@ test.describe('video hero shots', () => {
       'data-theme',
       /dark/,
     );
+    // No offline-fallback banner on the stubbed season.
+    await expect(page.getByText(/オフラインの収録データ/)).toHaveCount(0);
 
     await capture(page, 'dark-mode.png');
   });

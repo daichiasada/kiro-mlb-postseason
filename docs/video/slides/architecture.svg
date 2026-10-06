@@ -67,7 +67,7 @@
   <line x1="1360" y1="375" x2="1438" y2="375" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
   <text x="1365" y="358" font-size="22" fill="#8aa0bd">cache</text>
   <line x1="1360" y1="715" x2="1438" y2="715" stroke="#8aa0bd" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="1365" y="698" font-size="22" fill="#8aa0bd">InvokeModel</text>
+  <text x="1399" y="630" font-size="22" fill="#8aa0bd" text-anchor="middle">InvokeModel</text>
 
   <text x="120" y="900" font-size="34" font-weight="700" fill="#ffffff">キャッシュミス時は MLB Stats API を取得・集約 (2024/2025 はシードにフォールバック)。</text>
   <text x="120" y="955" font-size="30" fill="#8aa0bd">Bedrock 未達時も決定論的フォールバックで予測ナラティブを必ず返す。</text>
