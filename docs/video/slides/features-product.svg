@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Noto Sans JP', sans-serif">
+  <rect width="1920" height="1080" fill="#0b1220"/>
+  <rect x="0" y="0" width="1920" height="14" fill="#8C4FFF"/>
+
+  <text x="120" y="140" font-size="60" font-weight="700" fill="#ffffff">プロダクトの主な機能</text>
+  <rect x="122" y="162" width="300" height="8" rx="4" fill="#01A88D"/>
+
+  <!-- card 1 -->
+  <rect x="120" y="230" width="520" height="230" rx="20" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <text x="160" y="300" font-size="40" font-weight="700" fill="#8C4FFF">グラフィカルなブラケット表示</text>
+  <text x="160" y="356" font-size="30" fill="#c7d2e0">ワイルドカードからワールドシリーズまで</text>
+  <text x="160" y="398" font-size="30" fill="#c7d2e0">両チーム・スコア・ステータスを一望</text>
+
+  <!-- card 2 -->
+  <rect x="700" y="230" width="520" height="230" rx="20" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <text x="740" y="300" font-size="40" font-weight="700" fill="#8C4FFF">シリーズ詳細</text>
+  <text x="740" y="356" font-size="30" fill="#c7d2e0">試合ごとのアコーディオン</text>
+  <text x="740" y="398" font-size="30" fill="#c7d2e0">ラインスコア (R/H/E)・勝敗投手・球場</text>
+
+  <!-- card 3 -->
+  <rect x="1280" y="230" width="520" height="230" rx="20" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <text x="1320" y="300" font-size="40" font-weight="700" fill="#8C4FFF">AI 勝敗予測</text>
+  <text x="1320" y="356" font-size="30" fill="#c7d2e0">Amazon Bedrock によるナラティブ</text>
+  <text x="1320" y="398" font-size="30" fill="#c7d2e0">EN / JA ローカライズ・優勢チームと勝率</text>
+
+  <!-- card 4 -->
+  <rect x="120" y="500" width="520" height="230" rx="20" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <text x="160" y="570" font-size="40" font-weight="700" fill="#01A88D">ダークモード &amp; アクセシビリティ</text>
+  <text x="160" y="626" font-size="30" fill="#c7d2e0">システム / ライト / ダークのテーマ切替</text>
+  <text x="160" y="668" font-size="30" fill="#c7d2e0">WCAG AA・キーボード操作・axe 検証</text>
+
+  <!-- card 5 -->
+  <rect x="700" y="500" width="520" height="230" rx="20" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <text x="740" y="570" font-size="40" font-weight="700" fill="#01A88D">お気に入りチーム</text>
+  <text x="740" y="626" font-size="30" fill="#c7d2e0">星アイコン＋ボーダーで強調表示</text>
+  <text x="740" y="668" font-size="30" fill="#c7d2e0">色だけに頼らない手がかり・絞り込み</text>
+
+  <!-- card 6 -->
+  <rect x="1280" y="500" width="520" height="230" rx="20" fill="#152338" stroke="#2a3b56" stroke-width="2"/>
+  <text x="1320" y="570" font-size="40" font-weight="700" fill="#01A88D">自動更新</text>
+  <text x="1320" y="626" font-size="30" fill="#c7d2e0">ライブシーズンのブラケットを定期取得</text>
+  <text x="1320" y="668" font-size="30" fill="#c7d2e0">DynamoDB キャッシュ (TTL 約 15 分)</text>
+
+  <text x="120" y="860" font-size="34" font-weight="700" fill="#ffffff">サーバーレス構成でフルスタック TypeScript。EN / JA の 2 言語に完全対応。</text>
+  <text x="120" y="920" font-size="30" fill="#8aa0bd">S3 + CloudFront の SPA から API Gateway・Lambda へ。すべて AWS CDK でワンコマンドデプロイ。</text>
+</svg>
